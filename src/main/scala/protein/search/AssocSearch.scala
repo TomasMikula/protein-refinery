@@ -7,6 +7,7 @@ import nutcracker.PropagationLang._
 import nutcracker._
 import nutcracker.lib.bool._
 import nutcracker.util.free.{InjectK, FreeK}
+import protein.Cont
 import protein._
 import protein.Cost._
 import protein.capability.{Binding, BindingPartner}
@@ -14,7 +15,7 @@ import protein.mechanism.{CompetitiveBinding, Site, ProteinModifications, Protei
 import protein.search.Assoc._
 
 import scalaz.Id._
-import scalaz.{Foldable, Applicative, Apply, StreamT, NonEmptyList}
+import scalaz.{Applicative, Apply, Monad, NonEmptyList, IList, Foldable}
 
 
 case class AssocSearch(kb: KB) {
@@ -26,28 +27,19 @@ case class AssocSearch(kb: KB) {
     for {
       /* initialize left end */
 
-      // protein is given
-      lp <- variable[Protein].oneOf(p).inject[Vocabulary]
-
-      // start with no protein modification restrictions
-      lmods <- variable[ProteinModifications].init(Option(ProteinModifications.noModifications)).inject[Vocabulary]
-
       // start with all possible sites, we will be refining the binding site on p later
       ls <- variable[Site].oneOf(kb.sitesOf(p):_*).inject[Vocabulary]
+
+      // promise a binding to the right
+      bnd <- promiseF[Binding].inject[Vocabulary]
 
       // promise next Elem
       lNext <- promiseF[LeftConnected].inject[Vocabulary]
 
-      left = LeftEnd(lp, lmods, ls, lNext)
+      left = LeftEnd(p, ls, bnd, lNext)
 
 
       /* initialize right end */
-
-      // protein is given
-      rp <- variable[Protein].oneOf(q).inject[Vocabulary]
-
-      // start with no protein modification restrictions
-      rmods <- variable[ProteinModifications].init(Option(ProteinModifications.noModifications)).inject[Vocabulary]
 
       // start with all possible sites, we will be refining the binding site on q later
       rs <- variable[Site].oneOf(kb.sitesOf(q):_*).inject[Vocabulary]
@@ -55,7 +47,7 @@ case class AssocSearch(kb: KB) {
       // promise previous Elem
       rPrev <- promiseF[RightConnected].inject[Vocabulary]
 
-      right = RightEnd(rp, rmods, rs, rPrev)
+      right = RightEnd(q, rs, rPrev)
 
 
       /* try to connect the ends */
@@ -67,87 +59,61 @@ case class AssocSearch(kb: KB) {
   def fetch(a: Assoc): FreeK[Vocabulary, Promised[mechanism.Assoc]] =
     promiseC(whenComplete(a))
 
-  private[search] def whenComplete(a: Assoc): Cont[mechanism.Assoc] = for {
-    le <- whenComplete(a.leftEnd)
-    tail <- a.leftEnd.right.asCont[Vocabulary]
-    msre <- whenComplete1(tail)
-    (ms, re) = msre
-  } yield mechanism.Assoc(le, ms, re)
+  private[search] def whenComplete(a: Assoc): Cont[mechanism.Assoc] =
+    whenComplete0(a.leftEnd).map(mechanism.Assoc(_))
 
-  private def whenComplete(le: LeftEnd): Cont[mechanism.Assoc.LeftEnd] =
-    Apply[Cont].apply3(le.protein, le.condition, le.toRight)(mechanism.Assoc.LeftEnd(_, _, _))
+  private def whenComplete0(elem: RightConnected): Cont[List[Binding]] = for {
+    bnd <- elem.bindingToRight.asCont[Vocabulary]
+    tail <- elem.right.asCont[Vocabulary]
+    bnds <- whenComplete1(tail)
+  } yield bnd :: bnds
 
-  private def whenComplete(re: RightEnd): Cont[mechanism.Assoc.RightEnd] =
-    Apply[Cont].apply3(re.protein, re.condition, re.toLeft)(mechanism.Assoc.RightEnd(_, _, _))
-
-  private def whenComplete(mp: MidPoint): Cont[mechanism.Assoc.MidPoint] = {
-    Apply[Cont].apply4(mp.protein, mp.condition, mp.toRight, mp.toLeft)(mechanism.Assoc.MidPoint(_, _, _, _))
-  }
-
-  private def whenComplete1(elem: LeftConnected): Cont[(List[mechanism.Assoc.MidPoint], mechanism.Assoc.RightEnd)] =
+  private def whenComplete1(elem: LeftConnected): Cont[List[Binding]] =
     elem match {
-      case re @ RightEnd(_, _, _, _) => whenComplete(re) map { (Nil, _) }
-      case mp @ MidPoint(_, _, _, _, _, _) => for {
-        m <- whenComplete(mp)
-        lc <- mp.right.asCont[Vocabulary]
-        msre <- whenComplete1(lc)
-        (ms, re) = msre
-      } yield (m::ms, re)
+      case re @ RightEnd(_, _, _) => Monad[Cont].point(Nil)
+      case mp @ MidPoint(_, _, _, _, _, _) => whenComplete0(mp)
     }
-
-  private def withBindingToLeft(elem: LeftConnected): Cont[BindingPartner] =
-    Apply[Cont].apply3(elem.protein, elem.condition, elem.toLeft)(BindingPartner(_, _, _))
-
-  private def withBindingToRight(elem: RightConnected): Cont[BindingPartner] =
-    Apply[Cont].apply3(elem.protein, elem.condition, elem.toRight)(BindingPartner(_, _, _))
 
   private def connect(leftTail: NonEmptyList[RightConnected], rightTail: NonEmptyList[LeftConnected]): FreeK[Vocabulary, Unit] = {
-    whenResolvedF(leftTail.head.protein) { p =>
-      // find neighbors of left tip
-      val neighbors = kb.neighborsOf(p)
+    // find neighbors of left tip
+    val neighbors = kb.neighborsOf(leftTail.head.protein)
 
-      // branch by trying to connect via each neighbor
-      addBranchingF[StreamT[Id, ?], Vocabulary](
-        StreamT.fromIterable(neighbors) map { n => connectVia(leftTail, rightTail, n) })(
-        implicitly[InjectK[protein.SearchLang.BranchL, Vocabulary]])
-    }
+    // branch by trying to connect via each neighbor
+    branch(neighbors map { n => connectVia(leftTail, rightTail, n) }: _*)
   }
 
   private implicit val inj = implicitly[InjectK[protein.SearchLang.CostL, Vocabulary]]
   private def connectVia(leftTail: NonEmptyList[RightConnected], rightTail: NonEmptyList[LeftConnected], b: capability.Binding): FreeK[Vocabulary, Unit] = {
-    // in any case, set the right-bound site of left tip to the one from the found binding
-    // and apply the found condition under which this binding can occur
-    set(leftTail.head.toRight, b.left.s) >>
-    set(leftTail.head.condition, b.left.p.mods) >>>
-    branch(
-      // case 1: unify neighbor with the right tip
-      //  - unify the protein of the right tip
-      set(rightTail.head.protein, b.right.p.p) >>
-      //  - unify the binding site of the right tip
-      set(rightTail.head.toLeft, b.right.s) >>
-      //  - apply the state conditions to the right tip
-      set(rightTail.head.condition, b.right.p.mods) >>>
-      //  - complete the promises
-      completeF(leftTail.head.right, rightTail.head).inject[Vocabulary] >>
-      completeF(rightTail.head.left, leftTail.head).inject[Vocabulary],
+    // in any case, complete the binding in the left tip and
+    // set the right-bound site of left tip to the one from the found binding
+    completeF(leftTail.head.bindingToRight, b) >>>
+    set(leftTail.head.toRight, b.left.s).inject[Vocabulary] >> {
+
+      // case 1: the binding connects the tips
+      val branch1 =
+        if(rightTail.head.protein == b.right.p.p) Some(
+          // unify the binding site of the right tip
+          set(rightTail.head.toLeft, b.right.s) >>>
+          // set the pointers
+          completeF(leftTail.head.right, rightTail.head).inject[Vocabulary] >>
+          completeF(rightTail.head.left, leftTail.head).inject[Vocabulary]
+        ) else None
 
       // case 2: make the neighbor the new left tip and add distinctness constraints
-      for {
+      val branch2 = for {
         // penalize the additional element of the scaffold
         _ <- costF(complexity(10)).inject[Vocabulary]
-        // set the protein of the mid-point according to the found binding
-        mp <- variable[Protein].oneOf(b.right.p.p).inject[Vocabulary]
         // set the left-bound site of the mid-point according to the found binding
         mls <- variable[Site].oneOf(b.right.s).inject[Vocabulary]
         // initialize right-bound site
-        mrs <- variable[Site].oneOf(kb.sitesOf(b.right.p.p).filter(_ != b.right.s):_*).inject[Vocabulary]
-        // apply modification constraints to the mid-point according to the found binding
-        mmods <- variable[ProteinModifications].init(Option(b.right.p.mods)).inject[Vocabulary]
+        mrs <- variable[Site].oneOf(kb.sitesOf(b.right.p.p).filter(_ != b.right.s): _*).inject[Vocabulary]
+        // promise binding to the right
+        bnd <- promiseF[Binding].inject[Vocabulary]
         // promise the neighbors
         mPrev <- promiseF[RightConnected].inject[Vocabulary]
         mNext <- promiseF[LeftConnected].inject[Vocabulary]
         // instantiate the mid-point
-        mid = MidPoint(mp, mmods, mrs, mNext, mls, mPrev)
+        mid = MidPoint(b.right.p.p, mrs, bnd, mNext, mls, mPrev)
         // connect to the left tip
         _ <- completeF(leftTail.head.right, mid).inject[Vocabulary]
         _ <- completeF(mPrev, leftTail.head).inject[Vocabulary]
@@ -157,97 +123,82 @@ case class AssocSearch(kb: KB) {
         // recurse
         _ <- connect(mid <:: leftTail, rightTail)
       } yield ()
-    )
+
+      branch1.map(b1 => branch(b1, branch2)).getOrElse(branch2)
+    }
   }
 
   private def distinctFromAll(mid: MidPoint, others: NonEmptyList[_ <: Elem]): FreeK[Vocabulary, Unit] = {
     import algebra.std.set._ // use the implicit GenBool instance for Set
     implicit val app: Applicative[FreeK[Vocabulary, ?]] = FreeK.freeKMonad[Vocabulary] // not sure why scalac cannot find this by itself
 
-    Foldable[NonEmptyList].sequence_[FreeK[Vocabulary, ?], Unit](others map {
-      case MidPoint(p, c, rs, r, ls, l) => for {
-        dp <- isDifferent(mid.protein, p)
-        dl <- isDifferent(mid.toLeft, ls)
-        dr <- isDifferent(mid.toRight, rs)
-        _ <- atLeastOneTrue(dp, dl, dr)
+    Foldable[IList].sequence_[FreeK[Vocabulary, ?], Unit](others.list filter { _.protein == mid.protein } map {
+      case mp @ MidPoint(_, _, _, _, _, _) => for {
+        dl <- isDifferent(mid.toLeft, mp.toLeft)
+        dr <- isDifferent(mid.toRight, mp.toRight)
+        _ <- atLeastOneTrue(dl, dr)
       } yield ()
-      case LeftEnd(p, c, rs, r) => for {
-        dp <- isDifferent(mid.protein, p)
-        dr <- isDifferent(mid.toRight, rs)
-        _ <- atLeastOneTrue(dp, dr)
-      } yield ()
-      case RightEnd(p, c, ls, l) => for {
-        dp <- isDifferent(mid.protein, p)
-        dl <- isDifferent(mid.toLeft, ls)
-        _ <- atLeastOneTrue(dp, dl)
-      } yield ()
+      case le @ LeftEnd(_, _, _, _) =>
+        different(mid.toRight, le.toRight)
+      case re @ RightEnd(_, _, _) =>
+        different(mid.toLeft, re.toLeft)
     } map { p => p.inject[Vocabulary] })
   }
 
 
   def negativeInfluence(p: Protein, a: Assoc): FreeK[Vocabulary, Promised[CompetitiveBinding]] = for {
     pr <- promiseF[CompetitiveBinding].inject[Vocabulary]
-    _ <- negativeInfluence0(p, a)(cb => completeF(pr, cb).inject[Vocabulary])
+    _ <- negativeInfluence0(p, a.leftEnd)(cb => completeF(pr, cb).inject[Vocabulary])
   } yield pr
 
-  def negativeInfluence0(p: Protein, a: Assoc)(callback: CompetitiveBinding => FreeK[Vocabulary, Unit]): FreeK[Vocabulary, Unit] = {
+  def negativeInfluence0(p: Protein, elem: RightConnected)(callback: CompetitiveBinding => FreeK[Vocabulary, Unit]): FreeK[Vocabulary, Unit] = {
     // Currently, the only way a protein can have a negative influence on association of two proteins,
     // is via a competitive binding on one of the proteins in the association.
     branch(
-      // case 1: competitive binding on the left end
-      competitiveBinding(p, a.leftEnd.protein, a.leftEnd.condition, a.leftEnd.toRight, competingBinding => {
-        onCompleteF(a.leftEnd.right){ lc =>
-          withBindingToLeft(lc){ bp =>
-            callback(CompetitiveBinding(Binding(bp, competingBinding.right), competingBinding.left))
-          }
-        }
-      }),
+      // case 1: competitive binding in binding to the right
+      elem.bindingToRight.asCont[Vocabulary].apply({ bnd => competitiveBinding0(p, bnd, callback) }),
 
       // case 2: competitive binding somewhere in the tail
-      onCompleteF(a.leftEnd.right){ negativeInfluence(p, _, callback) }
+      elem.right.asCont[Vocabulary].apply({ negativeInfluence1(p, _, callback) })
     )
   }
 
-  private def negativeInfluence(p: Protein, tail: LeftConnected, callback: CompetitiveBinding => FreeK[Vocabulary, Unit]): FreeK[Vocabulary, Unit] = tail match {
-    case RightEnd(p2, c, ls, l) => competitiveBinding(p, p2, c, ls, competingBinding => {
-      onCompleteF(l){ rc =>
-        withBindingToRight(rc){ bp =>
-          callback(CompetitiveBinding(Binding(bp, competingBinding.right), competingBinding.left))
-        }
-      }
-    })
-    case MidPoint(p2, c, rs, r, ls, l) => branch(
-      // competitive binding on the site bound to the left
-      competitiveBinding(p, p2, c, ls, competingBinding => {
-        onCompleteF(l){ rc =>
-          withBindingToRight(rc){ bp =>
-            callback(CompetitiveBinding(Binding(bp, competingBinding.right), competingBinding.left))
-          }
-        }
-      }),
+  private def negativeInfluence1(p: Protein, tail: LeftConnected, callback: CompetitiveBinding => FreeK[Vocabulary, Unit]): FreeK[Vocabulary, Unit] = tail match {
+    case RightEnd(_, _, _) => branch() // empty branching equals fail
+    case mp @ MidPoint(_, _, _, _, _, _) => negativeInfluence0(p, mp)(callback)
+  }
 
-      // competitive binding on the site bound to the right
-      competitiveBinding(p, p2, c, rs, competingBinding => {
-        onCompleteF(r){ lc =>
-          withBindingToLeft(lc){ bp =>
-            callback(CompetitiveBinding(Binding(bp, competingBinding.right), competingBinding.left))
-          }
-        }
-      }),
+  private def competitiveBinding0(
+    competitor: Protein,
+    bnd: Binding,
+    callback: CompetitiveBinding => FreeK[Vocabulary, Unit]
+  ): FreeK[Vocabulary, Unit] = branch(
+    competitiveBinding1(competitor, bnd.left, competingBinding => callback(CompetitiveBinding(Binding(bnd.right, competingBinding.right), competingBinding.left))),
+    competitiveBinding1(competitor, bnd.right, competingBinding => callback(CompetitiveBinding(Binding(bnd.left, competingBinding.right), competingBinding.left)))
+  )
 
-      // competitive binding somewhere in the tail
-      onCompleteF(r){ negativeInfluence(p, _, callback) }
-    )
+  private def competitiveBinding1(
+    competitor: Protein,
+    bp: BindingPartner,
+    callback: Binding => FreeK[Vocabulary, Unit]
+  ): FreeK[Vocabulary, Unit] = {
+    val neighbors = kb.neighborsOf(competitor)
+    val neighbors1 = neighbors filter { bnd =>
+      bnd.right.p.p == bp.p.p &&
+      bnd.right.s == bp.s &&
+      (bnd.right.p.mods combine bp.p.mods).isDefined
+    }
+    branch(neighbors1 map (callback(_)):_*)
   }
 
   private def competitiveBinding(
-    p: Protein,
+    competitor: Protein,
     pRef: DomRef[Protein, Set[Protein]],
     cRef: DomRef[ProteinModifications, ProteinModificationsLattice],
     sRef: DomRef[Site, Set[Site]],
     callback: Binding => FreeK[Vocabulary, Unit]
   ): FreeK[Vocabulary, Unit] = branch(
-    (kb.neighborsOf(p) map { bnd =>
+    (kb.neighborsOf(competitor) map { bnd =>
       set(pRef, bnd.right.p.p) >>
         set(cRef, bnd.right.p.mods) >>
         set(sRef, bnd.right.s) >>>
