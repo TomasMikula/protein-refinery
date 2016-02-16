@@ -1,7 +1,7 @@
 package protein.search
 
 import nutcracker.DomRef
-import nutcracker.PromiseLang._
+import nutcracker.Promised
 import protein.capability.Binding
 import protein.mechanism.{Site, Protein}
 

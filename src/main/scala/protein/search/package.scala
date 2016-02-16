@@ -27,7 +27,10 @@ package object search {
 
       def singleton(a: ProteinModifications): ProteinModificationsLattice = Some(a)
 
-      def eqv(x: ProteinModificationsLattice, y: ProteinModificationsLattice): Boolean = x == y
+      def refine(x: ProteinModificationsLattice, y: ProteinModificationsLattice): Option[ProteinModificationsLattice] = {
+        val res = meet(x, y)
+        if (res == x) None else Some(res)
+      }
 
       def meet(x: ProteinModificationsLattice, y: ProteinModificationsLattice): ProteinModificationsLattice =
         (x, y) match {

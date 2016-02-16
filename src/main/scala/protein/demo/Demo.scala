@@ -1,6 +1,6 @@
 package protein.demo
 
-import nutcracker.PromiseLang._
+import nutcracker.PropagationLang._
 import protein.{Vocabulary, Cost}
 import protein.mechanism.{CompetitiveBinding, Phosphorylation}
 import protein.capability.syntax._

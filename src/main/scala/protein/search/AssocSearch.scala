@@ -2,7 +2,6 @@ package protein.search
 
 import nutcracker.BranchLang._
 import nutcracker.CostLang._
-import nutcracker.PromiseLang._
 import nutcracker.PropagationLang._
 import nutcracker._
 import nutcracker.lib.bool._

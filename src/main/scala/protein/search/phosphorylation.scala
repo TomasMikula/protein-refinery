@@ -1,7 +1,6 @@
 package protein.search
 
 import algebra.std.set._
-import nutcracker.PromiseLang._
 import nutcracker._
 import nutcracker.PropagationLang._
 import nutcracker.util.free.FreeK
