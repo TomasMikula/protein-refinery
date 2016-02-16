@@ -1,6 +1,5 @@
 package protein.search
 
-import nutcracker.BranchLang._
 import nutcracker.CostLang._
 import nutcracker.PropagationLang._
 import nutcracker._
@@ -13,8 +12,7 @@ import protein.capability.{Binding, BindingPartner}
 import protein.mechanism.{CompetitiveBinding, Site, ProteinModifications, Protein}
 import protein.search.Assoc._
 
-import scalaz.Id._
-import scalaz.{Applicative, Apply, Monad, NonEmptyList, IList, Foldable}
+import scalaz.{Applicative, Monad, NonEmptyList, IList, Foldable}
 
 
 case class AssocSearch(kb: KB) {
@@ -78,7 +76,7 @@ case class AssocSearch(kb: KB) {
     val neighbors = kb.neighborsOf(leftTail.head.protein)
 
     // branch by trying to connect via each neighbor
-    branch(neighbors map { n => connectVia(leftTail, rightTail, n) }: _*)
+    branchAndExec(neighbors map { n => connectVia(leftTail, rightTail, n) }: _*)
   }
 
   private implicit val inj = implicitly[InjectK[protein.SearchLang.CostL, Vocabulary]]
@@ -123,7 +121,7 @@ case class AssocSearch(kb: KB) {
         _ <- connect(mid <:: leftTail, rightTail)
       } yield ()
 
-      branch1.map(b1 => branch(b1, branch2)).getOrElse(branch2)
+      branch1.map(b1 => branchAndExec(b1, branch2)).getOrElse(branch2)
     }
   }
 
@@ -153,7 +151,7 @@ case class AssocSearch(kb: KB) {
   def negativeInfluence0(p: Protein, elem: RightConnected)(callback: CompetitiveBinding => FreeK[Vocabulary, Unit]): FreeK[Vocabulary, Unit] = {
     // Currently, the only way a protein can have a negative influence on association of two proteins,
     // is via a competitive binding on one of the proteins in the association.
-    branch(
+    branchAndExec(
       // case 1: competitive binding in binding to the right
       elem.bindingToRight.asCont[Vocabulary].apply({ bnd => competitiveBinding0(p, bnd, callback) }),
 
@@ -163,7 +161,7 @@ case class AssocSearch(kb: KB) {
   }
 
   private def negativeInfluence1(p: Protein, tail: LeftConnected, callback: CompetitiveBinding => FreeK[Vocabulary, Unit]): FreeK[Vocabulary, Unit] = tail match {
-    case RightEnd(_, _, _) => branch() // empty branching equals fail
+    case RightEnd(_, _, _) => branchAndExec() // empty branching equals fail
     case mp @ MidPoint(_, _, _, _, _, _) => negativeInfluence0(p, mp)(callback)
   }
 
@@ -171,7 +169,7 @@ case class AssocSearch(kb: KB) {
     competitor: Protein,
     bnd: Binding,
     callback: CompetitiveBinding => FreeK[Vocabulary, Unit]
-  ): FreeK[Vocabulary, Unit] = branch(
+  ): FreeK[Vocabulary, Unit] = branchAndExec(
     competitiveBinding1(competitor, bnd.left, competingBinding => callback(CompetitiveBinding(Binding(bnd.right, competingBinding.right), competingBinding.left))),
     competitiveBinding1(competitor, bnd.right, competingBinding => callback(CompetitiveBinding(Binding(bnd.left, competingBinding.right), competingBinding.left)))
   )
@@ -187,7 +185,7 @@ case class AssocSearch(kb: KB) {
       bnd.right.s == bp.s &&
       (bnd.right.p.mods combine bp.p.mods).isDefined
     }
-    branch(neighbors1 map (callback(_)):_*)
+    branchAndExec(neighbors1 map (callback(_)):_*)
   }
 
   private def competitiveBinding(
@@ -196,7 +194,7 @@ case class AssocSearch(kb: KB) {
     cRef: DomRef[ProteinModifications, ProteinModificationsLattice],
     sRef: DomRef[Site, Set[Site]],
     callback: Binding => FreeK[Vocabulary, Unit]
-  ): FreeK[Vocabulary, Unit] = branch(
+  ): FreeK[Vocabulary, Unit] = branchAndExec(
     (kb.neighborsOf(competitor) map { bnd =>
       set(pRef, bnd.right.p.p) >>
         set(cRef, bnd.right.p.mods) >>

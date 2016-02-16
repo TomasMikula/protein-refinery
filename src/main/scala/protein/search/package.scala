@@ -1,13 +1,9 @@
 package protein
 
-import nutcracker.BranchLang._
-import nutcracker.Domain
+import nutcracker.{PropagationLang, Domain}
 import nutcracker.Domain.Values
 import nutcracker.util.free.{InjectK, FreeK}
 import protein.mechanism.ProteinModifications
-
-import scalaz.Id._
-import scalaz.StreamT
 
 package object search {
 
@@ -39,8 +35,8 @@ package object search {
         }
     }
 
-  def branch(ks: FreeK[Vocabulary, Unit]*): FreeK[Vocabulary, Unit] = {
-    implicit val inj = implicitly[InjectK[protein.SearchLang.BranchL, Vocabulary]]
-    addBranchingF[StreamT[Id, ?], Vocabulary](StreamT.fromIterable(ks))
+  def branchAndExec(ks: FreeK[Vocabulary, Unit]*): FreeK[Vocabulary, Unit] = {
+    implicit val inj = implicitly[InjectK[PropagationLang, Vocabulary]]
+    PropagationLang.branchAndExec(ks:_*)
   }
 }
