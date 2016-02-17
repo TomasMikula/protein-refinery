@@ -1,6 +1,6 @@
 package protein
 
-import nutcracker.{PropagationLang, Domain}
+import nutcracker.{DomRef, PropagationLang, Domain}
 import nutcracker.Domain.Values
 import nutcracker.util.free.{InjectK, FreeK}
 import protein.mechanism.ProteinModifications
@@ -35,8 +35,5 @@ package object search {
         }
     }
 
-  def branchAndExec(ks: FreeK[Vocabulary, Unit]*): FreeK[Vocabulary, Unit] = {
-    implicit val inj = implicitly[InjectK[PropagationLang, Vocabulary]]
-    PropagationLang.branchAndExec(ks:_*)
-  }
+  implicit val injP = implicitly[InjectK[PropagationLang, Vocabulary]]
 }

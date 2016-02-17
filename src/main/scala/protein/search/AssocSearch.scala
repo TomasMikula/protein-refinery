@@ -143,63 +143,38 @@ case class AssocSearch(kb: KB) {
   }
 
 
-  def negativeInfluence(p: Protein, a: Assoc): FreeK[Vocabulary, Promised[CompetitiveBinding]] = for {
-    pr <- promiseF[CompetitiveBinding].inject[Vocabulary]
-    _ <- negativeInfluence0(p, a.leftEnd)(cb => completeF(pr, cb).inject[Vocabulary])
-  } yield pr
+  def negativeInfluence(p: Protein, a: Assoc): FreeK[Vocabulary, Promised[CompetitiveBinding]] =
+    promiseC(negativeInfluence0(p, a.leftEnd))
 
-  def negativeInfluence0(p: Protein, elem: RightConnected)(callback: CompetitiveBinding => FreeK[Vocabulary, Unit]): FreeK[Vocabulary, Unit] = {
+  private def negativeInfluence0(p: Protein, elem: RightConnected): Cont[CompetitiveBinding] = {
     // Currently, the only way a protein can have a negative influence on association of two proteins,
     // is via a competitive binding on one of the proteins in the association.
-    branchAndExec(
+    branchC(
       // case 1: competitive binding in binding to the right
-      elem.bindingToRight.asCont[Vocabulary].apply({ bnd => competitiveBinding0(p, bnd, callback) }),
+      elem.bindingToRight.asCont[Vocabulary] flatMap { bnd => competitiveBinding0(p, bnd) },
 
       // case 2: competitive binding somewhere in the tail
-      elem.right.asCont[Vocabulary].apply({ negativeInfluence1(p, _, callback) })
-    )
+      elem.right.asCont[Vocabulary] flatMap { negativeInfluence1(p, _) }
+    ).flatten
   }
 
-  private def negativeInfluence1(p: Protein, tail: LeftConnected, callback: CompetitiveBinding => FreeK[Vocabulary, Unit]): FreeK[Vocabulary, Unit] = tail match {
-    case RightEnd(_, _, _) => branchAndExec() // empty branching equals fail
-    case mp @ MidPoint(_, _, _, _, _, _) => negativeInfluence0(p, mp)(callback)
+  private def negativeInfluence1(p: Protein, tail: LeftConnected): Cont[CompetitiveBinding] = tail match {
+    case RightEnd(_, _, _) => branchC() // empty branching equals fail
+    case mp @ MidPoint(_, _, _, _, _, _) => negativeInfluence0(p, mp)
   }
 
-  private def competitiveBinding0(
-    competitor: Protein,
-    bnd: Binding,
-    callback: CompetitiveBinding => FreeK[Vocabulary, Unit]
-  ): FreeK[Vocabulary, Unit] = branchAndExec(
-    competitiveBinding1(competitor, bnd.left, competingBinding => callback(CompetitiveBinding(Binding(bnd.right, competingBinding.right), competingBinding.left))),
-    competitiveBinding1(competitor, bnd.right, competingBinding => callback(CompetitiveBinding(Binding(bnd.left, competingBinding.right), competingBinding.left)))
-  )
+  private def competitiveBinding0(competitor: Protein, bnd: Binding): Cont[CompetitiveBinding] =
+    branchC(
+      competitiveBinding1(competitor, bnd.left) map { competingBinding => CompetitiveBinding(Binding(bnd.right, competingBinding.right), competingBinding.left) },
+      competitiveBinding1(competitor, bnd.right) map { competingBinding => CompetitiveBinding(Binding(bnd.left, competingBinding.right), competingBinding.left) }
+    ).flatten
 
-  private def competitiveBinding1(
-    competitor: Protein,
-    bp: BindingPartner,
-    callback: Binding => FreeK[Vocabulary, Unit]
-  ): FreeK[Vocabulary, Unit] = {
-    val neighbors = kb.neighborsOf(competitor)
-    val neighbors1 = neighbors filter { bnd =>
+  private def competitiveBinding1(competitor: Protein, bp: BindingPartner): Cont[Binding] = {
+    val neighbors = kb.neighborsOf(competitor) filter { bnd =>
       bnd.right.p.p == bp.p.p &&
-      bnd.right.s == bp.s &&
-      (bnd.right.p.mods combine bp.p.mods).isDefined
+        bnd.right.s == bp.s &&
+        (bnd.right.p.mods combine bp.p.mods).isDefined
     }
-    branchAndExec(neighbors1 map (callback(_)):_*)
+    branchC(neighbors:_*)
   }
-
-  private def competitiveBinding(
-    competitor: Protein,
-    pRef: DomRef[Protein, Set[Protein]],
-    cRef: DomRef[ProteinModifications, ProteinModificationsLattice],
-    sRef: DomRef[Site, Set[Site]],
-    callback: Binding => FreeK[Vocabulary, Unit]
-  ): FreeK[Vocabulary, Unit] = branchAndExec(
-    (kb.neighborsOf(competitor) map { bnd =>
-      set(pRef, bnd.right.p.p) >>
-        set(cRef, bnd.right.p.mods) >>
-        set(sRef, bnd.right.s) >>>
-        callback(bnd)
-    }):_*
-  )
 }
