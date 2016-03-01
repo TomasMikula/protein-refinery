@@ -1,10 +1,10 @@
-import nutcracker.PropRelCost
+import nutcracker.PropCost
 import nutcracker.util.free.FreeK
 import scala.language.higherKinds
 
 package object protein {
 
-  val SearchLang = new PropRelCost[Cost]
+  val SearchLang = new PropCost[Cost]
 
   type Vocabulary[K[_], A] = SearchLang.Vocabulary[K, A]
 

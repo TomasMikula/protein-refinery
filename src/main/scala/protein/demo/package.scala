@@ -1,9 +1,9 @@
 package protein
 
-import nutcracker.BFSSolver
+import nutcracker.PropCost
 import protein.search.PhosphorylationSearch
 
 package object demo {
-  val Solver = new BFSSolver[Cost]
+  val Solver = new PropCost[Cost].bfsSolver
   val PhosSearch = PhosphorylationSearch(TestKB)
 }
