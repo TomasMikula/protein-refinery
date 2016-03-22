@@ -4,7 +4,7 @@ import nutcracker.CostLang._
 import nutcracker.PropagationLang._
 import nutcracker._
 import nutcracker.lib.bool._
-import nutcracker.util.free.{InjectK, FreeK}
+import nutcracker.util.{InjectK, FreeK}
 import protein.Cont
 import protein._
 import protein.Cost._
@@ -79,7 +79,7 @@ case class AssocSearch(kb: KB) {
     branchAndExec(neighbors map { n => connectVia(leftTail, rightTail, n) }: _*)
   }
 
-  private implicit val inj = implicitly[InjectK[protein.SearchLang.CostL, Vocabulary]]
+  private implicit val inj = implicitly[InjectK[protein.CostL, Vocabulary]]
   private def connectVia(leftTail: NonEmptyList[RightConnected], rightTail: NonEmptyList[LeftConnected], b: capability.Binding): FreeK[Vocabulary, Unit] = {
     // in any case, complete the binding in the left tip and
     // set the right-bound site of left tip to the one from the found binding

@@ -14,7 +14,7 @@ object Demo1_Phos extends App {
   val problem = PhosSearch.search('C, 'B)
 
   // output solutions
-  Solver.solutions(problem).toStream foreach {
+  Solver.solutions(problem).toStream.run(TestKB) foreach {
     case (ph: Phosphorylation, c: Cost) =>
       println
       println(s"Cost: $c")
@@ -39,7 +39,7 @@ object Demo2_NegInfl extends App {
   } yield pr
 
   // output solutions
-  Solver.solutions(problem).toStream foreach {
+  Solver.solutions(problem).toStream.run(TestKB) foreach {
     case ((ph: Phosphorylation, cb: CompetitiveBinding), c: Cost) =>
       println
       println(s"Cost: $c")

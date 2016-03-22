@@ -3,7 +3,7 @@ package protein.demo
 import protein.KB
 import protein.capability.Binding
 import protein.capability.syntax._
-import protein.mechanism.{Site, Protein}
+import protein.mechanism.{ProteinModifications, Site, Protein}
 
 object TestKB extends KB {
 
@@ -32,4 +32,6 @@ object TestKB extends KB {
   def neighborsOf(p: Protein): Seq[Binding] =
     (bindings filter { _.left.p.p == p  }) ++
     (bindings filter { _.right.p.p == p } map { _.flip })
+
+  def modsIncreasingKinaseActivity(kinase: Protein): Seq[ProteinModifications] = Seq()
 }

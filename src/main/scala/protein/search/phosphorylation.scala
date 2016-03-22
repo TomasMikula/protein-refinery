@@ -3,7 +3,7 @@ package protein.search
 import algebra.std.set._
 import nutcracker._
 import nutcracker.PropagationLang._
-import nutcracker.util.free.FreeK
+import nutcracker.util.FreeK
 import protein.{mechanism, KB, Vocabulary}
 import protein.mechanism.{CompetitiveBinding, Protein, Site}
 

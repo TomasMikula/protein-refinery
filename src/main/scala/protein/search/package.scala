@@ -1,8 +1,8 @@
 package protein
 
-import nutcracker.{DomRef, PropagationLang, Domain}
+import nutcracker.{PropagationLang, Domain}
 import nutcracker.Domain.Values
-import nutcracker.util.free.{InjectK, FreeK}
+import nutcracker.util.InjectK
 import protein.mechanism.ProteinModifications
 
 package object search {
