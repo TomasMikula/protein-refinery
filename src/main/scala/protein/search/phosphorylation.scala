@@ -4,7 +4,8 @@ import algebra.std.set._
 import nutcracker._
 import nutcracker.PropagationLang._
 import nutcracker.util.FreeK
-import protein.{mechanism, KB, Vocabulary}
+import protein.{mechanism, Vocabulary}
+import protein.KBLang._
 import protein.mechanism.{CompetitiveBinding, Protein, Site}
 
 case class Phosphorylation(
@@ -12,7 +13,7 @@ case class Phosphorylation(
   phosphoSite: DomRef[Site, Set[Site]] // substrate's site being phosphorylated
 )
 
-case class PhosphorylationSearch(kb: KB) {
+object PhosphorylationSearch {
 
   def search(kinase: Protein, substrate: Protein): FreeK[Vocabulary, Promised[mechanism.Phosphorylation]] =
     search0(kinase, substrate) >>= { fetch(_) }
@@ -25,9 +26,9 @@ case class PhosphorylationSearch(kb: KB) {
 
     for {
       // look for association
-      assoc <- AssocSearch(kb).search0(kinase, substrate)
+      assoc <- AssocSearch.search0(kinase, substrate)
       // initialize the phosphorylated site to all sites on this substrate that kinase can phosphorylate
-      phosphoSite <- variable[Site].oneOf(kb.phosphoSites(kinase, substrate):_*)
+      phosphoSite <- phosphoSitesF(kinase, substrate).inject[Vocabulary] >>= { variable[Site].oneOf(_:_*) }
       // make sure the binding site on substrate is different from the phosphorylated site
       _ <- different(assoc.rightEnd.toLeft, phosphoSite)
     } yield Phosphorylation(assoc, phosphoSite)
@@ -35,7 +36,7 @@ case class PhosphorylationSearch(kb: KB) {
 
   def fetch(ph: Phosphorylation): FreeK[Vocabulary, Promised[mechanism.Phosphorylation]] = for {
     pr <- promiseF[mechanism.Phosphorylation].inject[Vocabulary]
-    _ <- AssocSearch(kb).whenComplete(ph.assoc) { assoc =>
+    _ <- AssocSearch.whenComplete(ph.assoc) { assoc =>
       whenResolvedF(ph.phosphoSite) { s =>
         completeF(pr, mechanism.Phosphorylation(assoc, s)).inject[Vocabulary]
       }
@@ -45,6 +46,6 @@ case class PhosphorylationSearch(kb: KB) {
   def negativeInfluence(p: Protein, ph: Phosphorylation): FreeK[Vocabulary, Promised[CompetitiveBinding]] = {
     // currently the only way a protein can have negative influence on phosphorylation
     // is via negative influence on the association of enzyme and substrate
-    AssocSearch(kb).negativeInfluence(p, ph.assoc)
+    AssocSearch.negativeInfluence(p, ph.assoc)
   }
 }

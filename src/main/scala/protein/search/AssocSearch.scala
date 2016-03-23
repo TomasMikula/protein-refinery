@@ -5,17 +5,16 @@ import nutcracker.PropagationLang._
 import nutcracker._
 import nutcracker.lib.bool._
 import nutcracker.util.{InjectK, FreeK}
-import protein.Cont
 import protein._
 import protein.Cost._
+import protein.KBLang._
 import protein.capability.{Binding, BindingPartner}
 import protein.mechanism.{CompetitiveBinding, Site, ProteinModifications, Protein}
 import protein.search.Assoc._
 
 import scalaz.{Applicative, Monad, NonEmptyList, IList, Foldable}
 
-
-case class AssocSearch(kb: KB) {
+object AssocSearch {
 
   def search(p: Protein, q: Protein): FreeK[Vocabulary, Promised[mechanism.Assoc]] =
     search0(p, q) >>= { fetch(_) }
@@ -25,7 +24,7 @@ case class AssocSearch(kb: KB) {
       /* initialize left end */
 
       // start with all possible sites, we will be refining the binding site on p later
-      ls <- variable[Site].oneOf(kb.sitesOf(p):_*).inject[Vocabulary]
+      ls <- sitesOfF(p) >>>= { variable[Site].oneOf(_:_*).inject[Vocabulary] }
 
       // promise a binding to the right
       bnd <- promiseF[Binding].inject[Vocabulary]
@@ -39,7 +38,7 @@ case class AssocSearch(kb: KB) {
       /* initialize right end */
 
       // start with all possible sites, we will be refining the binding site on q later
-      rs <- variable[Site].oneOf(kb.sitesOf(q):_*).inject[Vocabulary]
+      rs <- sitesOfF(q) >>>= { variable[Site].oneOf(_:_*).inject[Vocabulary] }
 
       // promise previous Elem
       rPrev <- promiseF[RightConnected].inject[Vocabulary]
@@ -71,13 +70,14 @@ case class AssocSearch(kb: KB) {
       case mp @ MidPoint(_, _, _, _, _, _) => whenComplete0(mp)
     }
 
-  private def connect(leftTail: NonEmptyList[RightConnected], rightTail: NonEmptyList[LeftConnected]): FreeK[Vocabulary, Unit] = {
-    // find neighbors of left tip
-    val neighbors = kb.neighborsOf(leftTail.head.protein)
+  private def connect(leftTail: NonEmptyList[RightConnected], rightTail: NonEmptyList[LeftConnected]): FreeK[Vocabulary, Unit] =
+    for {
+      // find neighbors of left tip
+      neighbors <- bindingsOfF(leftTail.head.protein).inject[Vocabulary]
 
-    // branch by trying to connect via each neighbor
-    branchAndExec(neighbors map { n => connectVia(leftTail, rightTail, n) }: _*)
-  }
+      // branch by trying to connect via each neighbor
+      _ <- branchAndExec(neighbors map { n => connectVia(leftTail, rightTail, n) }: _*)
+    } yield ()
 
   private implicit val inj = implicitly[InjectK[protein.CostL, Vocabulary]]
   private def connectVia(leftTail: NonEmptyList[RightConnected], rightTail: NonEmptyList[LeftConnected], b: capability.Binding): FreeK[Vocabulary, Unit] = {
@@ -103,7 +103,7 @@ case class AssocSearch(kb: KB) {
         // set the left-bound site of the mid-point according to the found binding
         mls <- variable[Site].oneOf(b.right.s).inject[Vocabulary]
         // initialize right-bound site
-        mrs <- variable[Site].oneOf(kb.sitesOf(b.right.p.p).filter(_ != b.right.s): _*).inject[Vocabulary]
+        mrs <- sitesOfF(b.right.p.p) >>>= { ss => variable[Site].oneOf(ss.filter(_ != b.right.s): _*).inject[Vocabulary] }
         // promise binding to the right
         bnd <- promiseF[Binding].inject[Vocabulary]
         // promise the neighbors
@@ -169,12 +169,14 @@ case class AssocSearch(kb: KB) {
       competitiveBinding1(competitor, bnd.right) map { competingBinding => CompetitiveBinding(Binding(bnd.left, competingBinding.right), competingBinding.left) }
     ).flatten
 
-  private def competitiveBinding1(competitor: Protein, bp: BindingPartner): Cont[Binding] = {
-    val neighbors = kb.neighborsOf(competitor) filter { bnd =>
-      bnd.right.p.p == bp.p.p &&
-        bnd.right.s == bp.s &&
-        (bnd.right.p.mods combine bp.p.mods).isDefined
-    }
-    branchC(neighbors:_*)
-  }
+  private def competitiveBinding1(competitor: Protein, bp: BindingPartner): Cont[Binding] =
+    Cont.wrapEffect(for {
+      neighbors0 <- bindingsOfF(competitor).inject[Vocabulary]
+      neighbors = neighbors0 filter { bnd =>
+        bnd.right.p.p == bp.p.p &&
+          bnd.right.s == bp.s &&
+          (bnd.right.p.mods combine bp.p.mods).isDefined
+      }
+      bndRef <- branch(neighbors:_*)
+    } yield bndRef.asCont)
 }

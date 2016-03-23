@@ -1,9 +1,10 @@
 package protein
 
 import scala.language.higherKinds
+import nutcracker.util.{FreeK, FunctorKA}
+import protein.mechanism.{Protein, Site}
 
-import nutcracker.util.FreeK
-import protein.mechanism.{Site, Protein}
+import scalaz.~>
 
 sealed trait KBLang[A]
 
@@ -24,4 +25,13 @@ object KBLang {
     FreeK.suspend[KBLangK, Seq[capability.Binding]](bindingsOf(p))
   def phosphoSitesF(kinase: Protein, substrate: Protein): FreeK[KBLangK, Seq[Site]] =
     FreeK.suspend[KBLangK, Seq[Site]](phosphoSites(kinase, substrate))
+
+  implicit def functorKAInstance: FunctorKA[KBLangK] =
+    new FunctorKA[KBLangK] {
+      def transform[K[_], L[_], A](fk: KBLangK[K, A])(f: K ~> L): KBLangK[L, A] = fk match {
+        case SitesOf(p) => SitesOf(p)
+        case BindingsOf(p) => BindingsOf(p)
+        case PhosphoSites(k, s) => PhosphoSites(k, s)
+      }
+    }
 }

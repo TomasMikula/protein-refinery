@@ -36,4 +36,8 @@ package object protein {
     new BFSSolver[Vocabulary, State, Reader[KB, ?], Promised, Cost](interpreter, emptyState, naiveAssess, fetch, getCost)
 
   type Cont[A] = scalaz.Cont[FreeK[Vocabulary, Unit], A]
+  object Cont {
+    def wrapEffect[A](c: FreeK[Vocabulary, Cont[A]]): Cont[A] =
+      scalaz.Cont[FreeK[Vocabulary, Unit], A](f => c >>= { k => k(f) })
+  }
 }
