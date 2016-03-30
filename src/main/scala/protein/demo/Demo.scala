@@ -7,6 +7,7 @@ import protein.capability.syntax._
 import protein.search.PhosphorylationSearch
 
 object Demo1_Phos extends App {
+  val Solver = protein.bfsSolver
 
   /*
    * PROBLEM:
@@ -26,6 +27,7 @@ object Demo1_Phos extends App {
 
 
 object Demo2_NegInfl extends App {
+  val Solver = protein.bfsSolver
 
   /*
    * PROBLEM:
