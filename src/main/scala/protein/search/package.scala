@@ -8,8 +8,10 @@ package object search {
 
   type ProteinModificationsLattice = Option[ProteinModifications]
 
-  implicit def proteinModificationsLattice: Dom[ProteinModificationsLattice, Meet[ProteinModificationsLattice], Unit] =
-    new Dom[ProteinModificationsLattice, Meet[ProteinModificationsLattice], Unit] {
+  implicit def proteinModificationsLattice: Dom.Aux[ProteinModificationsLattice, Meet[ProteinModificationsLattice], Unit] =
+    new Dom[ProteinModificationsLattice] {
+      type Update = Meet[ProteinModificationsLattice]
+      type Delta = Unit
       override def assess(d: ProteinModificationsLattice): Dom.Status[Meet[ProteinModificationsLattice]] = d match {
         case None => Dom.Failed
         case Some(a) => Dom.Refined
@@ -23,7 +25,7 @@ package object search {
         if(res == d) None else Some((res, ()))
       }
 
-      override def combineDiffs(d1: Unit, d2: Unit): Unit = ()
+      override def combineDeltas(d1: Unit, d2: Unit): Unit = ()
     }
 
   implicit val injP = implicitly[InjectK[PropagationLang, Vocabulary]]

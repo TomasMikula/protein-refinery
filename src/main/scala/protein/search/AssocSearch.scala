@@ -4,15 +4,16 @@ import nutcracker.CostLang._
 import nutcracker.PropagationLang._
 import nutcracker._
 import nutcracker.lib.bool._
-import nutcracker.util.{FreeK, InjectK}
+import nutcracker.util.{FreeK, FreeKT, InjectK}
 import protein._
 import protein.Cost._
 import protein.KBLang._
 import protein.capability.BindingPartnerPattern
-import protein.mechanism.{Binding, BindingPartner, CompetitiveBinding, Protein, ProteinModifications, Site}
+import protein.mechanism.{Binding, CompetitiveBinding, Protein, Site}
 import protein.search.Assoc._
 
 import scalaz.{Applicative, Foldable, IList, Monad, NonEmptyList}
+import scalaz.Id._
 
 object AssocSearch {
 
@@ -126,8 +127,8 @@ object AssocSearch {
   }
 
   private def distinctFromAll(mid: MidPoint, others: NonEmptyList[_ <: Elem]): FreeK[Vocabulary, Unit] = {
-    import algebra.std.set._ // use the implicit GenBool instance for Set
-    implicit val app: Applicative[FreeK[Vocabulary, ?]] = FreeK.freeKMonad[Vocabulary] // not sure why scalac cannot find this by itself
+    implicit val app: Applicative[FreeK[Vocabulary, ?]] =
+      FreeKT.freeKTMonad[Vocabulary, Id]: Applicative[FreeK[Vocabulary, ?]]
 
     Foldable[IList].sequence_[FreeK[Vocabulary, ?], Unit](others.list filter { _.protein == mid.protein } map {
       case mp @ MidPoint(_, _, _, _, _, _) => for {

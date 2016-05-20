@@ -20,11 +20,11 @@ object KBLang {
   def phosphoSites[K[_]](kinase: Protein, substrate: Protein): KBLangK[K, Seq[Site]] = PhosphoSites(kinase, substrate)
 
   def sitesOfF(p: Protein): FreeK[KBLangK, Seq[Site]] =
-    FreeK.suspend[KBLangK, Seq[Site]](sitesOf(p))
+    FreeK.liftF[KBLangK, Seq[Site]](sitesOf(p))
   def bindingsOfF(p: Protein): FreeK[KBLangK, Seq[Binding]] =
-    FreeK.suspend[KBLangK, Seq[Binding]](bindingsOf(p))
+    FreeK.liftF[KBLangK, Seq[Binding]](bindingsOf(p))
   def phosphoSitesF(kinase: Protein, substrate: Protein): FreeK[KBLangK, Seq[Site]] =
-    FreeK.suspend[KBLangK, Seq[Site]](phosphoSites(kinase, substrate))
+    FreeK.liftF[KBLangK, Seq[Site]](phosphoSites(kinase, substrate))
 
   implicit def functorKAInstance: FunctorKA[KBLangK] =
     new FunctorKA[KBLangK] {

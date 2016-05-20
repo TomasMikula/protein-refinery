@@ -1,6 +1,6 @@
 package protein.mechanism
 
-import protein.capability.{AgentIndex, BindingPartnerPattern, ProteinPattern, Rule}
+import protein.capability.{AgentIndex, BindingPartnerPattern, Rule}
 
 sealed trait Binding {
 
