@@ -7,6 +7,7 @@ import nutcracker.util.{ConstK, CoproductK, FreeK, ProductK}
 import nutcracker.util.ProductK._
 import protein.KBLang.KBLangK
 import scalaz._
+import scalaz.Id._
 
 package object protein {
   type KB_K[K[_]] = KB
@@ -18,7 +19,7 @@ package object protein {
   type Vocabulary[K[_], A] = CoproductK[KBLangK, Vocabulary0, K, A]
   type State[K[_]] = ProductK[PropagationStore, CostS, K]
 
-  val interpreter = (KB.interpreter :+: (PropagationStore.interpreter :*: CostLang.interpreter[Cost]).hoistId[Reader[KB, ?]]).freeInstance
+  val interpreter = (KB.interpreter :+: (PropagationStore.interpreter :*: CostLang.interpreter[Cost]).hoistId[Reader[KB, ?]]).freeInstance(implicitly, Kleisli.kleisliBindRec[Id, KB])
   def propStore[K[_]]: Lens[State[K], PropagationStore[K]] = implicitly[Lens[State[K], PropagationStore[K]]]
   def cost[K[_]]: Lens[State[K], CostS[K]] = implicitly[Lens[State[K], CostS[K]]]
 

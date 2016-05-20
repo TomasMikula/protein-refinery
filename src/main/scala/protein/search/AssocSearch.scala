@@ -4,15 +4,15 @@ import nutcracker.CostLang._
 import nutcracker.PropagationLang._
 import nutcracker._
 import nutcracker.lib.bool._
-import nutcracker.util.{InjectK, FreeK}
+import nutcracker.util.{FreeK, InjectK}
 import protein._
 import protein.Cost._
 import protein.KBLang._
-import protein.capability.{Binding, BindingPartner}
-import protein.mechanism.{CompetitiveBinding, Site, ProteinModifications, Protein}
+import protein.capability.BindingPartnerPattern
+import protein.mechanism.{Binding, BindingPartner, CompetitiveBinding, Protein, ProteinModifications, Site}
 import protein.search.Assoc._
 
-import scalaz.{Applicative, Monad, NonEmptyList, IList, Foldable}
+import scalaz.{Applicative, Foldable, IList, Monad, NonEmptyList}
 
 object AssocSearch {
 
@@ -27,10 +27,10 @@ object AssocSearch {
       ls <- sitesOfF(p) >>>= { variable[Site].oneOf(_:_*).inject[Vocabulary] }
 
       // promise a binding to the right
-      bnd <- promiseF[Binding].inject[Vocabulary]
+      bnd <- promise[Binding].inject[Vocabulary]
 
       // promise next Elem
-      lNext <- promiseF[LeftConnected].inject[Vocabulary]
+      lNext <- promise[LeftConnected].inject[Vocabulary]
 
       left = LeftEnd(p, ls, bnd, lNext)
 
@@ -41,7 +41,7 @@ object AssocSearch {
       rs <- sitesOfF(q) >>>= { variable[Site].oneOf(_:_*).inject[Vocabulary] }
 
       // promise previous Elem
-      rPrev <- promiseF[RightConnected].inject[Vocabulary]
+      rPrev <- promise[RightConnected].inject[Vocabulary]
 
       right = RightEnd(q, rs, rPrev)
 
@@ -80,20 +80,20 @@ object AssocSearch {
     } yield ()
 
   private implicit val inj = implicitly[InjectK[protein.CostL, Vocabulary]]
-  private def connectVia(leftTail: NonEmptyList[RightConnected], rightTail: NonEmptyList[LeftConnected], b: capability.Binding): FreeK[Vocabulary, Unit] = {
+  private def connectVia(leftTail: NonEmptyList[RightConnected], rightTail: NonEmptyList[LeftConnected], b: Binding): FreeK[Vocabulary, Unit] = {
     // in any case, complete the binding in the left tip and
     // set the right-bound site of left tip to the one from the found binding
-    completeF(leftTail.head.bindingToRight, b) >>>
-    set(leftTail.head.toRight, b.left.s).inject[Vocabulary] >> {
+    complete(leftTail.head.bindingToRight, b) >>>
+    set(leftTail.head.toRight, b.leftS).inject[Vocabulary] >> {
 
       // case 1: the binding connects the tips
       val branch1 =
-        if(rightTail.head.protein == b.right.p.p) Some(
+        if(rightTail.head.protein == b.right) Some(
           // unify the binding site of the right tip
-          set(rightTail.head.toLeft, b.right.s) >>>
+          set(rightTail.head.toLeft, b.rightS) >>>
           // set the pointers
-          completeF(leftTail.head.right, rightTail.head).inject[Vocabulary] >>
-          completeF(rightTail.head.left, leftTail.head).inject[Vocabulary]
+          complete(leftTail.head.right, rightTail.head).inject[Vocabulary] >>
+          complete(rightTail.head.left, leftTail.head).inject[Vocabulary]
         ) else None
 
       // case 2: make the neighbor the new left tip and add distinctness constraints
@@ -101,19 +101,19 @@ object AssocSearch {
         // penalize the additional element of the scaffold
         _ <- costF(complexity(10)).inject[Vocabulary]
         // set the left-bound site of the mid-point according to the found binding
-        mls <- variable[Site].oneOf(b.right.s).inject[Vocabulary]
+        mls <- variable[Site].oneOf(b.rightS).inject[Vocabulary]
         // initialize right-bound site
-        mrs <- sitesOfF(b.right.p.p) >>>= { ss => variable[Site].oneOf(ss.filter(_ != b.right.s): _*).inject[Vocabulary] }
+        mrs <- sitesOfF(b.right) >>>= { ss => variable[Site].oneOf(ss.filter(_ != b.rightS): _*).inject[Vocabulary] }
         // promise binding to the right
-        bnd <- promiseF[Binding].inject[Vocabulary]
+        bnd <- promise[Binding].inject[Vocabulary]
         // promise the neighbors
-        mPrev <- promiseF[RightConnected].inject[Vocabulary]
-        mNext <- promiseF[LeftConnected].inject[Vocabulary]
+        mPrev <- promise[RightConnected].inject[Vocabulary]
+        mNext <- promise[LeftConnected].inject[Vocabulary]
         // instantiate the mid-point
-        mid = MidPoint(b.right.p.p, mrs, bnd, mNext, mls, mPrev)
+        mid = MidPoint(b.right, mrs, bnd, mNext, mls, mPrev)
         // connect to the left tip
-        _ <- completeF(leftTail.head.right, mid).inject[Vocabulary]
-        _ <- completeF(mPrev, leftTail.head).inject[Vocabulary]
+        _ <- complete(leftTail.head.right, mid).inject[Vocabulary]
+        _ <- complete(mPrev, leftTail.head).inject[Vocabulary]
         // add distinctness constraints to make sure the mid-point is different from all other elements in the chain
         _ <- distinctFromAll(mid, leftTail)
         _ <- distinctFromAll(mid, rightTail)
@@ -165,17 +165,17 @@ object AssocSearch {
 
   private def competitiveBinding0(competitor: Protein, bnd: Binding): Cont[CompetitiveBinding] =
     branchC(
-      competitiveBinding1(competitor, bnd.left) map { competingBinding => CompetitiveBinding(Binding(bnd.right, competingBinding.right), competingBinding.left) },
-      competitiveBinding1(competitor, bnd.right) map { competingBinding => CompetitiveBinding(Binding(bnd.left, competingBinding.right), competingBinding.left) }
+      competitiveBinding1(competitor, bnd.leftPattern) map { competingBinding => CompetitiveBinding(bnd.flip, competingBinding) },
+      competitiveBinding1(competitor, bnd.rightPattern) map { competingBinding => CompetitiveBinding(bnd, competingBinding) }
     ).flatten
 
-  private def competitiveBinding1(competitor: Protein, bp: BindingPartner): Cont[Binding] =
+  private def competitiveBinding1(competitor: Protein, bp: BindingPartnerPattern): Cont[Binding] =
     Cont.wrapEffect(for {
       neighbors0 <- bindingsOfF(competitor).inject[Vocabulary]
       neighbors = neighbors0 filter { bnd =>
-        bnd.right.p.p == bp.p.p &&
-          bnd.right.s == bp.s &&
-          (bnd.right.p.mods combine bp.p.mods).isDefined
+        bnd.right == bp.p.protein &&
+          bnd.rightS == bp.s &&
+          (bnd.rightPattern.p.mods combine bp.p.mods).isDefined
       }
       bndRef <- branch(neighbors:_*)
     } yield bndRef.asCont)

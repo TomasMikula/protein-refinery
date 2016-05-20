@@ -1,6 +1,4 @@
-package protein.capability
-
-import protein.mechanism.{ProteinModifications, Protein, Site}
+package protein.mechanism
 
 case class BindingPartner(p: ModifiedProtein, s: Site)
 

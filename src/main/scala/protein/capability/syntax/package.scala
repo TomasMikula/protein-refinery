@@ -1,18 +1,20 @@
 package protein.capability
 
 import scala.language.implicitConversions
+import protein.capability.AgentsPattern._
+import protein.mechanism.{Binding, Protein, ProteinModifications, Site, SiteState}
 
-import protein.mechanism.{SiteState, ProteinModifications, Protein, Site}
+import scalaz.{NonEmptyList, State}
 
 package object syntax {
 
   implicit class SymbolOps(sym: Symbol) {
 
-    def apply(ss: (Site, SiteState)*): ModifiedProtein =
-      ModifiedProtein(Protein(sym), ProteinModifications(ss.toMap))
+    def apply(ss: (Site, SiteState)*): ProteinPattern =
+      ProteinPattern(Protein(sym), ProteinModifications(ss.toMap))
 
-    def @@ (s: Site): BindingPartner = BindingPartner(
-      ModifiedProtein(Protein(sym), ProteinModifications.noModifications),
+    def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(
+      ProteinPattern(Protein(sym), ProteinModifications.noModifications),
       s
     )
 
@@ -20,14 +22,19 @@ package object syntax {
 
   }
 
-  implicit class ModifiedProteinOps(p: ModifiedProtein) {
+  implicit class ProteinPatternOps(p: ProteinPattern) {
 
-    def @@ (s: Site): BindingPartner = BindingPartner(p, s)
+    def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(p, s)
 
   }
 
-  implicit class BindingPartnerOps(bp: BindingPartner) {
-    def binds(that: BindingPartner): Binding = Binding(bp, that)
+  implicit class BindingPartnerPatternOps(bp: BindingPartnerPattern) {
+    def binds(that: BindingPartnerPattern): Binding = (for {
+      i <- addAgent(bp.p)
+      j <- addAgent(that.p)
+      lhs <- State.get[AgentsPattern]
+      a = Link(i, bp.s, j, that.s)
+    } yield Binding(Rule(lhs, NonEmptyList(a)), i, j, bp.s, that.s)).eval(AgentsPattern.empty)
   }
 
   implicit def symbolToProtein(sym: Symbol): Protein = Protein(sym)

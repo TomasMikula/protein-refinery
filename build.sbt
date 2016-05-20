@@ -36,12 +36,11 @@ libraryDependencies ++= Seq(
   "com.github.tomasmikula" %% "nutcracker" % "0.1-SNAPSHOT",
   "com.lihaoyi" %% "acyclic" % "0.1.3" % "provided",
   "com.github.mpilquist" %% "simulacrum" % "0.7.0",
-  "org.spire-math" %% "algebra" % "0.3.2-SNAPSHOT",
-  "org.spire-math" %% "algebra-std" % "0.3.2-SNAPSHOT",
+  "org.spire-math" %% "algebra" % "0.4.2",
+  "org.spire-math" %% "algebra-std" % "0.4.2",
   "org.scalaz" %% "scalaz-core" % "7.2.1",
   "com.chuusai" %% "shapeless" % "2.3.0",
   "com.github.julien-truffaut"  %%  "monocle-core" % "1.2.0",
-  "org.principled" %% "principled" % "0.1-SNAPSHOT",
   "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test",
   "org.scalacheck" %% "scalacheck" % "1.12.4"
 )

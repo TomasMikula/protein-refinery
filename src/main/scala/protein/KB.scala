@@ -1,10 +1,9 @@
 package protein
 
 import scala.language.higherKinds
-
 import nutcracker.util.~>>
 import protein.KBLang._
-import protein.mechanism.{Protein, ProteinModifications, Site}
+import protein.mechanism.{Binding, Protein, ProteinModifications, Site}
 
 import scalaz.Reader
 
@@ -15,7 +14,7 @@ trait KB {
 
   def sitesOf(p: Protein): Seq[Site]
 
-  def neighborsOf(p: Protein): Seq[capability.Binding]
+  def neighborsOf(p: Protein): Seq[Binding]
 
   def phosphoSites(kinase: Protein, substrate: Protein): Seq[Site]
 

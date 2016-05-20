@@ -1,7 +1,6 @@
 package protein
 
-import nutcracker.{PropagationLang, Domain}
-import nutcracker.Domain.Values
+import nutcracker.{Dom, Meet, PropagationLang}
 import nutcracker.util.InjectK
 import protein.mechanism.ProteinModifications
 
@@ -9,30 +8,22 @@ package object search {
 
   type ProteinModificationsLattice = Option[ProteinModifications]
 
-  implicit def proteinModificationsLattice: Domain[ProteinModifications, ProteinModificationsLattice] =
-    new Domain[ProteinModifications, ProteinModificationsLattice] {
-      def values(d: ProteinModificationsLattice): Values[ProteinModifications, ProteinModificationsLattice] = d match {
-        case None => Domain.Empty()
-        case Some(a) => Domain.Just(a)
+  implicit def proteinModificationsLattice: Dom[ProteinModificationsLattice, Meet[ProteinModificationsLattice], Unit] =
+    new Dom[ProteinModificationsLattice, Meet[ProteinModificationsLattice], Unit] {
+      override def assess(d: ProteinModificationsLattice): Dom.Status[Meet[ProteinModificationsLattice]] = d match {
+        case None => Dom.Failed
+        case Some(a) => Dom.Refined
       }
 
-      def sizeUpperBound(d: ProteinModificationsLattice): Option[Long] = d match {
-        case None => Some(0L)
-        case Some(a) => Some(1L)
-      }
-
-      def singleton(a: ProteinModifications): ProteinModificationsLattice = Some(a)
-
-      def refine(x: ProteinModificationsLattice, y: ProteinModificationsLattice): Option[ProteinModificationsLattice] = {
-        val res = meet(x, y)
-        if (res == x) None else Some(res)
-      }
-
-      def meet(x: ProteinModificationsLattice, y: ProteinModificationsLattice): ProteinModificationsLattice =
-        (x, y) match {
+      override def update(d: ProteinModificationsLattice, u: Meet[ProteinModificationsLattice]): Option[(ProteinModificationsLattice, Unit)] = {
+        val res = (d, u.value) match {
           case (Some(p), Some(q)) => p combine q
           case _ => None
         }
+        if(res == d) None else Some((res, ()))
+      }
+
+      override def combineDiffs(d1: Unit, d2: Unit): Unit = ()
     }
 
   implicit val injP = implicitly[InjectK[PropagationLang, Vocabulary]]

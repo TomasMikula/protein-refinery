@@ -1,16 +1,17 @@
 package protein.search
 
 import algebra.std.set._
+import nutcracker.DecSet.DecSetRef
 import nutcracker._
 import nutcracker.PropagationLang._
 import nutcracker.util.FreeK
-import protein.{mechanism, Vocabulary}
+import protein.{Vocabulary, mechanism}
 import protein.KBLang._
 import protein.mechanism.{CompetitiveBinding, Protein, Site}
 
 case class Phosphorylation(
   assoc: Assoc, // left end is the kinase, right end is the substrate
-  phosphoSite: DomRef[Site, Set[Site]] // substrate's site being phosphorylated
+  phosphoSite: DecSetRef[Site] // substrate's site being phosphorylated
 )
 
 object PhosphorylationSearch {
@@ -35,11 +36,11 @@ object PhosphorylationSearch {
   }
 
   def fetch(ph: Phosphorylation): FreeK[Vocabulary, Promised[mechanism.Phosphorylation]] = for {
-    pr <- promiseF[mechanism.Phosphorylation].inject[Vocabulary]
+    pr <- promise[mechanism.Phosphorylation].inject[Vocabulary]
     _ <- AssocSearch.whenComplete(ph.assoc) { assoc =>
-      whenResolvedF(ph.phosphoSite) { s =>
-        completeF(pr, mechanism.Phosphorylation(assoc, s)).inject[Vocabulary]
-      }
+      whenResolved(ph.phosphoSite).exec(
+        s => complete(pr, mechanism.Phosphorylation(assoc, s)).inject[Vocabulary]
+      )
     }
   } yield pr
 

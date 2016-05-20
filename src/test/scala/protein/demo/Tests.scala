@@ -1,33 +1,30 @@
 package protein.demo
 
-import nutcracker.PropagationLang._
+import nutcracker._
 import org.scalatest.FunSuite
 import protein._
-import protein.capability.Binding
 import protein.capability.syntax._
-import protein.mechanism.{Assoc, CompetitiveBinding, Phosphorylation, Protein, ProteinModifications, Site}
+import protein.mechanism.{Assoc, Binding, CompetitiveBinding, Phosphorylation, Protein, ProteinModifications, Site}
 import protein.search.PhosphorylationSearch
 
 class Tests extends FunSuite {
 
   object TestKB extends KB {
 
-    private val bindings = List[Binding](
-      ('A @@ 'b) binds ('B @@ 'v),
-      ('A('z~"p") @@ 'c) binds ('C @@ 'a),
-      ('A @@ 'e) binds ('E @@ 'a),
-      ('C @@ 'a) binds ('E @@ 'c),
-      ('D @@ 'n) binds ('E @@ 'c),
-      ('D @@ 'n) binds ('X @@ 'c),
-      ('B @@ 'v) binds ('Y @@ 'b),
-      ('X @@ 'y) binds ('Y @@ 'x),
-      ('X @@ 'c) binds ('C @@ 'a)
+    val bindings = List[Binding](
+      /* 00 */ ('A @@ 'b) binds ('B @@ 'v),
+      /* 01 */ ('A('z~"p") @@ 'c) binds ('C @@ 'a),
+      /* 02 */ ('A @@ 'e) binds ('E @@ 'a),
+      /* 03 */ ('C @@ 'a) binds ('E @@ 'c),
+      /* 04 */ ('D @@ 'n) binds ('E @@ 'c),
+      /* 05 */ ('D @@ 'n) binds ('X @@ 'c),
+      /* 06 */ ('B @@ 'v) binds ('Y @@ 'b),
+      /* 07 */ ('X @@ 'y) binds ('Y @@ 'x),
+      /* 08 */ ('X @@ 'c) binds ('C @@ 'a)
     )
 
-    def sitesOf(p: Protein): Seq[Site] = (
-      (bindings.iterator filter { _.left.p.p == p } map { _.left.s }).toSet ++
-        (bindings.iterator filter { _.right.p.p == p } map { _.right.s })
-      ).toSeq
+    def sitesOf(p: Protein): Seq[Site] =
+      (bindings.iterator map (_.witness.mentionedSitesOf(p))).reduce(_ union _).toSeq
 
     def phosphoSites(kinase: Protein, substrate: Protein): Seq[Site] = (kinase, substrate) match {
       case (Protein('C), Protein('B)) => Seq('s)
@@ -35,11 +32,12 @@ class Tests extends FunSuite {
     }
 
     def neighborsOf(p: Protein): Seq[Binding] =
-      (bindings filter { _.left.p.p == p  }) ++
-        (bindings filter { _.right.p.p == p } map { _.flip })
+      bindings.iterator.map(r => r.witness.linksAgentTo(p)).flatten.toSeq
 
     def modsIncreasingKinaseActivity(kinase: Protein): Seq[ProteinModifications] = Seq()
   }
+
+  def bindings(i: Int) = TestKB.bindings(i)
 
   val Solver = protein.bfsSolver
 
@@ -47,9 +45,9 @@ class Tests extends FunSuite {
     val problem = PhosphorylationSearch.search('C, 'B)
     val solutions = Solver.solutions(problem).toStream.run(TestKB).toSet
     val expected = Set(
-      (Phosphorylation(Assoc(List[Binding](('C @@ 'a) binds ('A('z~"p") @@ 'c), ('A @@ 'b) binds ('B @@ 'v))), Site("s")), Cost.complexity(10)),
-      (Phosphorylation(Assoc(List[Binding](('C @@ 'a) binds ('E @@ 'c), ('E @@ 'a) binds ('A @@ 'e), ('A @@ 'b) binds ('B @@ 'v))), Site("s")), Cost.complexity(20)),
-      (Phosphorylation(Assoc(List[Binding](('C @@ 'a) binds ('X @@ 'c), ('X @@ 'y) binds ('Y @@ 'x), ('Y @@ 'b) binds ('B @@ 'v))), Site("s")), Cost.complexity(20))
+      (Phosphorylation(Assoc(List[Binding](bindings(1).flip, bindings(0))), Site("s")), Cost.complexity(10)),
+      (Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), Cost.complexity(20)),
+      (Phosphorylation(Assoc(List[Binding](bindings(8).flip, bindings(7), bindings(6).flip)), Site("s")), Cost.complexity(20))
     )
     assertResult(expected)(solutions)
   }
@@ -66,8 +64,8 @@ class Tests extends FunSuite {
     val solutions = Solver.solutions(problem).toStream.run(TestKB).toSet
 
     val expected = Set[((Phosphorylation, CompetitiveBinding), Cost)](
-      ((Phosphorylation(Assoc(List[Binding](('C @@ 'a) binds ('E @@ 'c), ('E @@ 'a) binds ('A @@ 'e), ('A @@ 'b) binds ('B @@ 'v))), Site("s")), CompetitiveBinding(('C @@ 'a) binds ('E @@ 'c), ('D @@ 'n))), Cost.complexity(20)),
-      ((Phosphorylation(Assoc(List[Binding](('C @@ 'a) binds ('X @@ 'c), ('X @@ 'y) binds ('Y @@ 'x), ('Y @@ 'b) binds ('B @@ 'v))), Site("s")), CompetitiveBinding(('C @@ 'a) binds ('X @@ 'c), ('D @@ 'n))), Cost.complexity(20))
+      ((Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), CompetitiveBinding(bindings(3), bindings(4))), Cost.complexity(20)),
+      ((Phosphorylation(Assoc(List[Binding](bindings(8).flip, bindings(7), bindings(6).flip)), Site("s")), CompetitiveBinding(bindings(8).flip, bindings(5))), Cost.complexity(20))
     )
 
     assertResult(expected)(solutions)

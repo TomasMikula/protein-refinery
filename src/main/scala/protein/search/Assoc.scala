@@ -1,10 +1,8 @@
 package protein.search
 
-import nutcracker.DomRef
+import nutcracker.DecSet.DecSetRef
 import nutcracker.Promised
-import protein.capability.Binding
-import protein.mechanism.{Site, Protein}
-
+import protein.mechanism.{Binding, Protein, Site}
 import Assoc._
 
 case class Assoc(
@@ -19,35 +17,35 @@ object Assoc {
   }
 
   sealed trait RightConnected extends Elem {
-    def toRight: DomRef[Site, Set[Site]]
+    def toRight: DecSetRef[Site]
     def bindingToRight: Promised[Binding]
     def right: Promised[LeftConnected]
   }
 
   sealed trait LeftConnected extends Elem {
-    def toLeft: DomRef[Site, Set[Site]]
+    def toLeft: DecSetRef[Site]
     def left: Promised[RightConnected]
   }
 
   final case class LeftEnd(
     protein: Protein,
-    toRight: DomRef[Site, Set[Site]],
+    toRight: DecSetRef[Site],
     bindingToRight: Promised[Binding],
     right: Promised[LeftConnected]
   ) extends RightConnected
 
   final case class MidPoint(
     protein: Protein,
-    toRight: DomRef[Site, Set[Site]],
+    toRight: DecSetRef[Site],
     bindingToRight: Promised[Binding],
     right: Promised[LeftConnected],
-    toLeft: DomRef[Site, Set[Site]],
+    toLeft: DecSetRef[Site],
     left: Promised[RightConnected]
   ) extends RightConnected with LeftConnected
 
   final case class RightEnd(
     protein: Protein,
-    toLeft: DomRef[Site, Set[Site]],
+    toLeft: DecSetRef[Site],
     left: Promised[RightConnected]
   ) extends LeftConnected
 
