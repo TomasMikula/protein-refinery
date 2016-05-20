@@ -1,6 +1,5 @@
 package protein.search
 
-import algebra.std.set._
 import nutcracker.DecSet.DecSetRef
 import nutcracker._
 import nutcracker.PropagationLang._

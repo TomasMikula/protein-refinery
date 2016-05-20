@@ -2,15 +2,13 @@ name := "protein"
 
 version := "0.1-SNAPSHOT"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.8"
 
 resolvers += "bintray/non" at "http://dl.bintray.com/non/maven"
 resolvers += Resolver.sonatypeRepo("releases")
 
 autoCompilerPlugins := true
-addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.3")
 addCompilerPlugin("org.spire-math" % "kind-projector" % "0.6.0" cross CrossVersion.binary)
-addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
 
 scalastyleFailOnError := true
 
@@ -34,15 +32,10 @@ javacOptions ++= Seq(
 
 libraryDependencies ++= Seq(
   "com.github.tomasmikula" %% "nutcracker" % "0.1-SNAPSHOT",
-  "com.lihaoyi" %% "acyclic" % "0.1.3" % "provided",
-  "com.github.mpilquist" %% "simulacrum" % "0.7.0",
   "org.spire-math" %% "algebra" % "0.4.2",
   "org.spire-math" %% "algebra-std" % "0.4.2",
   "org.scalaz" %% "scalaz-core" % "7.2.1",
-  "com.chuusai" %% "shapeless" % "2.3.0",
-  "com.github.julien-truffaut"  %%  "monocle-core" % "1.2.0",
-  "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.12.4"
+  "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 )
 
 fork := true

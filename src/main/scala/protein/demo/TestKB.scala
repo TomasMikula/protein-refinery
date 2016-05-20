@@ -1,7 +1,6 @@
 package protein.demo
 
 import protein.KB
-import protein.capability.{Link, Modify, Replace, Rule, Unlink}
 import protein.capability.syntax._
 import protein.mechanism.{Binding, Protein, ProteinModifications, Site}
 
