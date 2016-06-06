@@ -1,6 +1,6 @@
 name := "protein"
 
-version := "0.1-SNAPSHOT"
+version := "0.1"
 
 scalaVersion := "2.11.8"
 
@@ -31,7 +31,7 @@ javacOptions ++= Seq(
   "-Xlint:deprecation")
 
 libraryDependencies ++= Seq(
-  "com.github.tomasmikula" %% "nutcracker" % "0.1-SNAPSHOT",
+  "com.github.tomasmikula" %% "nutcracker" % "0.1",
   "org.spire-math" %% "algebra" % "0.4.2",
   "org.spire-math" %% "algebra-std" % "0.4.2",
   "org.scalaz" %% "scalaz-core" % "7.2.1",
