@@ -1,10 +1,11 @@
 package protein.demo
 
-import protein.KB
+import nutcracker.util.{FreeK, Lst, _}
+import protein._
 import protein.capability.syntax._
 import protein.mechanism.{Binding, Protein, ProteinModifications, Site}
 
-object TestKB extends KB {
+object TestKB extends KB[FreeK[Vocabulary, ?]] {
 
   val bindings = List[Binding](
     /* 00 */ ('A @@ 'b) binds ('B @@ 'v),
@@ -18,17 +19,19 @@ object TestKB extends KB {
     /* 08 */ ('X @@ 'c) binds ('C @@ 'a)
   )
 
-  def sitesOf(p: Protein): Seq[Site] =
-    (bindings.iterator map (_.witness.mentionedSitesOf(p))).reduce(_ union _).toSeq
-
-  def phosphoSites(kinase: Protein, substrate: Protein): Seq[Site] = (kinase, substrate) match {
-    case (Protein('C), Protein('B)) => Seq('s)
-    case _ => Seq()
+  def sitesOf(p: Protein)(f: Site => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) = {
+    val sites = (bindings.iterator map (_.witness.mentionedSitesOf(p))).reduce(_ union _)
+    (Lst.singleton(FreeK.traverse_(sites)(f)), this, ())
   }
 
-  def neighborsOf(p: Protein): Seq[Binding] =
-    bindings.iterator.map(r => r.witness.linksAgentTo(p)).flatten.toSeq
+  def phosphoSites(kinase: Protein, substrate: Protein)(f: Site => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) =
+    (kinase, substrate) match {
+      case (Protein('C), Protein('B)) => (Lst.singleton(f('s)), this, ())
+      case _ => (Lst.empty, this, ())
+    }
 
-  def modsIncreasingKinaseActivity(kinase: Protein): Seq[ProteinModifications] = Seq()
+  def neighborsOf(p: Protein)(f: Binding => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) =
+    (Lst.singleton(FreeK.traverse_(bindings.iterator.map(r => r.witness.linksAgentTo(p)).flatten.toSeq)(f)), this, ())
 
+  def modsIncreasingKinaseActivity(kinase: Protein)(f: ProteinModifications => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) = ???
 }

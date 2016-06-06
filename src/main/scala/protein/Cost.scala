@@ -1,6 +1,6 @@
 package protein
 
-import nutcracker.algebraic.NonDecreasingMonoid
+import nutcracker.algebraic.{NonDecreasingMonoid, OrderPreservingMonoid}
 
 import scalaz.Ordering
 
@@ -15,20 +15,21 @@ object Cost {
   def speculation(x: Long) = Cost(0, x, 0)
   def vagueness(x: Long) = Cost(0, 0, x)
 
-  implicit val nonDecreasingMonoid: NonDecreasingMonoid[Cost] = new NonDecreasingMonoid[Cost] {
-    def zero: Cost = Cost(0, 0, 0)
+  implicit val orderedMonoid: NonDecreasingMonoid[Cost] with OrderPreservingMonoid[Cost] =
+    new NonDecreasingMonoid[Cost] with OrderPreservingMonoid[Cost] {
+      def zero: Cost = Cost(0, 0, 0)
 
-    def append(c1: Cost, c2: => Cost): Cost = Cost(
-      c1.complexity + c2.complexity,
-      c1.speculation + c2.speculation,
-      c1.vagueness + c2.vagueness
-    )
+      def append(c1: Cost, c2: => Cost): Cost = Cost(
+        c1.complexity + c2.complexity,
+        c1.speculation + c2.speculation,
+        c1.vagueness + c2.vagueness
+      )
 
-    def order(x: Cost, y: Cost): Ordering = {
-      import Ordering._
-      val sx = x.complexity + x.speculation + x.vagueness
-      val sy = y.complexity + y.speculation + y.vagueness
-      if(sx < sy) LT else if (sx == sy) EQ else GT
+      def order(x: Cost, y: Cost): Ordering = {
+        import Ordering._
+        val sx = x.complexity + x.speculation + x.vagueness
+        val sy = y.complexity + y.speculation + y.vagueness
+        if(sx < sy) LT else if (sx == sy) EQ else GT
+      }
     }
-  }
 }
