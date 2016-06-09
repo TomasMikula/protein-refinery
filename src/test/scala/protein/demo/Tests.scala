@@ -24,21 +24,16 @@ class Tests extends FunSuite {
       /* 08 */ ('X @@ 'c) binds ('C @@ 'a)
     )
 
-    def sitesOf(p: Protein)(f: Site => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) = {
-      val sites = (bindings.iterator map (_.witness.mentionedSitesOf(p))).reduce(_ union _)
-      (Lst.singleton(FreeK.traverse_(sites)(f)), this, ())
-    }
-
-    def phosphoSites(kinase: Protein, substrate: Protein)(f: Site => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) =
+    override def phosphoSites(kinase: Protein, substrate: Protein)(f: Site => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) =
       (kinase, substrate) match {
         case (Protein('C), Protein('B)) => (Lst.singleton(f('s)), this, ())
         case _ => (Lst.empty, this, ())
       }
 
-    def neighborsOf(p: Protein)(f: Binding => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) =
+    override def neighborsOf(p: Protein)(f: Binding => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) =
       (Lst.singleton(FreeK.traverse_(bindings.iterator.map(r => r.witness.linksAgentTo(p)).flatten.toSeq)(f)), this, ())
 
-    def modsIncreasingKinaseActivity(kinase: Protein)(f: ProteinModifications => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) = ???
+    override def modsIncreasingKinaseActivity(kinase: Protein)(f: ProteinModifications => FreeK[Vocabulary, Unit]): (Lst[FreeK[Vocabulary, Unit]], KB[FreeK[Vocabulary, ?]], Unit) = ???
   }
 
   def bindings(i: Int) = TestKB.bindings(i)
