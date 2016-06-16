@@ -1,8 +1,9 @@
 import scala.language.higherKinds
 import monocle.Lens
 import nutcracker._
-import nutcracker.util.{ContF, CoproductK, FreeK, FreeKT, InjectK, ProductK}
-import nutcracker.util.ProductK._
+import nutcracker.util.{ContF, FreeK, FreeKT, InjectK}
+import nutcracker.util.CoproductK._
+import nutcracker.util.KList._
 
 import scalaz.{|>=|, ~>}
 import scalaz.Id._
@@ -11,14 +12,12 @@ package object protein {
   type DeferL[K[_], A] = DeferLang[Cost, K, A]
   type DeferS[K] = DeferStore[Cost, K]
 
-  type Vocabulary0[K[_], A] = CoproductK[PropagationLang, DeferL, K, A]
-  type Vocabulary[K[_], A] = CoproductK[KBLang, Vocabulary0, K, A]
-  type State0[K] = ProductK[PropagationStore, DeferS, K]
-  type State[K] = ProductK[KB, State0, K]
+  type Vocabulary[K[_], A] = (KBLang :+: PropagationLang  :++: DeferL)#Out[K, A]
+  type State[K]            = (KB     :*: PropagationStore :**: DeferS)#Out[K]
 
   type Prg[A] = FreeK[Vocabulary, A]
 
-  val interpreter = (KB.interpreter :*: PropagationStore.interpreter :*: DeferStore.interpreter[Cost]).freeInstance
+  val interpreter = (KB.interpreter :&: PropagationStore.interpreter :&&: DeferStore.interpreter[Cost]).freeInstance
   def propStore[K]: Lens[State[K], PropagationStore[K]] = implicitly[Lens[State[K], PropagationStore[K]]]
   def cost[K]: Lens[State[K], DeferS[K]] = implicitly[Lens[State[K], DeferS[K]]]
 
@@ -29,8 +28,7 @@ package object protein {
   private def fetchPromised: Promised ~> (State[PU] => ?) = new ~>[Promised, State[PU] => ?] {
     def apply[A](pa: Promised[A]): (State[PU] => A) = s => propStore[PU].get(s).fetchResult(pa).get
   }
-  private def emptyState0: State0[PU] = PropagationStore.empty[PU] :*: (DeferStore.empty[Cost, PU]: DeferS[PU])
-  def initialState(kb: KB[PU]): State[PU] = kb :*: emptyState0
+  def initialState(kb: KB[PU]): State[PU] = kb :*: PropagationStore.empty[PU] :**: (DeferStore.empty[Cost, PU]: DeferS[PU])
 
   def dfsSolver(kb: KB[PU]): DFSSolver[Vocabulary, State, Id, Promised] =
     new DFSSolver[Vocabulary, State, Id, Promised](interpreter, initialState(kb), naiveAssess, fetchPromised)
