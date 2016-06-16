@@ -16,7 +16,7 @@ final case class KB[K] private(private val db: DB[K]) extends AnyVal {
   import KB._
 
   def neighborsOf(p: Protein)(f: Binding => K): (Lst[K], KB[K], Unit) =
-    db.query(Tables.Rules)(rule => rule.linksAgentTo(p).toList.map(f) rev_::: Lst.empty) match {
+    db.query(Tables.Rules)(rule => (rule.linksAgentTo(p), f) mapRev_::: Lst.empty) match {
       case (db, ks) => (ks, copy(db = db), ())
     }
 
