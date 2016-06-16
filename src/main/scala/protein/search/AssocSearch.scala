@@ -12,11 +12,11 @@ import scalaz.syntax.monad._
 
 object AssocSearch {
 
-  def search(p: Protein, q: Protein): FreeK[Vocabulary, IncSetRef[Assoc]] =
+  def search(p: Protein, q: Protein): Prg[IncSetRef[Assoc]] =
     IncSet.collect(search0(Nil, p, q, Nil))
 
   private def search0(leftTail: List[Binding], p: Protein, q: Protein, rightTail: List[Binding]): Cont[Assoc] =
-    bindingsOfC[Vocabulary](p) flatMap { b =>
+    bindingsOfC[DSL](p) flatMap { b =>
       if(leftTail.nonEmpty && b.leftS == leftTail.head.rightS) Cont.noop
       else if(leftTail.contains(b) || rightTail.contains(b)) Cont.noop
       else {
@@ -31,7 +31,7 @@ object AssocSearch {
     }
 
 
-  def negativeInfluence(p: Protein, a: Assoc): FreeK[Vocabulary, IncSetRef[CompetitiveBinding]] =
+  def negativeInfluence(p: Protein, a: Assoc): Prg[IncSetRef[CompetitiveBinding]] =
     IncSet.collectAll(a.bindings.map(b => competitiveBindings0(p, b)))
 
   def negativeInfluenceC(p: Protein, a: Assoc): Cont[CompetitiveBinding] =
@@ -44,7 +44,7 @@ object AssocSearch {
   }
 
   private def competitiveBindings1(competitor: Protein, bp: BindingPartnerPattern): Cont[Binding] =
-    ContF.filter(bindingsOfC[Vocabulary](competitor)) { bnd =>
+    ContF.filter(bindingsOfC[DSL](competitor)) { bnd =>
       bnd.right == bp.p.protein &&
       bnd.rightS == bp.s &&
       (bnd.rightPattern.p.mods combine bp.p.mods).isDefined

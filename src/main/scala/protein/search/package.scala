@@ -28,5 +28,5 @@ package object search {
       override def combineDeltas(d1: Unit, d2: Unit): Unit = ()
     }
 
-  implicit val injP = implicitly[InjectK[PropagationLang, Vocabulary]]
+  implicit val injP = implicitly[InjectK[PropagationLang, DSL]]
 }
