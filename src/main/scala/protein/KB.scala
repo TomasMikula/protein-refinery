@@ -21,10 +21,8 @@ final case class KB[K] private(private val db: DB[K]) extends AnyVal {
   def addPhosphoSite(kinase: Protein, substrate: Protein, site: Site): (Lst[K], KB[K], Unit) =
     db.insert(Tables.PhosphoSites, (kinase, substrate, site)) match { case (db, ks) => (ks, KB(db), ()) }
 
-  def neighborsOf(p: Protein)(f: Binding => K): (Lst[K], KB[K], Unit) =
-    db.query(Tables.Rules)(rule => (rule.linksAgentTo(p), f) mapRev_::: Lst.empty) match {
-      case (db, ks) => (ks, KB(db), ())
-    }
+  def rules(f: Rule => Lst[K]): (Lst[K], KB[K], Unit) =
+    db.query(Tables.Rules)(f) match { case (db, ks) => (ks, KB(db), ()) }
 
   def phosphoSites(kinase: Protein, substrate: Protein)(f: Site => K): (Lst[K], KB[K], Unit) =
     db.query(Tables.PhosphoSites)(kss => {
@@ -57,7 +55,7 @@ object KB {
     def apply[K[_], A](op: KBLang[K, A]): WriterState[Lst[K[Unit]], KB[K[Unit]], A] = WriterState(kb => op match {
       case AddRule(r) => kb.addRule(r)
       case AddPhosphoSite(kin, sub, s) => kb.addPhosphoSite(kin, sub, s)
-      case BindingsOf(p, f) => kb.neighborsOf(p)(f)
+      case Rules(f) => kb.rules(f)
       case PhosphoSites(k, s, f) => kb.phosphoSites(k, s)(f)
     })
   }
