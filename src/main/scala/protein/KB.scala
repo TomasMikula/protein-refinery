@@ -15,9 +15,15 @@ import protein.mechanism.{Binding, Protein, ProteinModifications, Site}
 final case class KB[K] private(private val db: DB[K]) extends AnyVal {
   import KB._
 
+  def addRule(r: Rule): (Lst[K], KB[K], Unit) =
+    db.insert(Tables.Rules, r) match { case (db, ks) => (ks, KB(db), ()) }
+
+  def addPhosphoSite(kinase: Protein, substrate: Protein, site: Site): (Lst[K], KB[K], Unit) =
+    db.insert(Tables.PhosphoSites, (kinase, substrate, site)) match { case (db, ks) => (ks, KB(db), ()) }
+
   def neighborsOf(p: Protein)(f: Binding => K): (Lst[K], KB[K], Unit) =
     db.query(Tables.Rules)(rule => (rule.linksAgentTo(p), f) mapRev_::: Lst.empty) match {
-      case (db, ks) => (ks, copy(db = db), ())
+      case (db, ks) => (ks, KB(db), ())
     }
 
   def phosphoSites(kinase: Protein, substrate: Protein)(f: Site => K): (Lst[K], KB[K], Unit) =
@@ -25,7 +31,7 @@ final case class KB[K] private(private val db: DB[K]) extends AnyVal {
       val (kin, sub, s)  = kss
       if(kin == kinase && sub == substrate) Lst.singleton(f(s))
       else Lst.empty[K]
-    }) match { case (db, ks) => (ks, copy(db = db), ()) }
+    }) match { case (db, ks) => (ks, KB(db), ()) }
 
   def modsIncreasingKinaseActivity(kinase: Protein)(f: ProteinModifications => K): (Lst[K], KB[K], Unit) = ???
 
@@ -49,6 +55,8 @@ object KB {
 
   implicit def interpreter: Step[KBLang, KB] = new Step[KBLang, KB] {
     def apply[K[_], A](op: KBLang[K, A]): WriterState[Lst[K[Unit]], KB[K[Unit]], A] = WriterState(kb => op match {
+      case AddRule(r) => kb.addRule(r)
+      case AddPhosphoSite(kin, sub, s) => kb.addPhosphoSite(kin, sub, s)
       case BindingsOf(p, f) => kb.neighborsOf(p)(f)
       case PhosphoSites(k, s, f) => kb.phosphoSites(k, s)(f)
     })
