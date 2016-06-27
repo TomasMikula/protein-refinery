@@ -15,7 +15,7 @@ object Demo1_Phos extends App {
   val problem = PhosSearch.search('C, 'B)
 
   // output solutions
-  val (s, ref) = protein.interpreter(problem)(protein.initialState(TestKB))
+  val (s, ref) = protein.interpreterF(problem)(protein.initialState(TestKB))
   protein.fetch(ref)(s).value foreach { ph =>
     println
     println(s"Result: $ph")
@@ -37,7 +37,7 @@ object Demo2_NegInfl extends App {
   } yield (phos, ni))
 
   // output solutions
-  val (s, ref) = protein.interpreter(problem)(protein.initialState(TestKB))
+  val (s, ref) = protein.interpreterF(problem)(protein.initialState(TestKB))
   protein.fetch(ref)(s).value foreach {
     case (ph: Phosphorylation, cb: CompetitiveBinding) =>
       println

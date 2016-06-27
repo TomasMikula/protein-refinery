@@ -17,7 +17,8 @@ package object protein {
 
   type Prg[A] = FreeK[DSL, A]
 
-  val interpreter = (KB.interpreter :&: PropagationStore.interpreter :&&: DeferStore.interpreter[Cost]).freeInstance
+  val interpreter = KB.interpreter :&: PropagationStore.interpreter :&&: DeferStore.interpreter[Cost]
+  val interpreterF = interpreter.freeInstance
   def propStore[K]: Lens[State[K], PropagationStore[K]] = implicitly[Lens[State[K], PropagationStore[K]]]
   def cost[K]: Lens[State[K], DeferS[K]] = implicitly[Lens[State[K], DeferS[K]]]
 
@@ -28,10 +29,11 @@ package object protein {
   private def fetchPromised: Promised ~> (State[PU] => ?) = new ~>[Promised, State[PU] => ?] {
     def apply[A](pa: Promised[A]): (State[PU] => A) = s => propStore[PU].get(s).fetchResult(pa).get
   }
-  def initialState(kb: KB[PU]): State[PU] = kb :*: PropagationStore.empty[PU] :**: (DeferStore.empty[Cost, PU]: DeferS[PU])
+  def initialState[K](kb: KB[K]): State[K] = kb :*: PropagationStore.empty[K] :**: (DeferStore.empty[Cost, K]: DeferS[K])
+  def emptyState[K]: State[K] = initialState(KB[K]())
 
   def dfsSolver(kb: KB[PU]): DFSSolver[DSL, State, Id, Promised] =
-    new DFSSolver[DSL, State, Id, Promised](interpreter, initialState(kb), naiveAssess, fetchPromised)
+    new DFSSolver[DSL, State, Id, Promised](interpreterF, initialState(kb), naiveAssess, fetchPromised)
 
   implicit val injectDefer = InjectK[DeferL, DSL]
 

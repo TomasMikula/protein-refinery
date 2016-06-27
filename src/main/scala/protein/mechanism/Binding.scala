@@ -52,4 +52,7 @@ object Binding {
 
   def apply(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: Site, qs: Site): Binding =
     Binding0(witness, pi, qi, ps, qs)
+
+  def apply(p: Protein, ps: Site, q: Protein, qs: Site): Binding =
+    BindingPartnerPattern(p, ps) bind BindingPartnerPattern(q, qs)
 }

@@ -30,7 +30,7 @@ class Tests extends FunSuite {
     )
   )
 
-  val Interpreter = protein.interpreter
+  val Interpreter = protein.interpreterF
 
   test("Phosphorylation search") {
     val problem = PhosSearch.search('C, 'B)
@@ -48,7 +48,7 @@ class Tests extends FunSuite {
 
     val problem = IncSet.collect(for {
       phos <- PhosSearch.searchC('C, 'B)
-      ni <- PhosSearch.negativeInfluenceC('D, phos)
+      ni <- PhosSearch. negativeInfluenceC('D, phos)
     } yield (phos, ni))
 
     val (s, ref) = Interpreter(problem)(protein.initialState(TestKB))

@@ -13,10 +13,7 @@ package object syntax {
     def apply(ss: (Site, SiteState)*): ProteinPattern =
       ProteinPattern(Protein(sym), ProteinModifications(ss.toMap))
 
-    def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(
-      ProteinPattern(Protein(sym), ProteinModifications.noModifications),
-      s
-    )
+    def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(Protein(sym), s)
 
     def ~(s: SiteState): (Site, SiteState) = (Site(sym.name), s)
 
@@ -29,12 +26,7 @@ package object syntax {
   }
 
   implicit class BindingPartnerPatternOps(bp: BindingPartnerPattern) {
-    def binds(that: BindingPartnerPattern): Binding = (for {
-      i <- addAgent(bp.p)
-      j <- addAgent(that.p)
-      lhs <- State.get[AgentsPattern]
-      a = Link(i, bp.s, j, that.s)
-    } yield Binding(Rule(lhs, NonEmptyList(a)), i, j, bp.s, that.s)).eval(AgentsPattern.empty)
+    def binds(that: BindingPartnerPattern): Binding = bp bind that
   }
 
   implicit def symbolToProtein(sym: Symbol): Protein = Protein(sym)

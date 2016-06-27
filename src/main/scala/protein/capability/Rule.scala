@@ -3,10 +3,11 @@ package protein.capability
 import protein.mechanism.{Binding, Protein, Site}
 
 import scala.collection.mutable.ArrayBuffer
-import scalaz.NonEmptyList
+import scalaz.{NonEmptyList, Show}
+import scalaz.syntax.foldable._
 
 final case class Rule(lhs: AgentsPattern, actions: NonEmptyList[Action]) {
-  def rhs: AgentsPattern = ???
+  lazy val rhs: AgentsPattern = actions.foldLeft(lhs)((p, a) => p.modify(a))
   def apply(lhs: Agents): Agents = ???
   def canConsume(ptrn: AgentsPattern): Boolean = ???
   def canProduce(ptrn: AgentsPattern): Boolean = ???
@@ -54,5 +55,13 @@ final case class Rule(lhs: AgentsPattern, actions: NonEmptyList[Action]) {
       case _ => ()
     })
     buf.toSet
+  }
+
+  override def toString: String = s"$lhs -> $rhs"
+}
+
+object Rule {
+  implicit def showInstance: Show[Rule] = new Show[Rule] {
+    override def shows(r: Rule): String = r.toString
   }
 }

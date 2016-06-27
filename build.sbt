@@ -36,6 +36,7 @@ libraryDependencies ++= Seq(
   "org.spire-math" %% "algebra" % "0.4.2",
   "org.spire-math" %% "algebra-std" % "0.4.2",
   "org.scalaz" %% "scalaz-core" % "7.3.0-M3",
+  "org.reactfx" % "reactfx" % "2.0-M5",
   "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 )
 

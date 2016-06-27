@@ -18,7 +18,7 @@ final case class DB[K] private(private val tables: KMap[TableId, Table[K, ?]]) {
     DB.query(table, p).run(this)
 
   def setTable[R](id: TableId[R], t: Table[K, R]): DB[K] =
-    DB(tables.updated(id, t))
+    DB(tables.put(id)(t))
 }
 
 object DB {
@@ -36,14 +36,14 @@ object DB {
       case Some(v) => (m, v)
       case None =>
         val w = v
-        (m.updated(k, w), w)
+        (m.put(k)(w), w)
     })
 
   private def getTable[K, R](id: TableId[R]): State[DB[K], Table[K, R]] =
     getOrInsert[TableId, Table[K, ?], R](id, Table.empty[K, R]).zoom(tables[K])
 
   private def setTable[K, R](id: TableId[R], t: Table[K, R]): State[DB[K], Unit] =
-    State(db => (db.copy(tables = db.tables.updated(id, t)), ()))
+    State(db => (db.copy(tables = db.tables.put(id)(t)), ()))
 
   private def insert[K, R](table: TableId[R], r: R): State[DB[K], Lst[K]] =
     for {
