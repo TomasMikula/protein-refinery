@@ -47,6 +47,15 @@ case class AgentsPattern(
     AgentsPattern(agents, bonds.updated(id.value, None), (i, si) :: (j, sj) :: unbound)
   }
 
+  def getBond(id: LinkId): Option[(ProteinPattern, Site, ProteinPattern, Site)] =
+    bonds(id.value).map(reifyBond)
+
+  def getBonds: List[(ProteinPattern, Site, ProteinPattern, Site)] =
+    bonds.iterator.collectToList(_.map(reifyBond))
+
+  def getUnbound: List[(ProteinPattern, Site)] =
+    unbound map { case (i, s) => (agents(i.value), s) }
+
   def unify(that: AgentsPattern): Option[AgentsPattern] = ???
   def partition(that: AgentsPattern): (Option[AgentsPattern], Option[AgentsPattern], Option[AgentsPattern]) = ???
 
@@ -63,6 +72,10 @@ case class AgentsPattern(
     agents.iterator.zipWithIndex.map({ case (pp, i) =>
       pp.toString(linksByAgent.getOrElse(AgentIndex(i), Nil).toMap)
     }).mkString(", ")
+  }
+
+  private def reifyBond(b: (AgentIndex, Site, AgentIndex, Site)): (ProteinPattern, Site, ProteinPattern, Site) = b match {
+    case (i, si, j, sj) => (agents(i.value), si, agents(j.value), sj)
   }
 
   @inline private def hasAgent(i: Int): Boolean =

@@ -14,6 +14,14 @@ package object syntax {
       builder.toMap
     }
 
+    def collectToList[B](f: A => Option[B]): List[B] = {
+      var buf = List.newBuilder[B]
+      while(it.hasNext) {
+        f(it.next()).foreach(buf += _)
+      }
+      buf.result()
+    }
+
     def mapFilter[B](f: A => Option[B]): Iterator[B] = {
       it.flatMap(a => f(a) match {
         case Some(b) => Iterator.single(b)
@@ -25,6 +33,9 @@ package object syntax {
   implicit class IterableOps[A](col: Iterable[A]) {
     def toMultiMap[K, V](implicit ev: A =:= (K, V)): Map[K, List[V]] =
       col.iterator.toMultiMap
+
+    def collectToList[B](f: A => Option[B]): List[B] =
+      col.iterator.collectToList(f)
   }
 
   implicit class MapOps[A, B](self: Map[A, B]) {

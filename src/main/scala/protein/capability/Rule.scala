@@ -59,6 +59,43 @@ final case class Rule(lhs: AgentsPattern, actions: NonEmptyList[Action]) {
     buf.toSet
   }
 
+  def enables(pat: AgentsPattern): Boolean = {
+
+    def enables(a: Action, pat: AgentsPattern): Boolean = a match {
+
+      case Link(i, si, j, sj) =>
+        // does `pat` need this link?
+        val pi = lhs.agents(i.value).protein
+        val pj = lhs.agents(j.value).protein
+        pat.getBonds.exists({ case (p, ps, q, qs) =>
+          (p.protein == pi && ps == si && q.protein == pj && qs == sj) ||
+            (p.protein == pj && ps == sj && q.protein == pi && qs == si)
+        })
+
+      case Unlink(linkId) =>
+        // does `pat` need one of the participants unbound?
+        val (p, ps, q, qs) = lhs.getBond(linkId).get
+        pat.getUnbound.exists({ case (pp, s) =>
+          (pp.protein == p.protein && s == ps) ||
+            (pp.protein == q.protein && s == qs)
+        })
+
+      case Modify(i, rmMods, addMods) =>
+        // does `pat` need some of the introduced modifications?
+        val p = lhs.agents(i.value).protein
+        pat.agents.exists(q => {
+          (q.protein == p) && (addMods meet q.mods).mods.nonEmpty
+        })
+
+      case Replace(from, to, insert) => ???
+    }
+
+    actions.foldLeft(false)((res, action) => res || enables(action, pat))
+  }
+
+  // TODO: should return a list of explanations instead of Boolean
+  def enables(that: Rule): Boolean = enables(that.lhs)
+
   override def toString: String = s"$lhs -> $rhs"
 }
 
