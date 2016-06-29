@@ -13,7 +13,10 @@ import scalaz.syntax.monad._
 object AssocSearch {
 
   def search(p: Protein, q: Protein): Prg[IncSetRef[Assoc]] =
-    IncSet.collect(search0(Nil, p, q, Nil))
+    IncSet.collect(searchC(p, q))
+
+  def searchC(p: Protein, q: Protein): Cont[Assoc] =
+    search0(Nil, p, q, Nil)
 
   private def search0(leftTail: List[Binding], p: Protein, q: Protein, rightTail: List[Binding]): Cont[Assoc] =
     bindingsOfC[DSL](p) flatMap { b =>

@@ -10,24 +10,19 @@ import protein.mechanism.{CompetitiveBinding, Phosphorylation, Protein}
 object PhosSearch {
 
   def search(kinase: Protein, substrate: Protein): Prg[IncSetRef[Phosphorylation]] =
-    search0(kinase, substrate) >>= (IncSet.collect(_))
+    IncSet.collect(searchC(kinase, substrate))
 
-  def searchC(kinase: Protein, substrate: Protein): Cont[Phosphorylation] =
-    Cont.wrapEffect(search0(kinase, substrate))
-
-  private def search0(kinase: Protein, substrate: Protein): Prg[Cont[Phosphorylation]] = {
+  def searchC(kinase: Protein, substrate: Protein): Cont[Phosphorylation] = {
     // XXX this version is quite primitive and cannot infer much beyond what is already given by the knowledge base,
     // except for finding indirect enzyme-substrate associations. In the future, we would like it to be able to hypothesize
     // phosphorylation at site s, if, e.g., s is a Serine and kinase is a Serine kinase.
     // Should be easy to achieve by having phosphoSites not as an atomic query, but as a search on top of more basic facts.
     for {
-      sites <- phosphoSitesS[DSL](kinase, substrate)
-      assocs <- AssocSearch.search(kinase, substrate)
-      pairs = ContF.tuple2(IncSet.forEach(sites), IncSet.forEach(assocs))
-    } yield ContF.filterMap(pairs)({ case (s, a) =>
-      if (s != a.bindings.last.rightS) Some(Phosphorylation(a, s))
-      else None
-    })
+      s <- phosphoSitesC[DSL](kinase, substrate)
+      a <- AssocSearch.searchC(kinase, substrate)
+      ph <- if(s != a.bindings.last.rightS) ContF.point[DSL, Phosphorylation](Phosphorylation(a, s))
+            else                            ContF.noop[DSL, Phosphorylation]
+    } yield ph
   }
 
   def negativeInfluence(p: Protein, ph: Phosphorylation): Prg[IncSetRef[CompetitiveBinding]] = {
