@@ -43,6 +43,8 @@ object KBLang {
   // KB queries in CPS style
   def bindingsOfC[F[_[_], _]](p: Protein)(implicit inj: InjectK[KBLang, F]): ContF[F, Binding] =
     ContF(f => bindingsOfF[F](p)(f))
+  def rulesC[F[_[_], _]](implicit inj: InjectK[KBLang, F]): ContF[F, Rule] =
+    ContF(f => rulesF[F](f andThen Lst.singleton))
   def phosphoSitesC[F[_[_], _]](kinase: Protein, substrate: Protein)(implicit inj: InjectK[KBLang, F]): ContF[F, Site] =
     ContF(f => phosphoSitesF[F](kinase, substrate)(f))
 
