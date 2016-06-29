@@ -20,9 +20,11 @@ final case class Rule(lhs: AgentsPattern, actions: NonEmptyList[Action]) {
 
     // sites mentioned in existing bonds
     lhs.bonds.foreach({
-      case (i, si, j, sj) =>
+      case Some((i, si, j, sj)) =>
         if(lhs(i).protein == p) buf += si
         if(lhs(j).protein == p) buf += sj
+      case None =>
+        // do nothing
     })
 
     // sites mentioned in actions

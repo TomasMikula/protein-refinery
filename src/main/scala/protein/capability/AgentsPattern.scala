@@ -7,7 +7,7 @@ import scalaz.State
 
 case class AgentsPattern(
   agents: Vector[ProteinPattern],
-  bonds: Vector[(AgentIndex, Site, AgentIndex, Site)],
+  bonds: Vector[Option[(AgentIndex, Site, AgentIndex, Site)]],
   unbound: List[(AgentIndex, Site)]
 ) {
 
@@ -38,20 +38,20 @@ case class AgentsPattern(
     require(hasAgent(j.value))
     require(isUnbound(i, si))
     require(isUnbound(j, sj))
-    (AgentsPattern(agents, bonds :+ ((i, si, j, sj)), unbound.filter(u => u != ((i, si)) && u != ((j, sj)))), LinkId(bonds.size))
+    (AgentsPattern(agents, bonds :+ Some((i, si, j, sj)), unbound.filter(u => u != ((i, si)) && u != ((j, sj)))), LinkId(bonds.size))
   }
 
   def unlink(id: LinkId): AgentsPattern = {
     require(hasBond(id.value))
-    val (i, si, j, sj) = bonds(id.value)
-    AgentsPattern(agents, bonds.updated(id.value, null), (i, si) :: (j, sj) :: unbound)
+    val Some((i, si, j, sj)) = bonds(id.value)
+    AgentsPattern(agents, bonds.updated(id.value, None), (i, si) :: (j, sj) :: unbound)
   }
 
   def unify(that: AgentsPattern): Option[AgentsPattern] = ???
   def partition(that: AgentsPattern): (Option[AgentsPattern], Option[AgentsPattern], Option[AgentsPattern]) = ???
 
   override def toString: String = {
-    val bondsByAgent = bonds.iterator.zipWithIndex.flatMap[(AgentIndex, (Site, Either[Unbound.type , LinkId]))]{
+    val bondsByAgent = bonds.iterator.zipWithIndex.mapFilter({ case (l, i) => l.map((_, i)) }).flatMap[(AgentIndex, (Site, Either[Unbound.type , LinkId]))]{
       case ((pi, ps, qi, qs), linkIdx) =>
         Iterator((pi, (ps, Right(LinkId(linkIdx)))), (qi, (qs, Right(LinkId(linkIdx)))))
     }
@@ -69,15 +69,15 @@ case class AgentsPattern(
     i >= 0 && i < agents.size && agents(i) != null
 
   @inline private def hasBond(i: Int): Boolean =
-    i >= 0 && i < bonds.size && bonds(i) != null
+    i >= 0 && i < bonds.size && bonds(i).isDefined
 
   @inline private def isUnbound(i: AgentIndex, s: Site): Boolean =
     unbound.contains((i, s))
 
   @inline private def isNotBound(i: AgentIndex, s: Site): Boolean =
-    bonds.forall(b => {
-      val (p, ps, q, qs) = b
-      (p != i || ps != s) && (q != i || qs != s)
+    bonds.forall(_ match {
+      case Some((p, ps, q, qs)) => (p != i || ps != s) && (q != i || qs != s)
+      case None => true
     })
 }
 

@@ -13,6 +13,13 @@ package object syntax {
       }
       builder.toMap
     }
+
+    def mapFilter[B](f: A => Option[B]): Iterator[B] = {
+      it.flatMap(a => f(a) match {
+        case Some(b) => Iterator.single(b)
+        case None => Iterator.empty
+      })
+    }
   }
 
   implicit class IterableOps[A](col: Iterable[A]) {
