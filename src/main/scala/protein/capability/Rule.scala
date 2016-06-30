@@ -16,7 +16,7 @@ final case class Rule(lhs: AgentsPattern, actions: NonEmptyList[Action]) {
     val buf = ArrayBuffer[Site]()
 
     // sites mentioned in agent patterns
-    lhs.agents.iterator.filter(_.protein == p).foreach(buf ++= _.mods.mods.keys)
+    lhs.agentIterator.filter(_.protein == p).foreach(buf ++= _.mods.mods.keys)
 
     // sites mentioned in existing bonds
     lhs.bonds.foreach({
@@ -65,8 +65,8 @@ final case class Rule(lhs: AgentsPattern, actions: NonEmptyList[Action]) {
 
       case Link(i, si, j, sj) =>
         // does `pat` need this link?
-        val pi = lhs.agents(i.value).protein
-        val pj = lhs.agents(j.value).protein
+        val pi = lhs(i).protein
+        val pj = lhs(j).protein
         pat.getBonds.exists({ case (p, ps, q, qs) =>
           (p.protein == pi && ps == si && q.protein == pj && qs == sj) ||
             (p.protein == pj && ps == sj && q.protein == pi && qs == si)
@@ -82,8 +82,8 @@ final case class Rule(lhs: AgentsPattern, actions: NonEmptyList[Action]) {
 
       case Modify(i, rmMods, addMods) =>
         // does `pat` need some of the introduced modifications?
-        val p = lhs.agents(i.value).protein
-        pat.agents.exists(q => {
+        val p = lhs(i).protein
+        pat.agentIterator.exists(q => {
           (q.protein == p) && (addMods meet q.mods).mods.nonEmpty
         })
 

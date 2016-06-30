@@ -6,12 +6,14 @@ import protein.util.syntax._
 import scalaz.State
 
 case class AgentsPattern(
-  agents: Vector[ProteinPattern],
+  private val agents: Vector[Option[ProteinPattern]],
   bonds: Vector[Option[(AgentIndex, Site, AgentIndex, Site)]],
   unbound: List[(AgentIndex, Site)]
 ) {
 
-  def apply(i: AgentIndex): ProteinPattern = agents(i.value)
+  def apply(i: AgentIndex): ProteinPattern = agents(i.value).get
+
+  def agentIterator: Iterator[ProteinPattern] = agents.iterator.mapFilter(identity)
 
   def modify(a: Action): AgentsPattern = a match {
     case Link(i, si, j, sj) => link(i, si, j, sj)._1
@@ -23,7 +25,7 @@ case class AgentsPattern(
   }
 
   def addAgent(a: ProteinPattern): (AgentsPattern, AgentIndex) =
-    (copy(agents = agents :+ a), AgentIndex(agents.size))
+    (copy(agents = agents :+ Some(a)), AgentIndex(agents.size))
 
   def removeAgent(i: AgentIndex): AgentsPattern = ???
 
@@ -54,7 +56,7 @@ case class AgentsPattern(
     bonds.iterator.collectToList(_.map(reifyBond))
 
   def getUnbound: List[(ProteinPattern, Site)] =
-    unbound map { case (i, s) => (agents(i.value), s) }
+    unbound map { case (i, s) => (apply(i), s) }
 
   def unify(that: AgentsPattern): Option[AgentsPattern] = ???
   def partition(that: AgentsPattern): (Option[AgentsPattern], Option[AgentsPattern], Option[AgentsPattern]) = ???
@@ -69,13 +71,13 @@ case class AgentsPattern(
     }
     val linksByAgent = (bondsByAgent ++ nonBondsByAgent).toMultiMap[AgentIndex, (Site, Either[Unbound.type , LinkId])]
 
-    agents.iterator.zipWithIndex.map({ case (pp, i) =>
+    agents.iterator.zipWithIndex.mapFilter({ case (pp, i) => pp.map(pp =>
       pp.toString(linksByAgent.getOrElse(AgentIndex(i), Nil).toMap)
-    }).mkString(", ")
+    )}).mkString(", ")
   }
 
   private def reifyBond(b: (AgentIndex, Site, AgentIndex, Site)): (ProteinPattern, Site, ProteinPattern, Site) = b match {
-    case (i, si, j, sj) => (agents(i.value), si, agents(j.value), sj)
+    case (i, si, j, sj) => (apply(i), si, apply(j), sj)
   }
 
   @inline private def hasAgent(i: Int): Boolean =

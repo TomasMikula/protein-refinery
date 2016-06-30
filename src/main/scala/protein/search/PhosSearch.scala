@@ -166,7 +166,7 @@ object PositiveInfluenceOnRule {
     searchC(agent, rule, List(rule))
 
   private def searchC(agent: Protein, r: Rule, avoid: List[Rule]): ContF[DSL, PositiveInfluenceOnRule] = {
-    val inLhs: Option[PositiveInfluenceOnRule] = if(r.lhs.agents.exists(_.protein == agent)) Some(InLhs(agent, r)) else None
+    val inLhs: Option[PositiveInfluenceOnRule] = if(r.lhs.agentIterator.exists(_.protein == agent)) Some(InLhs(agent, r)) else None
     val indirect: ContF[DSL, PositiveInfluenceOnRule] = KBLang.rulesC[DSL].flatMap(q => { // TODO: penalize
       if(!avoid.contains(q) && (q enables r)) searchC(agent, q, q :: avoid).map(posInfl => Indirect(posInfl, r))
       else ContF.noop[DSL, PositiveInfluenceOnRule]
