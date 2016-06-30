@@ -20,14 +20,14 @@ object AssocSearch {
 
   private def search0(leftTail: List[Binding], p: Protein, q: Protein, rightTail: List[Binding]): Cont[Assoc] =
     bindingsOfC[DSL](p) flatMap { b =>
-      if(leftTail.nonEmpty && b.leftS == leftTail.head.rightS) Cont.noop
-      else if(leftTail.contains(b) || rightTail.contains(b)) Cont.noop
+      if(leftTail.nonEmpty && b.leftS == leftTail.head.rightS) ContF.noop
+      else if(leftTail.contains(b) || rightTail.contains(b)) ContF.noop
       else {
         val indirect0 = search0(b :: leftTail, b.right, q, rightTail)
         val indirect = DeferLang.deferC(Cost.complexity(10), indirect0)
         if(b.right == q) {
           val direct = Assoc(leftTail reverse_::: b :: rightTail).point[Cont]
-          Cont.sequence(direct, indirect)
+          ContF.sequence(direct, indirect)
         } else
           indirect
       }

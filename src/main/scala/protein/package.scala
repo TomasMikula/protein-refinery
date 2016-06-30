@@ -38,17 +38,4 @@ package object protein {
   implicit val injectDefer = InjectK[DeferL, DSL]
 
   type Cont[A] = ContF[DSL, A]
-  object Cont {
-    def apply[A](f: (A => Prg[Unit]) => Prg[Unit]): Cont[A] =
-      ContF(f)
-
-    def noop[A]: Cont[A] =
-      ContF.noop
-
-    def sequence[A](a: Cont[A], b: Cont[A]): Cont[A] =
-      ContF.sequence(a, b)
-
-    def wrapEffect[A](c: Prg[Cont[A]]): Cont[A] =
-      ContF.wrapEffect[DSL, A](c)
-  }
 }
