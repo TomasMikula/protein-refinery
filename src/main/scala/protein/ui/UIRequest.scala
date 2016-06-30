@@ -1,6 +1,7 @@
 package protein.ui
 
 import nutcracker.IncSet.IncSetRef
+import protein.capability.ProteinPattern
 import protein.mechanism.{Phosphorylation, Protein, Site}
 
 sealed abstract class UIRequest
@@ -10,4 +11,5 @@ final case class ReqGoalPhos(kinase: Protein, substrate: Protein) extends UIRequ
 final case class ReqGoalPhosNegInfl(agent: Protein, phosGoal: IncSetRef[Phosphorylation], phosDesc: String) extends UIRequest
 
 final case class ReqAssertBind(p: Protein, ps: Site, q: Protein, qs: Site) extends UIRequest
+final case class ReqAssertKinaseActivity(pp: ProteinPattern) extends UIRequest
 final case class ReqAssertPhosSite(k: Protein, s: Protein, ss: Site) extends UIRequest

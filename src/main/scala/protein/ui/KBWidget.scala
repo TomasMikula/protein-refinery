@@ -1,30 +1,35 @@
 package protein.ui
 
+import javafx.collections.{FXCollections, ObservableSet}
 import javafx.geometry.Pos
 import javafx.scene.Node
-import javafx.scene.control.{Label, ListView, Menu, MenuBar, MenuItem, ScrollPane, TextField, TitledPane}
-import javafx.scene.layout.{GridPane, StackPane, VBox}
+import javafx.scene.control.{Button, Label, ListView, Menu, MenuBar, MenuItem, ScrollPane, TextField, TitledPane}
+import javafx.scene.layout.{GridPane, HBox, StackPane, VBox}
 
 import nutcracker.util.KMap
-import org.reactfx.value.Val
-import org.reactfx.{EventSource, EventStream}
-import protein.capability.Rule
-import protein.mechanism.{Protein, Site}
-import protein.ui.FactType.{FactPhosTarget, FactRule}
+import org.reactfx.collection.LiveArrayList
+import org.reactfx.value.{Val, Var}
+import org.reactfx.{EventSource, EventStream, EventStreams}
+import protein.capability.{ProteinPattern, Rule}
+import protein.mechanism.{Protein, ProteinModifications, Site, SiteState}
+import protein.ui.FactType.{FactKinase, FactPhosTarget, FactRule}
 import protein.ui.util.syntax._
 
+import scala.collection.mutable.ArrayBuffer
 import scalaz.Show
 
 class KBWidget {
 
   private val newFactMenu = new Menu("Add fact") <| { _.getItems.addAll(
     new MenuItem("Bind") <| { _.onAction(() => showDialog(new BindFactInput){ case (p, ps, q, qs) => ReqAssertBind(p, ps, q, qs) }) },
+    new MenuItem("Kinase activity") <| { _.onAction(() => showDialog(new KinaseActivityInput)(pp => ReqAssertKinaseActivity(pp))) },
     new MenuItem("Phosphorylatable site") <| { _.onAction(() => showDialog(new PhosSiteFactInput){ case (k, s, ss) => ReqAssertPhosSite(k, s, ss) }) }
   ).ignoreResult }
 
   private val dialogHolder = new StackPane()
   private val rules = new ListView[Rule]
   private val phosSites = new ListView[(Protein, Protein, Site)]
+  private val kinases = new ListView[ProteinPattern]
 
   val node: Node = new ScrollPane(
     new VBox(
@@ -32,6 +37,7 @@ class KBWidget {
       new MenuBar(newFactMenu),
       dialogHolder,
       new TitledPane("Rules", rules),
+      new TitledPane("Kinase activity", kinases),
       new TitledPane("Phosphorylation target sites", phosSites)
     ) <| {
       _.setFillWidth(true) } <| {
@@ -46,6 +52,7 @@ class KBWidget {
   private val factHandlers: KMap[FactType, ? => Unit] = KMap[FactType, ? => Unit]()
     .put(FactRule)(ruleAdded)
     .put(FactPhosTarget)({ case (k, s, ss) => phosTargetAdded(k, s, ss) })
+    .put(FactKinase)(kinaseAdded)
 
   def requests: EventStream[UIRequest] = _requests
 
@@ -56,6 +63,8 @@ class KBWidget {
   private def ruleAdded(r: Rule): Unit = rules.getItems.add(r).ignoreResult()
 
   private def phosTargetAdded(k: Protein, s: Protein, ss: Site): Unit = phosSites.getItems.add((k, s, ss)).ignoreResult()
+
+  private def kinaseAdded(pp: ProteinPattern): Unit = kinases.getItems.add(pp).ignoreResult()
 
   private def showDialog[A](form: InputForm[A])(req: A => UIRequest): Unit =
     InputDialog.show(dialogHolder, form)(a => _requests.push(req(a)))
@@ -68,6 +77,7 @@ object KBWidget {
 trait FactType[A] { self: Singleton => }
 object FactType {
   object FactRule extends FactType[Rule]
+  object FactKinase extends FactType[ProteinPattern]
   object FactPhosTarget extends FactType[(Protein, Protein, Site)]
 }
 
@@ -104,4 +114,53 @@ class PhosSiteFactInput extends InputForm[(Protein, Protein, Site)] {
   val input: Val[(Protein, Protein, Site)] = (kinase.textProperty() |@| substrate.textProperty() |@| phosSite.textProperty()).tuple
     .filter3[String, String, String]((k, s, ss) => !k.isEmpty && !s.isEmpty && !ss.isEmpty)
     .map3[String, String, String, (Protein, Protein, Site)]((k, s, ss) => (Protein(k), Protein(s), Site(ss)))
+}
+
+class KinaseActivityInput extends InputForm[ProteinPattern] {
+  private val protein = new TextField()
+  private val siteStates = new LiveArrayList[(TextField, TextField)]
+  private val siteGrid = new GridPane() <| {
+    _.addRow(0, new Label("Site"), new Label("State"))
+  }
+  private val siteFields = FXCollections.observableSet[TextField]()
+
+  val title = "Kinase activity"
+
+  val node = new VBox(
+    new HBox(new Label("Protein"), protein),
+    new Label("State conditions:"),
+    siteGrid,
+    new Button("+") <| { _.onAction(addSiteRow) }
+  )
+
+  val input: Val[ProteinPattern] = {
+    val p = protein.textProperty().map1(s => if(s.nonEmpty) Protein(s) else null)
+    val mods: Var[Option[ProteinModifications]] = Var.newSimpleVar(Some(ProteinModifications.noModifications))
+    EventStreams.merge(siteFields, j((tf: TextField) => EventStreams.valuesOf(tf.textProperty()))).forEach(mod => {
+      var m: Option[ProteinModifications] = Some(ProteinModifications.noModifications)
+      val it = siteStates.iterator()
+      while(it.hasNext) {
+        val (siteField, stateField)  = it.next()
+        val (site, state) = (siteField.getText, stateField.getText)
+        m = m.flatMap(m => {
+          if (site.nonEmpty && state.nonEmpty) m.addModification(Site(site), SiteState(state))
+          else if (site.isEmpty && state.isEmpty) Some(m)
+          else None
+        })
+      }
+      mods.setValue(m)
+    })
+    (p |@| mods)((p, m) => m.map(ProteinPattern(p, _)).getOrElse(null))
+  }
+
+  addSiteRow()
+
+  private def addSiteRow(): Unit = {
+    val site = new TextField()
+    val state = new TextField()
+    siteStates.add((site, state))
+    siteFields.add(site)
+    siteFields.add(state)
+    siteGrid.addRow(siteStates.size, site, state)
+  }
 }

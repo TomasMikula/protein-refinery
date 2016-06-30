@@ -10,6 +10,7 @@ import nutcracker.util.FreeK
 import nutcracker.util.CoproductK.:++:
 import org.reactfx.EventStreams
 import protein.KBLang
+import protein.capability.ProteinPattern
 import protein.mechanism.{Assoc, Binding, Phosphorylation, Protein, Site}
 import protein.search.{AssocSearch, PhosSearch}
 import protein.ui.FactType._
@@ -31,6 +32,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
     case ReqGoalPhosNegInfl(agent, phosGoal, phosDesc) => exec(addGoalPhosNegInfl(agent, phosGoal, phosDesc))
 
     case ReqAssertBind(p, ps, q, qs) => exec(addFactBind(p, ps, q, qs))
+    case ReqAssertKinaseActivity(pp) => exec(addFactKinase(pp))
     case ReqAssertPhosSite(k, s, ss) => exec(addFactPhosSite(k, s, ss))
   })
 
@@ -56,6 +58,10 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   private def addFactBind(p: Protein, ps: Site, q: Protein, qs: Site): Prg[Unit] = {
     val rule = Binding(p, ps, q, qs).witness
     KBLang.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
+  }
+
+  private def addFactKinase(pp: ProteinPattern): Prg[Unit] = {
+    KBLang.addKinaseActivityF[DSL](pp) >> newFactF(FactKinase, pp)
   }
 
   private def addFactPhosSite(k: Protein, s: Protein, ss: Site): Prg[Unit] =
