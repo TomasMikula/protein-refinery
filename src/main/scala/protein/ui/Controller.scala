@@ -59,7 +59,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   }
 
   private def addFactPhosSite(k: Protein, s: Protein, ss: Site): Prg[Unit] =
-    KBLang.addPhosphoSiteF[DSL](k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
+    KBLang.addPhosphoTargetF[DSL](k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
 
   private def observeGoal[A: Show](desc: String, ref: IncSetRef[A])(implicit t: GoalType[A]): Prg[Unit] =
     domTriggerF(ref)(d => {

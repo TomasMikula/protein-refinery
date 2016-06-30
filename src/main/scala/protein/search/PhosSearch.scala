@@ -2,10 +2,12 @@ package protein.search
 
 import nutcracker.IncSet.IncSetRef
 import nutcracker._
-import nutcracker.util.{ContF}
-import protein.{Cont, DSL, Prg}
+import nutcracker.util.ContF
+import protein._
 import protein.KBLang._
-import protein.mechanism.{CompetitiveBinding, Phosphorylation, Protein, Site}
+import protein.capability.{AgentsPattern, ProteinPattern, Rule}
+import protein.mechanism.{CompetitiveBinding, Phosphorylation, Protein, ProteinModifications, Site, SiteState}
+import protein.util.syntax._
 
 object PhosSearch {
 
@@ -36,5 +38,143 @@ object PhosSearch {
     // currently the only way a protein can have negative influence on phosphorylation
     // is via negative influence on the association of enzyme and substrate
     AssocSearch.negativeInfluenceC(p, ph.assoc)
+  }
+}
+
+sealed trait PositiveInfluenceOnPhosphorylation {
+  def agent: Protein
+  def phosphorylation: Phosphorylation
+}
+
+object PositiveInfluenceOnPhosphorylation {
+
+  /** Agent that acts as the kinase in a phosphorylation
+    * is considered to have positive influence on that phosphorylation.
+    */
+  final case class IsKinase(phosphorylation: Phosphorylation) extends PositiveInfluenceOnPhosphorylation {
+    def agent: Protein = phosphorylation.kinase
+  }
+
+  /** Agent that is part of the scaffold connecting kinase to substrate
+    * is considered to have positive influence on the phosphorylation.
+    */
+  final case class InScaffold(agent: Protein, phosphorylation: Phosphorylation) extends PositiveInfluenceOnPhosphorylation
+
+  /** Agent that has positive influence on kinase activity of the kinase involved in phosphorylation
+    * is considered to have positive influence on that phosphorylation.
+    */
+  final case class ActivatesKinase(activation: PositiveInfluenceOnKinaseActivity, phosphorylation: Phosphorylation) extends PositiveInfluenceOnPhosphorylation {
+    def agent: Protein = activation.agent
+  }
+
+
+  def search(p: Protein, ph: Phosphorylation): Prg[IncSetRef[PositiveInfluenceOnPhosphorylation]] =
+    IncSet.collect(searchC(p, ph))
+
+  def searchC(p: Protein, ph: Phosphorylation): ContF[DSL, PositiveInfluenceOnPhosphorylation] = {
+
+    // we can immediately tell whether `p` is the kinase or part of the scaffold in `ph`
+    val immediate: List[ContF[DSL, PositiveInfluenceOnPhosphorylation]] = {
+      val isKinase = if(ph.kinase == p) List(IsKinase(ph)) else Nil
+      val inScaffold = if(ph.assoc.bindings.tail.exists(_.left == p)) List(InScaffold(p, ph)) else Nil
+      (isKinase ++ inScaffold).map(ContF.point[DSL, PositiveInfluenceOnPhosphorylation])
+    }
+
+    val indirect: ContF[DSL, PositiveInfluenceOnPhosphorylation] = PositiveInfluenceOnKinaseActivity.searchC(p, ph.kinase).map(infl => ActivatesKinase(infl, ph))
+
+    ContF.sequence(indirect :: immediate)
+  }
+}
+
+sealed trait PositiveInfluenceOnKinaseActivity {
+  def agent: Protein
+  def kinase: Protein
+}
+
+object PositiveInfluenceOnKinaseActivity {
+  final case class PositiveInfluenceOnActiveState(infl: PositiveInfluenceOnState) extends PositiveInfluenceOnKinaseActivity {
+    def agent: Protein = infl.agent
+    def kinase: Protein = infl.target.protein
+  }
+
+  def searchC(agent: Protein, kinase: Protein): ContF[DSL, PositiveInfluenceOnKinaseActivity] =
+    KBLang.kinaseActivityC[DSL](kinase).flatMap(PositiveInfluenceOnState.searchC(agent, _).map(PositiveInfluenceOnActiveState(_)))
+}
+
+sealed trait PositiveInfluenceOnState {
+  def agent: Protein
+  def target: ProteinPattern
+}
+
+object PositiveInfluenceOnState {
+  final case class ByRule(influenceOnEnablingRule: PositiveInfluenceOnRule, target: ProteinPattern) extends PositiveInfluenceOnState {
+    def agent = influenceOnEnablingRule.agent
+  }
+  final case class ByPhosphorylation(infl: PositiveInfluenceOnPhosphorylation, target: ProteinPattern) extends PositiveInfluenceOnState {
+    def agent: Protein = infl.agent
+  }
+
+  def searchC(agent: Protein, target: ProteinPattern): ContF[DSL, PositiveInfluenceOnState] =
+    ContF.sequence(searchByRule(agent, target), searchByPhosphorylation(agent, target))
+
+  private def searchByRule(agent: Protein, target: ProteinPattern): ContF[DSL, PositiveInfluenceOnState] = {
+    val ap = AgentsPattern.empty.addAgent(target)._1
+    for {
+      r <- ContF.filter(rulesC[DSL])(r => r enables ap)
+      infl <- PositiveInfluenceOnRule.searchC(agent, r)
+    } yield ByRule(infl, target)
+  }
+
+  private def searchByPhosphorylation(agent: Protein, target: ProteinPattern): ContF[DSL, PositiveInfluenceOnState] = {
+    val conts = target.mods.mods.iterator.mapFilter({ case (site, state) =>
+      if (state.label == "p") Some(site) // XXX
+      else None
+    }).map[ContF[DSL, PositiveInfluenceOnState]](site =>
+      for {
+        k <- KBLang.kinasesOfC[DSL](target.protein, site)
+        ph <- PhosSearch.searchC(k, target.protein, site)
+        infl <- PositiveInfluenceOnPhosphorylation.searchC(agent, ph)
+      } yield ByPhosphorylation(infl, target)
+    ).toList
+    ContF.sequence(conts)
+  }
+}
+
+object PositiveInfluenceOnPhosphorylatedState {
+  def searchC(agent: Protein, target: Protein): ContF[DSL, PositiveInfluenceOnState] =
+    KBLang.phosphoSitesC[DSL](target).flatMap(site => {
+      val pat = ProteinPattern(target).addModification(site, SiteState("p")).get // XXX
+      PositiveInfluenceOnState.searchC(agent, pat)
+    })
+}
+
+sealed trait PositiveInfluenceOnRule {
+  def agent: Protein
+  def rule: Rule
+}
+
+object PositiveInfluenceOnRule {
+  final case class InLhs(agent: Protein, rule: Rule) extends PositiveInfluenceOnRule
+  final case class Indirect(influenceOnEnablingRule: PositiveInfluenceOnRule, rule: Rule) extends PositiveInfluenceOnRule {
+    def agent = influenceOnEnablingRule.agent
+  }
+
+  def search(agent: Protein, rule: Rule): Prg[IncSetRef[PositiveInfluenceOnRule]] =
+    IncSet.collect(searchC(agent, rule))
+
+  def searchC(agent: Protein, rule: Rule): ContF[DSL, PositiveInfluenceOnRule] =
+    searchC(agent, rule, List(rule))
+
+  private def searchC(agent: Protein, r: Rule, avoid: List[Rule]): ContF[DSL, PositiveInfluenceOnRule] = {
+    val inLhs: Option[PositiveInfluenceOnRule] = if(r.lhs.agents.exists(_.protein == agent)) Some(InLhs(agent, r)) else None
+    val indirect: ContF[DSL, PositiveInfluenceOnRule] = KBLang.rulesC[DSL].flatMap(q => { // TODO: penalize
+      if(!avoid.contains(q) && (q enables r)) searchC(agent, q, q :: avoid).map(posInfl => Indirect(posInfl, r))
+      else ContF.noop[DSL, PositiveInfluenceOnRule]
+    })
+
+    inLhs match {
+      case Some(inLhs) => ContF.sequence(ContF.point(inLhs), indirect)
+      case None => indirect
+    }
   }
 }

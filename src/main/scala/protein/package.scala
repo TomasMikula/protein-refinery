@@ -49,6 +49,6 @@ package object protein {
       ContF.sequence(a, b)
 
     def wrapEffect[A](c: Prg[Cont[A]]): Cont[A] =
-      ContF[DSL, A](f => c >>= { k => k(f) })
+      ContF.wrapEffect[DSL, A](c)
   }
 }
