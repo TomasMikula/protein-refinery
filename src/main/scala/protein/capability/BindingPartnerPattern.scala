@@ -3,7 +3,7 @@ package protein.capability
 import protein.capability.AgentsPattern._
 import protein.mechanism.{Binding, Protein, Site}
 
-import scalaz.{NonEmptyList, State}
+import scalaz.{State}
 
 case class BindingPartnerPattern(p: ProteinPattern, s: Site) {
   def overlaps(that: BindingPartnerPattern): Boolean = (this.s == that.s) && (this.p isCompatibleWith that.p)
@@ -15,7 +15,7 @@ case class BindingPartnerPattern(p: ProteinPattern, s: Site) {
     _ <- requireUnbound(j, that.s)
     lhs <- State.get[AgentsPattern]
     a = Link(i, this.s, j, that.s)
-  } yield Binding(Rule(lhs, NonEmptyList(a)), i, j, this.s, that.s)).eval(AgentsPattern.empty)
+  } yield Binding(Rule(lhs, List(a)), i, j, this.s, that.s)).eval(AgentsPattern.empty)
 }
 
 object BindingPartnerPattern {

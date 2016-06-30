@@ -3,10 +3,9 @@ package protein.capability
 import protein.mechanism.{Binding, Protein, Site}
 
 import scala.collection.mutable.ArrayBuffer
-import scalaz.{NonEmptyList, Show}
-import scalaz.syntax.foldable._
+import scalaz.{Show}
 
-final case class Rule(lhs: AgentsPattern, actions: NonEmptyList[Action]) {
+final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
   lazy val rhs: AgentsPattern = actions.foldLeft(lhs)((p, a) => p.modify(a))
   def apply(lhs: Agents): Agents = ???
   def canConsume(ptrn: AgentsPattern): Boolean = ???
@@ -47,7 +46,7 @@ final case class Rule(lhs: AgentsPattern, actions: NonEmptyList[Action]) {
 
   def linksAgentTo(p: Protein): Set[Binding] = {
     val buf = ArrayBuffer[Binding]()
-    actions.list.foldLeft(())({
+    actions.foldLeft(())({
       case ((), Link(i, si, j, sj)) =>
         if(lhs(i).protein == p)
           buf += Binding(this, i, j, si, sj)
@@ -90,7 +89,7 @@ final case class Rule(lhs: AgentsPattern, actions: NonEmptyList[Action]) {
       case Replace(from, to, insert) => ???
     }
 
-    actions.foldLeft(false)((res, action) => res || enables(action, pat))
+    actions.exists(enables(_, pat))
   }
 
   // TODO: should return a list of explanations instead of Boolean
