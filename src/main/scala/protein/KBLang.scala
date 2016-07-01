@@ -5,6 +5,7 @@ import nutcracker.IncSet.IncSetRef
 
 import scala.language.higherKinds
 import nutcracker.util.{ContF, FreeK, FunctorKA, InjectK, Lst}
+import nutcracker.util.ContF._
 import protein.capability.{ProteinPattern, Rule}
 import protein.mechanism.{Binding, Protein, Site}
 
@@ -74,7 +75,7 @@ object KBLang {
       _   <- phosphoTargetsF[F]((k, s, ss) => if(s == substrate) IncSet.insert(ss, res) else FreeK.pure(()))
     } yield res
   def phosphoSitesC[F[_[_], _]](substrate: Protein)(implicit i: InjectK[KBLang, F], j: InjectK[PropagationLang, F]): ContF[F, Site] =
-    ContF.wrapEffect(phosphoSitesS[F](substrate).map(IncSet.forEach(_)))
+    phosphoSitesS[F](substrate).map(IncSet.forEach(_)).wrapEffect
 
   def kinasesOfF[F[_[_], _]](substrate: Protein, site: Site)(f: Protein => FreeK[F, Unit])(implicit inj: InjectK[KBLang, F]): FreeK[F, Unit] =
     phosphoTargetsF[F]((k, s, ss) => if(substrate == s && site == ss) f(k) else FreeK.pure(()))
