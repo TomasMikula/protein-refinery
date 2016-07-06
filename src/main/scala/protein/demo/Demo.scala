@@ -1,7 +1,6 @@
 package protein.demo
 
 import nutcracker._
-import protein.{Cost, DSL}
 import protein.mechanism.{CompetitiveBinding, Phosphorylation}
 import protein.capability.syntax._
 import protein.search.PhosSearch

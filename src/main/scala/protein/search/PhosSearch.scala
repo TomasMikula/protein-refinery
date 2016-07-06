@@ -4,9 +4,9 @@ import nutcracker.IncSet.IncSetRef
 import nutcracker._
 import nutcracker.util.ContF
 import protein._
-import protein.KBLang._
+import protein.KB._
 import protein.capability.{AgentsPattern, ProteinPattern, Rule}
-import protein.mechanism.{CompetitiveBinding, Phosphorylation, Protein, ProteinModifications, Site, SiteState}
+import protein.mechanism.{CompetitiveBinding, Phosphorylation, Protein, Site, SiteState}
 import protein.util.syntax._
 
 object PhosSearch {
@@ -98,7 +98,7 @@ object PositiveInfluenceOnKinaseActivity {
   }
 
   def searchC(agent: Protein, kinase: Protein): ContF[DSL, PositiveInfluenceOnKinaseActivity] =
-    KBLang.kinaseActivityC[DSL](kinase).flatMap(PositiveInfluenceOnState.searchC(agent, _).map(PositiveInfluenceOnActiveState(_)))
+    kinaseActivityC[DSL](kinase).flatMap(PositiveInfluenceOnState.searchC(agent, _).map(PositiveInfluenceOnActiveState(_)))
 }
 
 sealed trait PositiveInfluenceOnState {
@@ -131,7 +131,7 @@ object PositiveInfluenceOnState {
       else None
     }).map[ContF[DSL, PositiveInfluenceOnState]](site =>
       for {
-        k <- KBLang.kinasesOfC[DSL](target.protein, site)
+        k <- kinasesOfC[DSL](target.protein, site)
         ph <- PhosSearch.searchC(k, target.protein, site)
         infl <- PositiveInfluenceOnPhosphorylation.searchC(agent, ph)
       } yield ByPhosphorylation(infl, target)
@@ -142,7 +142,7 @@ object PositiveInfluenceOnState {
 
 object PositiveInfluenceOnPhosphorylatedState {
   def searchC(agent: Protein, target: Protein): ContF[DSL, PositiveInfluenceOnState] =
-    KBLang.phosphoSitesC[DSL](target).flatMap(site => {
+    phosphoSitesC[DSL](target).flatMap(site => {
       val pat = ProteinPattern(target).addModification(site, SiteState("p")).get // XXX
       PositiveInfluenceOnState.searchC(agent, pat)
     })
@@ -167,7 +167,7 @@ object PositiveInfluenceOnRule {
 
   private def searchC(agent: Protein, r: Rule, avoid: List[Rule]): ContF[DSL, PositiveInfluenceOnRule] = {
     val inLhs: Option[PositiveInfluenceOnRule] = if(r.lhs.agentIterator.exists(_.protein == agent)) Some(InLhs(agent, r)) else None
-    val indirect: ContF[DSL, PositiveInfluenceOnRule] = KBLang.rulesC[DSL].flatMap(q => { // TODO: penalize
+    val indirect: ContF[DSL, PositiveInfluenceOnRule] = rulesC[DSL].flatMap(q => { // TODO: penalize
       if(!avoid.contains(q) && (q enables r)) searchC(agent, q, q :: avoid).map(posInfl => Indirect(posInfl, r))
       else ContF.noop[DSL, PositiveInfluenceOnRule]
     })

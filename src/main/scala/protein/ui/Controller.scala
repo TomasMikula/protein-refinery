@@ -9,9 +9,9 @@ import nutcracker.Trigger._
 import nutcracker.util.FreeK
 import nutcracker.util.CoproductK.:++:
 import org.reactfx.EventStreams
-import protein.KBLang
+import protein.KB
 import protein.capability.ProteinPattern
-import protein.mechanism.{Assoc, Binding, Phosphorylation, Protein, Site}
+import protein.mechanism.{Binding, Phosphorylation, Protein, Site}
 import protein.search.{AssocSearch, PhosSearch}
 import protein.ui.FactType._
 import protein.ui.UIUpdateLang._
@@ -57,15 +57,15 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
 
   private def addFactBind(p: Protein, ps: Site, q: Protein, qs: Site): Prg[Unit] = {
     val rule = Binding(p, ps, q, qs).witness
-    KBLang.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
+    KB.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
   }
 
   private def addFactKinase(pp: ProteinPattern): Prg[Unit] = {
-    KBLang.addKinaseActivityF[DSL](pp) >> newFactF(FactKinase, pp)
+    KB.addKinaseActivityF[DSL](pp) >> newFactF(FactKinase, pp)
   }
 
   private def addFactPhosSite(k: Protein, s: Protein, ss: Site): Prg[Unit] =
-    KBLang.addPhosphoTargetF[DSL](k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
+    KB.addPhosphoTargetF[DSL](k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
 
   private def observeGoal[A: Show](desc: String, ref: IncSetRef[A])(implicit t: GoalType[A]): Prg[Unit] =
     domTriggerF(ref)(d => {

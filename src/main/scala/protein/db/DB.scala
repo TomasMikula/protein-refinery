@@ -1,7 +1,8 @@
 package protein.db
 
 import scala.language.higherKinds
-import nutcracker.util.{KMap, Lst}
+import nutcracker.util._
+import protein.db.DBLang.{Insert, Query}
 
 import scalaz.{Lens, State}
 
@@ -58,4 +59,12 @@ object DB {
       (t1, ks) = t.query(p)
       _ <- setTable(table, t1)
     } yield ks
+
+  def interpreter: Step[DBLang, DB] = new Step[DBLang, DB] {
+    def apply[K[_], A](f: DBLang[K, A]): WriterState[Lst[K[Unit]], DB[K[Unit]], A] =
+      WriterState(db => f match {
+        case Insert(t, r) => db.insert(t, r) match { case (db, ks) => (ks, db, ()) }
+        case Query(t, p)  => db.query(t)(p)  match { case (db, ks) => (ks, db, ()) }
+      })
+  }
 }

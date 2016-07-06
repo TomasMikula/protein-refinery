@@ -2,9 +2,9 @@ package protein.search
 
 import nutcracker.IncSet.IncSetRef
 import nutcracker._
-import nutcracker.util.{ContF, FreeK}
+import nutcracker.util.ContF
 import protein._
-import protein.KBLang._
+import protein.KB._
 import protein.capability.BindingPartnerPattern
 import protein.mechanism.{Assoc, Binding, CompetitiveBinding, Protein}
 
