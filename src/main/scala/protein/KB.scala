@@ -69,7 +69,7 @@ object KB {
 
   def phosphoSitesS[F[_[_], _]](substrate: Protein)(implicit i: InjectK[DBLang, F], j: InjectK[PropagationLang, F]): FreeK[F, IncSetRef[Site]] =
     for {
-      res <- IncSet.initF[F, Site]
+      res <- IncSet.init[F, Site]
       _   <- phosphoTargetsF[F]((k, s, ss) => if(s == substrate) IncSet.insert(ss, res) else FreeK.pure(()))
     } yield res
   def phosphoSitesC[F[_[_], _]](substrate: Protein)(implicit i: InjectK[DBLang, F], j: InjectK[PropagationLang, F]): ContF[F, Site] =

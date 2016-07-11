@@ -1,6 +1,7 @@
 package protein.mechanism
 
 import protein.capability.{AgentIndex, BindingPartnerPattern, Rule}
+import protein.util.Antichain
 
 sealed trait Binding {
 
@@ -49,6 +50,8 @@ sealed trait Binding {
 
 object Binding {
   private case class Binding0(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: Site, qs: Site) extends Binding
+
+  type Ref = Antichain.Ref[Binding]
 
   def apply(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: Site, qs: Site): Binding =
     Binding0(witness, pi, qi, ps, qs)

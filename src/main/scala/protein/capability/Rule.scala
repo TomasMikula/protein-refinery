@@ -1,9 +1,15 @@
 package protein.capability
 
+import nutcracker.{DSet, IncSet, PropagationLang, Trigger}
+import nutcracker.util.{ContF, FreeK, InjectK}
 import protein.mechanism.{Binding, Protein, Site}
+import protein.util.Antichain
 
+import scala.language.higherKinds
 import scala.collection.mutable.ArrayBuffer
-import scalaz.{Show}
+import scalaz.Show
+import scalaz.syntax.traverse._
+import scalaz.std.list._
 
 final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
   lazy val rhs: AgentsPattern = actions.foldLeft(lhs)((p, a) => p.modify(a))
@@ -99,6 +105,15 @@ final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
 }
 
 object Rule {
+  type Ref = Antichain.Ref[Rule]
+
+  def linksAgentToC[F[_[_], _]](ref: Ref)(p: Protein)(implicit inj: InjectK[PropagationLang, F]): ContF[F, Binding.Ref] =
+    ContF(f => PropagationLang.domTriggerF(ref)(r => {
+      val now = FreeK.sequence_(r.value.linksAgentTo(p).iterator.map(b => PropagationLang.cellF(Antichain(b)).inject[F].flatMap(f)).toList)
+      val onChange: (Antichain[Rule], Antichain.Delta[Rule]) => Trigger[FreeK[F, Unit]] = (d, δ) => sys.error("Unreachable code")
+      (Some(now), Some(onChange))
+    }))
+
   implicit def showInstance: Show[Rule] = new Show[Rule] {
     override def shows(r: Rule): String = r.toString
   }
