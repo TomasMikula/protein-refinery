@@ -1,7 +1,7 @@
 import scala.language.higherKinds
 import monocle.Lens
 import nutcracker._
-import nutcracker.util.{ContF, FreeK, FreeKT, InjectK}
+import nutcracker.util.{FreeK, FreeKT}
 import nutcracker.util.CoproductK._
 import nutcracker.util.KList._
 import protein.db.{DB, DBLang}
@@ -35,8 +35,4 @@ package object protein {
 
   def dfsSolver(db: DB[PU]): DFSSolver[DSL, State, Id, Promised] =
     new DFSSolver[DSL, State, Id, Promised](interpreterF, initialState(db), naiveAssess, fetchPromised)
-
-  implicit val injectDefer = InjectK[DeferL, DSL]
-
-  type Cont[A] = ContF[DSL, A]
 }
