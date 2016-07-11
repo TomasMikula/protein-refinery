@@ -1,12 +1,10 @@
-package protein.search
+package protein.lib
 
 import nutcracker.IncSet.IncSetRef
 import nutcracker._
 import nutcracker.util.ContF
+import KB._
 import protein._
-import protein.KB._
-import protein.capability.{AgentsPattern, ProteinPattern, Rule}
-import protein.mechanism.{CompetitiveBinding, Phosphorylation, Protein, Site, SiteState}
 import protein.util.syntax._
 
 object PhosSearch {

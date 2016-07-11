@@ -9,10 +9,7 @@ import nutcracker.Trigger._
 import nutcracker.util.FreeK
 import nutcracker.util.CoproductK.:++:
 import org.reactfx.EventStreams
-import protein.KB
-import protein.capability.ProteinPattern
-import protein.mechanism.{Binding, Phosphorylation, Protein, Site}
-import protein.search.{AssocSearch, PhosSearch}
+import protein.lib.{AssocSearch, Binding, KB, PhosSearch, Phosphorylation, Protein, ProteinPattern, Site}
 import protein.ui.FactType._
 import protein.ui.UIUpdateLang._
 import protein.ui.util.syntax._

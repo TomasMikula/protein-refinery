@@ -1,12 +1,10 @@
-package protein.search
+package protein.lib
 
 import nutcracker.IncSet.IncSetRef
 import nutcracker._
 import nutcracker.util.ContF
+import KB._
 import protein._
-import protein.KB._
-import protein.capability.BindingPartnerPattern
-import protein.mechanism.{Assoc, Binding, CompetitiveBinding, Protein}
 
 object AssocSearch {
 

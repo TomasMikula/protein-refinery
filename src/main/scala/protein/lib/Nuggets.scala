@@ -1,17 +1,15 @@
-package protein
+package protein.lib
 
 import nutcracker.DSet.DSetRef
 import nutcracker.IncSet._
-import nutcracker.{DSet, IncSet, PropagationLang}
-
-import scala.language.higherKinds
 import nutcracker.PropagationLang._
 import nutcracker.util.{ContF, FreeK, InjectK}
 import nutcracker.util.ContF._
-import protein.TrackLang._
-import protein.capability.{ProteinPattern, Rule}
-import protein.mechanism.{Binding, Protein, Site}
-import protein.util.Antichain
+import nutcracker.{DSet, IncSet, PropagationLang}
+import protein.util.TrackLang._
+import protein.util.{Antichain, DomType, OnceTrigger, TrackLang}
+
+import scala.language.higherKinds
 
 object Nuggets {
   type PhosphoTarget = (Protein, Protein, Site)

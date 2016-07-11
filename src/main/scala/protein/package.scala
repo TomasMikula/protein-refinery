@@ -5,6 +5,7 @@ import nutcracker.util.FreeK
 import nutcracker.util.CoproductK._
 import nutcracker.util.KList._
 import protein.db.{DB, DBLang}
+import protein.util.{TrackLang, Tracker}
 
 package object protein {
   type DeferL[K[_], A] = DeferLang[Cost, K, A]

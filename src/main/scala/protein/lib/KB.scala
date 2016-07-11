@@ -1,14 +1,12 @@
-package protein
+package protein.lib
 
 import nutcracker.IncSet._
-import nutcracker.{IncSet, PropagationLang}
-
-import scala.language.higherKinds
 import nutcracker.util.{ContF, FreeK, InjectK, Lst}
 import nutcracker.util.ContF._
-import protein.capability.{ProteinPattern, Rule}
+import nutcracker.{IncSet, PropagationLang}
 import protein.db.{DB, DBLang, Table, TableId}
-import protein.mechanism.{Binding, Protein, Site}
+
+import scala.language.higherKinds
 
 object KB {
   private object Tables {

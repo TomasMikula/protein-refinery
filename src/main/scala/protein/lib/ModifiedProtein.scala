@@ -1,4 +1,4 @@
-package protein.mechanism
+package protein.lib
 
 case class ModifiedProtein(p: Protein, mods: ProteinModifications) {
   override def toString = s"$p$mods"

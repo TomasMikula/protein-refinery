@@ -1,8 +1,9 @@
-package protein
+package protein.util
+
+import nutcracker.util.{FreeK, InjectK}
+import nutcracker.{DRef, PropagationLang, Trigger}
 
 import scala.language.higherKinds
-import nutcracker.{DRef, PropagationLang, Trigger}
-import nutcracker.util.{FreeK, InjectK}
 
 sealed abstract class TrackLang[K[_], A]
 

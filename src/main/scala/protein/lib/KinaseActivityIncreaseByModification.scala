@@ -1,5 +1,3 @@
-package protein.capability
-
-import protein.mechanism.{Protein, ProteinModifications}
+package protein.lib
 
 case class KinaseActivityIncreaseByModification(kinase: Protein, mods: ProteinModifications)

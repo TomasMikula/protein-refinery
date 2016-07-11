@@ -1,5 +1,3 @@
-package protein.capability
-
-import protein.mechanism.{Site, Protein}
+package protein.lib
 
 case class Phosphorylates(kinase: Protein, substrate: Protein, phosphoSite: Site)

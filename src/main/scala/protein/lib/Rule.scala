@@ -1,15 +1,12 @@
-package protein.capability
+package protein.lib
 
-import nutcracker.{DSet, IncSet, PropagationLang, Trigger}
 import nutcracker.util.{ContF, FreeK, InjectK}
-import protein.mechanism.{Binding, Protein, Site}
+import nutcracker.{PropagationLang, Trigger}
 import protein.util.Antichain
 
-import scala.language.higherKinds
 import scala.collection.mutable.ArrayBuffer
+import scala.language.higherKinds
 import scalaz.Show
-import scalaz.syntax.traverse._
-import scalaz.std.list._
 
 final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
   lazy val rhs: AgentsPattern = actions.foldLeft(lhs)((p, a) => p.modify(a))

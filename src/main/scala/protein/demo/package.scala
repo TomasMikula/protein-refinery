@@ -1,7 +1,7 @@
 package protein
 
 import protein.capability.syntax._
-import protein.mechanism.{Binding, Protein, Site}
+import protein.lib.{Binding, KB, Protein, Site}
 
 package object demo {
 

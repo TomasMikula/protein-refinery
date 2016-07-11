@@ -1,4 +1,4 @@
-package protein.mechanism
+package protein.lib
 
 import algebra.Eq
 

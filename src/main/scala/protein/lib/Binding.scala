@@ -1,6 +1,5 @@
-package protein.mechanism
+package protein.lib
 
-import protein.capability.{AgentIndex, BindingPartnerPattern, Rule}
 import protein.util.Antichain
 
 sealed trait Binding {

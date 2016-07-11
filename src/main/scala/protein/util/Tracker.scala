@@ -1,11 +1,11 @@
-package protein
+package protein.util
 
-import scala.language.higherKinds
 import nutcracker.DRef
 import nutcracker.util.{K3Map, Lst, Step, WriterState}
-import protein.TrackLang._
-import protein.Tracker.SingleTypeTracker
+import protein.util.TrackLang._
+import protein.util.Tracker.SingleTypeTracker
 
+import scala.language.higherKinds
 import scalaz.std.list._
 import scalaz.syntax.traverse._
 

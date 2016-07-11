@@ -1,10 +1,7 @@
 package protein.capability
 
 import scala.language.implicitConversions
-import protein.capability.AgentsPattern._
-import protein.mechanism.{Binding, Protein, ProteinModifications, Site, SiteState}
-
-import scalaz.{NonEmptyList, State}
+import protein.lib.{Binding, BindingPartnerPattern, Protein, ProteinModifications, ProteinPattern, Site, SiteState}
 
 package object syntax {
 

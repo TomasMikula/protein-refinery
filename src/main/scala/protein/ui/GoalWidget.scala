@@ -11,7 +11,7 @@ import nutcracker.IncSet.IncSetRef
 import nutcracker.util.KMap
 import org.reactfx.{EventSource, EventStream}
 import org.reactfx.value.Val
-import protein.mechanism.{Assoc, CompetitiveBinding, Phosphorylation, Protein}
+import protein.lib.{Assoc, CompetitiveBinding, Phosphorylation, Protein}
 import protein.ui.util.syntax._
 
 class GoalWidget {

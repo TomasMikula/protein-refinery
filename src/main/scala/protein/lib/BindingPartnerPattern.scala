@@ -1,9 +1,7 @@
-package protein.capability
+package protein.lib
 
-import protein.capability.AgentsPattern._
-import protein.mechanism.{Binding, Protein, Site}
-
-import scalaz.{State}
+import protein.lib.AgentsPattern._
+import scalaz.State
 
 case class BindingPartnerPattern(p: ProteinPattern, s: Site) {
   def overlaps(that: BindingPartnerPattern): Boolean = (this.s == that.s) && (this.p isCompatibleWith that.p)

@@ -1,10 +1,8 @@
 package protein
 
-import nutcracker.{Dom, Meet, PropagationLang}
-import nutcracker.util.InjectK
-import protein.mechanism.ProteinModifications
+import nutcracker.{Dom, Meet}
 
-package object search {
+package object lib {
 
   type ProteinModificationsLattice = Option[ProteinModifications]
 
@@ -28,5 +26,4 @@ package object search {
       override def combineDeltas(d1: Unit, d2: Unit): Unit = ()
     }
 
-  implicit val injP = implicitly[InjectK[PropagationLang, DSL]]
 }

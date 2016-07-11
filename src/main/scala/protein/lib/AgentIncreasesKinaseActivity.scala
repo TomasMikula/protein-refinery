@@ -1,6 +1,4 @@
-package protein.mechanism
-
-import protein.capability.KinaseActivityIncreaseByModification
+package protein.lib
 
 sealed trait AgentIncreasesKinaseActivity {
   val subject: Protein

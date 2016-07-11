@@ -1,6 +1,5 @@
-package protein.capability
+package protein.lib
 
-import protein.mechanism.{Protein, ProteinModifications, Site, SiteState}
 import protein.util.syntax._
 
 import scalaz.Show

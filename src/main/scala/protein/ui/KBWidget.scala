@@ -1,6 +1,6 @@
 package protein.ui
 
-import javafx.collections.{FXCollections, ObservableSet}
+import javafx.collections.FXCollections
 import javafx.geometry.Pos
 import javafx.scene.Node
 import javafx.scene.control.{Button, Label, ListView, Menu, MenuBar, MenuItem, ScrollPane, TextField, TitledPane}
@@ -10,12 +10,10 @@ import nutcracker.util.KMap
 import org.reactfx.collection.LiveArrayList
 import org.reactfx.value.{Val, Var}
 import org.reactfx.{EventSource, EventStream, EventStreams}
-import protein.capability.{ProteinPattern, Rule}
-import protein.mechanism.{Protein, ProteinModifications, Site, SiteState}
+import protein.lib.{Protein, ProteinModifications, ProteinPattern, Rule, Site, SiteState}
 import protein.ui.FactType.{FactKinase, FactPhosTarget, FactRule}
 import protein.ui.util.syntax._
 
-import scala.collection.mutable.ArrayBuffer
 import scalaz.Show
 
 class KBWidget {

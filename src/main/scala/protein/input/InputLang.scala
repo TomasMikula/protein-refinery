@@ -1,7 +1,7 @@
 package protein.input
 
 import scala.language.higherKinds
-import protein.mechanism.{AgentIncreasesKinaseActivity, Binding, Protein, ProteinModifications, Site}
+import protein.lib.{AgentIncreasesKinaseActivity, Binding, Protein, ProteinModifications, Site}
 
 sealed trait InputLang[A]
 

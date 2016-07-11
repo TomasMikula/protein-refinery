@@ -1,8 +1,7 @@
 package protein.ui
 
 import nutcracker.IncSet.IncSetRef
-import protein.capability.ProteinPattern
-import protein.mechanism.{Phosphorylation, Protein, Site}
+import protein.lib.{Phosphorylation, Protein, ProteinPattern, Site}
 
 sealed abstract class UIRequest
 

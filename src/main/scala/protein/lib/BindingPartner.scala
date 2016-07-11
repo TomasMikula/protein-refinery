@@ -1,4 +1,4 @@
-package protein.mechanism
+package protein.lib
 
 case class BindingPartner(p: ModifiedProtein, s: Site)
 

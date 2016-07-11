@@ -1,9 +1,8 @@
 package protein.demo
 
 import nutcracker._
-import protein.mechanism.{CompetitiveBinding, Phosphorylation}
+import protein.lib.{CompetitiveBinding, PhosSearch, Phosphorylation}
 import protein.capability.syntax._
-import protein.search.PhosSearch
 
 object Demo1_Phos extends App {
 

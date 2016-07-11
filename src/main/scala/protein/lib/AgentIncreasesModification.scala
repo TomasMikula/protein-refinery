@@ -1,6 +1,4 @@
-package protein.mechanism
-
-import protein.capability.Rule
+package protein.lib
 
 import scalaz.NonEmptyList
 

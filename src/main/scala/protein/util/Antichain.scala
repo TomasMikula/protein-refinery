@@ -11,7 +11,7 @@ object Antichain {
 
   type Ref[A] = DRef.Aux[Antichain[A], Update[A], Delta[A]]
 
-  trait DomType[A] extends protein.DomType[A] { self: Singleton =>
+  trait DomType[A] extends protein.util.DomType[A] { self: Singleton =>
     override type Update = Nothing
     override type Delta = Nothing
   }

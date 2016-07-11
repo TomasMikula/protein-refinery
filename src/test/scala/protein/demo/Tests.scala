@@ -5,8 +5,7 @@ import nutcracker.util.{FreeK, Lst}
 import org.scalatest.FunSuite
 import protein._
 import protein.capability.syntax._
-import protein.mechanism.{Assoc, Binding, CompetitiveBinding, Phosphorylation, Protein, ProteinModifications, Site}
-import protein.search.PhosSearch
+import protein.lib.{Assoc, Binding, CompetitiveBinding, KB, PhosSearch, Phosphorylation, Protein, ProteinModifications, Site}
 
 class Tests extends FunSuite {
 
