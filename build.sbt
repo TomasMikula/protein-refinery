@@ -1,4 +1,4 @@
-name := "protein"
+name := "protein-refinery"
 
 version := "0.1.2"
 
