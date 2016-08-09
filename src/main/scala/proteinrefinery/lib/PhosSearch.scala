@@ -24,7 +24,7 @@ object PhosSearch {
     // phosphorylation at site s, if, e.g., s is a Serine and kinase is a Serine kinase.
     // Should be easy to achieve by having phosphoSites not as an atomic query, but as a search on top of more basic facts.
     for {
-      a <- AssocSearch.searchC(kinase, substrate)
+      a <- Assoc.searchC(kinase, substrate)
       ph <- if(s != a.bindings.last.rightS) ContF.point[DSL, Phosphorylation](Phosphorylation(a, s))
             else                            ContF.noop[DSL, Phosphorylation]
     } yield ph
@@ -37,7 +37,7 @@ object PhosSearch {
   def negativeInfluenceC(p: Protein, ph: Phosphorylation): ContF[DSL, NegativeInfluenceOnPhosphorylation] = {
     // currently the only way a protein can have negative influence on phosphorylation
     // is via negative influence on the association of enzyme and substrate
-    AssocSearch.negativeInfluenceC(p, ph.assoc).map(NegativeInfluenceOnPhosphorylation.byNegativeInfluenceOnAssociation)
+    NegativeInfluenceOnAssociation.searchC(p, ph.assoc).map(NegativeInfluenceOnPhosphorylation.byNegativeInfluenceOnAssociation)
   }
 }
 

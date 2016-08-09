@@ -9,7 +9,7 @@ import nutcracker.Trigger._
 import nutcracker.util.FreeK
 import nutcracker.util.CoproductK.:++:
 import org.reactfx.EventStreams
-import proteinrefinery.lib.{AssocSearch, Binding, KB, PhosSearch, Phosphorylation, Protein, ProteinPattern, Site}
+import proteinrefinery.lib.{Assoc, Binding, KB, PhosSearch, Phosphorylation, Protein, ProteinPattern, Site}
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.UIUpdateLang._
 import proteinrefinery.ui.util.syntax._
@@ -38,7 +38,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   }
 
   private def addGoalAssoc(p: Protein, q: Protein): Prg[Unit] =
-    AssocSearch.search(p, q).inject[DSL] >>= {
+    Assoc.search(p, q).inject[DSL] >>= {
       observeGoal(s"Association between $p and $q", _)
     }
 
