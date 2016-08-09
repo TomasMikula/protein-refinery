@@ -8,6 +8,7 @@ import javafx.scene.control.{Button, MenuItem}
 import org.reactfx.util.{TetraFunction, TriFunction}
 import org.reactfx.{EventStream, Subscription}
 import org.reactfx.value.Val
+import proteinrefinery.ui.util.syntax.{Ap3Builder, Ap4Builder}
 
 package object syntax {
 
@@ -81,6 +82,9 @@ package object syntax {
   def j[A, B, C, D, R](f: (A, B, C, D) => R): TetraFunction[A, B, C, D, R] = new TetraFunction[A, B, C, D, R] {
     def apply(a: A, b: B, c: C, d: D): R = f(a, b, c, d)
   }
+}
+
+package syntax {
 
   final case class Ap2Builder[A, B](a: ObservableValue[A], b: ObservableValue[B]) {
     def apply[R](f: (A, B) => R): Val[R] = Val.combine(a, b, j(f))
@@ -98,4 +102,5 @@ package object syntax {
     def apply[R](f: (A, B, C, D) => R): Val[R] = Val.combine(a, b, c, d, j(f))
     def tuple: Val[(A, B, C, D)] = apply((a, b, c, d) => (a, b, c, d))
   }
+
 }

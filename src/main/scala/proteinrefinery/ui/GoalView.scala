@@ -16,7 +16,7 @@ class GoalView[A](val goalType: GoalType[A], val desc: String, val ref: IncSetRe
 
   val node = new TitledPane(desc, goals)
 
-  def updateSolutions(newVal: IncSet[A], delta: Diff[Set[A]]): Unit = {
+  def updateSolutions(newVal: IncSet[A], delta: Diff[Set[A]]): Unit = { // linter:ignore UnusedParameter
     delta.value.foreach(a => addSolution(a))
   }
 

@@ -18,7 +18,7 @@ object AssocSearch {
 
   private def search0(leftTail: List[Binding], p: Protein, q: Protein, rightTail: List[Binding]): ContF[DSL, Assoc] =
     bindingsOfC[DSL](p) flatMap { b =>
-      if(leftTail.nonEmpty && b.leftS == leftTail.head.rightS) ContF.noop
+      if(leftTail.nonEmpty && b.leftS == leftTail.head.rightS) ContF.noop // linter:ignore DuplicateIfBranches
       else if(leftTail.contains(b) || rightTail.contains(b)) ContF.noop
       else {
         val indirect0 = search0(b :: leftTail, b.right, q, rightTail)

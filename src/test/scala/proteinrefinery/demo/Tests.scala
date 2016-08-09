@@ -35,8 +35,8 @@ class Tests extends FunSuite {
     val (s, ref) = Interpreter(problem)(proteinrefinery.initialState(TestKB))
     val solutions = proteinrefinery.fetch(ref)(s).value
     val expected = Set(
-      Phosphorylation(Assoc(List[Binding](bindings(1).flip, bindings(0))), Site("s")),
-      Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")),
+      Phosphorylation(Assoc(List[Binding](bindings(1).flip, bindings(0))), Site("s")),              // linter:ignore UseHeadNotApply
+      Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), // linter:ignore UseHeadNotApply
       Phosphorylation(Assoc(List[Binding](bindings(8).flip, bindings(7), bindings(6).flip)), Site("s"))
     )
     assertResult(expected)(solutions)
@@ -53,7 +53,7 @@ class Tests extends FunSuite {
     val solutions = proteinrefinery.fetch(ref)(s).value
 
     val expected = Set[(Phosphorylation, NegativeInfluenceOnPhosphorylation)](
-      (Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(CompetitiveBinding(bindings(3), bindings(4)))),
+      (Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(CompetitiveBinding(bindings(3), bindings(4)))), // linter:ignore UseHeadNotApply
       (Phosphorylation(Assoc(List[Binding](bindings(8).flip, bindings(7), bindings(6).flip)), Site("s")), NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(CompetitiveBinding(bindings(8).flip, bindings(5))))
     )
 
