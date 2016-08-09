@@ -28,11 +28,11 @@ object PhosSearch {
     } yield ph
   }
 
-  def negativeInfluence(p: Protein, ph: Phosphorylation): Prg[IncSetRef[CompetitiveBinding]] = {
+  def negativeInfluence(p: Protein, ph: Phosphorylation): Prg[IncSetRef[NegativeInfluenceOnAssociation]] = {
     IncSet.collect(negativeInfluenceC(p, ph))
   }
 
-  def negativeInfluenceC(p: Protein, ph: Phosphorylation): ContF[DSL, CompetitiveBinding] = {
+  def negativeInfluenceC(p: Protein, ph: Phosphorylation): ContF[DSL, NegativeInfluenceOnAssociation] = {
     // currently the only way a protein can have negative influence on phosphorylation
     // is via negative influence on the association of enzyme and substrate
     AssocSearch.negativeInfluenceC(p, ph.assoc)

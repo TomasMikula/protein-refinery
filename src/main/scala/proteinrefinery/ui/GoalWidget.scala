@@ -11,7 +11,7 @@ import nutcracker.IncSet.IncSetRef
 import nutcracker.util.KMap
 import org.reactfx.{EventSource, EventStream}
 import org.reactfx.value.Val
-import proteinrefinery.lib.{Assoc, CompetitiveBinding, Phosphorylation, Protein}
+import proteinrefinery.lib.{Assoc, CompetitiveBinding, NegativeInfluenceOnAssociation, Phosphorylation, Protein}
 import proteinrefinery.ui.util.syntax._
 
 class GoalWidget {
@@ -75,7 +75,7 @@ trait GoalType[A] { self: Singleton => }
 object GoalType {
   implicit object GoalAssoc extends GoalType[Assoc]
   implicit object GoalPhos extends GoalType[Phosphorylation]
-  implicit object GoalPhosNegInfl extends GoalType[CompetitiveBinding]
+  implicit object GoalPhosNegInfl extends GoalType[NegativeInfluenceOnAssociation]
 }
 
 class AssocGoalInput extends InputForm[(Protein, Protein)] {

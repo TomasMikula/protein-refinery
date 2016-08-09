@@ -6,6 +6,8 @@ import nutcracker.util.ContF
 import KB._
 import proteinrefinery._
 
+import scalaz.Show
+
 object AssocSearch {
 
   def search(p: Protein, q: Protein): Prg[IncSetRef[Assoc]] =
@@ -30,22 +32,36 @@ object AssocSearch {
     }
 
 
-  def negativeInfluence(p: Protein, a: Assoc): Prg[IncSetRef[CompetitiveBinding]] =
-    IncSet.collectAll(a.bindings.map(b => competitiveBindings0(p, b)))
+  def negativeInfluence(p: Protein, a: Assoc): Prg[IncSetRef[NegativeInfluenceOnAssociation]] =
+    IncSet.collectAll(a.bindings.map(b => negativeInfluenceByCompetitiveBinding(p, b)))
 
-  def negativeInfluenceC(p: Protein, a: Assoc): ContF[DSL, CompetitiveBinding] =
-    ContF.sequence(a.bindings.map(b => competitiveBindings0(p, b)))
+  def negativeInfluenceC(p: Protein, a: Assoc): ContF[DSL, NegativeInfluenceOnAssociation] =
+    ContF.sequence(a.bindings.map(b => negativeInfluenceByCompetitiveBinding(p, b)))
 
-  private def competitiveBindings0(competitor: Protein, bnd: Binding): ContF[DSL, CompetitiveBinding] = {
-    val l = competitiveBindings1(competitor, bnd.leftPattern) map { competingBinding => CompetitiveBinding(bnd.flip, competingBinding) }
-    val r = competitiveBindings1(competitor, bnd.rightPattern) map { competingBinding => CompetitiveBinding(bnd, competingBinding) }
+  private def negativeInfluenceByCompetitiveBinding(competitor: Protein, bnd: Binding): ContF[DSL, NegativeInfluenceOnAssociation] = {
+    val l = competitiveBindings(competitor, bnd.leftPattern) map { competingBinding => NegativeInfluenceOnAssociation.byCompetitiveBinding(CompetitiveBinding(bnd.flip, competingBinding)) }
+    val r = competitiveBindings(competitor, bnd.rightPattern) map { competingBinding => NegativeInfluenceOnAssociation.byCompetitiveBinding(CompetitiveBinding(bnd, competingBinding)) }
     ContF.sequence(l, r)
   }
 
-  private def competitiveBindings1(competitor: Protein, bp: BindingPartnerPattern): ContF[DSL, Binding] =
+  private def competitiveBindings(competitor: Protein, bp: BindingPartnerPattern): ContF[DSL, Binding] =
     ContF.filter(bindingsOfC[DSL](competitor)) { bnd =>
       bnd.right == bp.p.protein &&
       bnd.rightS == bp.s &&
       (bnd.rightPattern.p.mods combine bp.p.mods).isDefined
     }
+}
+
+sealed trait NegativeInfluenceOnAssociation
+
+object NegativeInfluenceOnAssociation {
+
+  final case class ByCompetitiveBinding(value: CompetitiveBinding) extends NegativeInfluenceOnAssociation
+  def byCompetitiveBinding(cb: CompetitiveBinding): NegativeInfluenceOnAssociation = ByCompetitiveBinding(cb)
+
+  implicit def showInstance: Show[NegativeInfluenceOnAssociation] = new Show[NegativeInfluenceOnAssociation] {
+    override def shows(x: NegativeInfluenceOnAssociation): String = x match {
+      case ByCompetitiveBinding(cb) => Show[CompetitiveBinding].shows(cb)
+    }
+  }
 }

@@ -1,7 +1,7 @@
 package proteinrefinery.demo
 
 import nutcracker._
-import proteinrefinery.lib.{CompetitiveBinding, PhosSearch, Phosphorylation}
+import proteinrefinery.lib.{CompetitiveBinding, NegativeInfluenceOnAssociation, PhosSearch, Phosphorylation}
 import proteinrefinery.capability.syntax._
 
 object Demo1_Phos extends App {
@@ -37,10 +37,10 @@ object Demo2_NegInfl extends App {
   // output solutions
   val (s, ref) = proteinrefinery.interpreterF(problem)(proteinrefinery.initialState(TestKB))
   proteinrefinery.fetch(ref)(s).value foreach {
-    case (ph: Phosphorylation, cb: CompetitiveBinding) =>
+    case (ph: Phosphorylation, ni: NegativeInfluenceOnAssociation) =>
       println
       println(ph)
-      println(cb)
+      println(ni)
   }
   println
 }

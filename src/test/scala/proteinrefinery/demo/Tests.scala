@@ -5,7 +5,7 @@ import nutcracker.util.{FreeK, Lst}
 import org.scalatest.FunSuite
 import proteinrefinery._
 import proteinrefinery.capability.syntax._
-import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, KB, PhosSearch, Phosphorylation, Protein, ProteinModifications, Site}
+import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, KB, NegativeInfluenceOnAssociation, PhosSearch, Phosphorylation, Protein, ProteinModifications, Site}
 
 class Tests extends FunSuite {
 
@@ -53,9 +53,9 @@ class Tests extends FunSuite {
     val (s, ref) = Interpreter(problem)(proteinrefinery.initialState(TestKB))
     val solutions = proteinrefinery.fetch(ref)(s).value
 
-    val expected = Set[(Phosphorylation, CompetitiveBinding)](
-      (Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), CompetitiveBinding(bindings(3), bindings(4))),
-      (Phosphorylation(Assoc(List[Binding](bindings(8).flip, bindings(7), bindings(6).flip)), Site("s")), CompetitiveBinding(bindings(8).flip, bindings(5)))
+    val expected = Set[(Phosphorylation, NegativeInfluenceOnAssociation)](
+      (Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), NegativeInfluenceOnAssociation.byCompetitiveBinding(CompetitiveBinding(bindings(3), bindings(4)))),
+      (Phosphorylation(Assoc(List[Binding](bindings(8).flip, bindings(7), bindings(6).flip)), Site("s")), NegativeInfluenceOnAssociation.byCompetitiveBinding(CompetitiveBinding(bindings(8).flip, bindings(5))))
     )
 
     assertResult(expected)(solutions)
