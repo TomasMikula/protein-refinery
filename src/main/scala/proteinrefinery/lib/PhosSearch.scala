@@ -7,6 +7,8 @@ import KB._
 import proteinrefinery._
 import proteinrefinery.util.syntax._
 
+import scalaz.Show
+
 object PhosSearch {
 
   def search(kinase: Protein, substrate: Protein): Prg[IncSetRef[Phosphorylation]] =
@@ -28,14 +30,29 @@ object PhosSearch {
     } yield ph
   }
 
-  def negativeInfluence(p: Protein, ph: Phosphorylation): Prg[IncSetRef[NegativeInfluenceOnAssociation]] = {
+  def negativeInfluence(p: Protein, ph: Phosphorylation): Prg[IncSetRef[NegativeInfluenceOnPhosphorylation]] = {
     IncSet.collect(negativeInfluenceC(p, ph))
   }
 
-  def negativeInfluenceC(p: Protein, ph: Phosphorylation): ContF[DSL, NegativeInfluenceOnAssociation] = {
+  def negativeInfluenceC(p: Protein, ph: Phosphorylation): ContF[DSL, NegativeInfluenceOnPhosphorylation] = {
     // currently the only way a protein can have negative influence on phosphorylation
     // is via negative influence on the association of enzyme and substrate
-    AssocSearch.negativeInfluenceC(p, ph.assoc)
+    AssocSearch.negativeInfluenceC(p, ph.assoc).map(NegativeInfluenceOnPhosphorylation.byNegativeInfluenceOnAssociation)
+  }
+}
+
+sealed trait NegativeInfluenceOnPhosphorylation
+
+object NegativeInfluenceOnPhosphorylation {
+
+  final case class ByNegativeInfluenceOnAssociation(value: NegativeInfluenceOnAssociation) extends NegativeInfluenceOnPhosphorylation
+  def byNegativeInfluenceOnAssociation(ni: NegativeInfluenceOnAssociation): NegativeInfluenceOnPhosphorylation = ByNegativeInfluenceOnAssociation(ni)
+  def byCompetitiveBinding(cb: CompetitiveBinding): NegativeInfluenceOnPhosphorylation = byNegativeInfluenceOnAssociation(NegativeInfluenceOnAssociation.byCompetitiveBinding(cb))
+
+  implicit def showInstance: Show[NegativeInfluenceOnPhosphorylation] = new Show[NegativeInfluenceOnPhosphorylation] {
+    override def shows(x: NegativeInfluenceOnPhosphorylation): String = x match {
+      case ByNegativeInfluenceOnAssociation(ni) => Show[NegativeInfluenceOnAssociation].shows(ni)
+    }
   }
 }
 
