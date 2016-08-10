@@ -4,7 +4,7 @@ import nutcracker._
 import org.scalatest.FunSuite
 import proteinrefinery._
 import proteinrefinery.capability.syntax._
-import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, KB, NegativeInfluenceOnPhosphorylation, PhosSearch, Phosphorylation, Protein, Site}
+import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, KB, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein, Site}
 
 class Tests extends FunSuite {
 
@@ -31,7 +31,7 @@ class Tests extends FunSuite {
   val Interpreter = proteinrefinery.interpreterF
 
   test("Phosphorylation search") {
-    val problem = PhosSearch.search('C, 'B)
+    val problem = Phosphorylation.search('C, 'B)
     val (s, ref) = Interpreter(problem)(proteinrefinery.initialState(TestKB))
     val solutions = proteinrefinery.fetch(ref)(s).value
     val expected = Set(
@@ -45,8 +45,8 @@ class Tests extends FunSuite {
   test("Negative influence on phosphorylation") {
 
     val problem = IncSet.collect(for {
-      phos <- PhosSearch.searchC('C, 'B)
-      ni <- PhosSearch. negativeInfluenceC('D, phos)
+      phos <- Phosphorylation.searchC('C, 'B)
+      ni <- NegativeInfluenceOnPhosphorylation.searchC('D, phos)
     } yield (phos, ni))
 
     val (s, ref) = Interpreter(problem)(proteinrefinery.initialState(TestKB))
