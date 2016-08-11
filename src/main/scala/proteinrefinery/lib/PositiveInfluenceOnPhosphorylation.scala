@@ -5,7 +5,6 @@ import nutcracker._
 import nutcracker.util.ContF
 import KB._
 import proteinrefinery._
-import proteinrefinery.util.syntax._
 
 sealed trait PositiveInfluenceOnPhosphorylation {
   def agent: Protein
@@ -52,95 +51,10 @@ object PositiveInfluenceOnPhosphorylation {
   }
 }
 
-sealed trait PositiveInfluenceOnKinaseActivity {
-  def agent: Protein
-  def kinase: Protein
-}
-
-object PositiveInfluenceOnKinaseActivity {
-  final case class PositiveInfluenceOnActiveState(infl: PositiveInfluenceOnState) extends PositiveInfluenceOnKinaseActivity {
-    def agent: Protein = infl.agent
-    def kinase: Protein = infl.target.protein
-  }
-
-  def searchC(agent: Protein, kinase: Protein): ContF[DSL, PositiveInfluenceOnKinaseActivity] =
-    kinaseActivityC[DSL](kinase).flatMap(PositiveInfluenceOnState.searchC(agent, _).map(PositiveInfluenceOnActiveState(_)))
-}
-
-sealed trait PositiveInfluenceOnState {
-  def agent: Protein
-  def target: ProteinPattern
-}
-
-object PositiveInfluenceOnState {
-  final case class ByRule(influenceOnEnablingRule: PositiveInfluenceOnRule, target: ProteinPattern) extends PositiveInfluenceOnState {
-    def agent = influenceOnEnablingRule.agent
-  }
-  final case class ByPhosphorylation(infl: PositiveInfluenceOnPhosphorylation, target: ProteinPattern) extends PositiveInfluenceOnState {
-    def agent: Protein = infl.agent
-  }
-
-  def searchC(agent: Protein, target: ProteinPattern): ContF[DSL, PositiveInfluenceOnState] =
-    ContF.sequence(searchByRule(agent, target), searchByPhosphorylation(agent, target))
-
-  private def searchByRule(agent: Protein, target: ProteinPattern): ContF[DSL, PositiveInfluenceOnState] = {
-    val ap = AgentsPattern.empty.addAgent(target)._1
-    for {
-      r <- ContF.filter(rulesC[DSL])(r => r enables ap)
-      infl <- PositiveInfluenceOnRule.searchC(agent, r)
-    } yield ByRule(infl, target)
-  }
-
-  private def searchByPhosphorylation(agent: Protein, target: ProteinPattern): ContF[DSL, PositiveInfluenceOnState] = {
-    val conts = target.mods.mods.iterator.mapFilter({ case (site, state) =>
-      if (state.label == "p") Some(site) // XXX
-      else None
-    }).map[ContF[DSL, PositiveInfluenceOnState]](site =>
-      for {
-        k <- kinasesOfC[DSL](target.protein, site)
-        ph <- Phosphorylation.searchC(k, target.protein, site)
-        infl <- PositiveInfluenceOnPhosphorylation.searchC(agent, ph)
-      } yield ByPhosphorylation(infl, target)
-    ).toList
-    ContF.sequence(conts)
-  }
-}
-
 object PositiveInfluenceOnPhosphorylatedState {
   def searchC(agent: Protein, target: Protein): ContF[DSL, PositiveInfluenceOnState] =
     phosphoSitesC[DSL](target).flatMap(site => {
       val pat = ProteinPattern(target).addModification(site, SiteState("p")).get // XXX
       PositiveInfluenceOnState.searchC(agent, pat)
     })
-}
-
-sealed trait PositiveInfluenceOnRule {
-  def agent: Protein
-  def rule: Rule
-}
-
-object PositiveInfluenceOnRule {
-  final case class InLhs(agent: Protein, rule: Rule) extends PositiveInfluenceOnRule
-  final case class Indirect(influenceOnEnablingRule: PositiveInfluenceOnRule, rule: Rule) extends PositiveInfluenceOnRule {
-    def agent = influenceOnEnablingRule.agent
-  }
-
-  def search(agent: Protein, rule: Rule): Prg[IncSetRef[PositiveInfluenceOnRule]] =
-    IncSet.collect(searchC(agent, rule))
-
-  def searchC(agent: Protein, rule: Rule): ContF[DSL, PositiveInfluenceOnRule] =
-    searchC(agent, rule, List(rule))
-
-  private def searchC(agent: Protein, r: Rule, avoid: List[Rule]): ContF[DSL, PositiveInfluenceOnRule] = {
-    val inLhs: Option[PositiveInfluenceOnRule] = if(r.lhs.agentIterator.exists(_.protein == agent)) Some(InLhs(agent, r)) else None
-    val indirect: ContF[DSL, PositiveInfluenceOnRule] = rulesC[DSL].flatMap(q => { // TODO: penalize
-      if(!avoid.contains(q) && (q enables r)) searchC(agent, q, q :: avoid).map(posInfl => Indirect(posInfl, r))
-      else ContF.noop[DSL, PositiveInfluenceOnRule]
-    })
-
-    inLhs match {
-      case Some(inLhs) => ContF.sequence(ContF.point(inLhs), indirect)
-      case None => indirect
-    }
-  }
 }
