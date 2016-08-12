@@ -1,5 +1,6 @@
 package proteinrefinery.lib
 
+import proteinrefinery.util.Antichain
 import proteinrefinery.util.syntax._
 
 import scalaz.Show
@@ -30,6 +31,8 @@ case class ProteinPattern(protein: Protein, mods: ProteinModifications) {
 }
 
 object ProteinPattern {
+  type Ref = Antichain.Ref[ProteinPattern]
+
   def apply(p: Protein): ProteinPattern = ProteinPattern(p, ProteinModifications.noModifications)
 
   implicit def showInstance: Show[ProteinPattern] = new Show[ProteinPattern] {

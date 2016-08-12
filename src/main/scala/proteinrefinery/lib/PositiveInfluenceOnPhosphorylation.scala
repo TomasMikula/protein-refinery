@@ -5,6 +5,7 @@ import nutcracker._
 import nutcracker.util.ContF
 import KB._
 import proteinrefinery._
+import proteinrefinery.util.Antichain
 
 sealed trait PositiveInfluenceOnPhosphorylation {
   def agent: Protein
@@ -12,6 +13,10 @@ sealed trait PositiveInfluenceOnPhosphorylation {
 }
 
 object PositiveInfluenceOnPhosphorylation {
+
+  type Ref = Antichain.Ref[PositiveInfluenceOnPhosphorylation]
+
+  // Constructors
 
   /** Agent that acts as the kinase in a phosphorylation
     * is considered to have positive influence on that phosphorylation.
@@ -33,6 +38,8 @@ object PositiveInfluenceOnPhosphorylation {
   }
 
 
+  // Search
+
   def search(p: Protein, ph: Phosphorylation): Prg[IncSetRef[PositiveInfluenceOnPhosphorylation]] =
     IncSet.collect(searchC(p, ph))
 
@@ -46,6 +53,20 @@ object PositiveInfluenceOnPhosphorylation {
     }
 
     val indirect: ContF[DSL, PositiveInfluenceOnPhosphorylation] = PositiveInfluenceOnKinaseActivity.searchC(p, ph.kinase).map(infl => ActivatesKinase(infl, ph))
+
+    ContF.sequence(indirect :: immediate)
+  }
+
+  def searchC_2(p: Protein, ph: Phosphorylation): ContF[DSL2, Ref] = {
+
+    // we can immediately tell whether `p` is the kinase or part of the scaffold in `ph`
+    val immediate: List[ContF[DSL2, Ref]] = {
+      val isKinase = if(ph.kinase == p) List(IsKinase(ph)) else Nil
+      val inScaffold = if(ph.assoc.bindings.tail.exists(_.left == p)) List(InScaffold(p, ph)) else Nil
+      (isKinase ++ inScaffold).map(Antichain.cellC[DSL2, PositiveInfluenceOnPhosphorylation](_))
+    }
+
+    val indirect: ContF[DSL2, Ref] = Antichain.map(PositiveInfluenceOnKinaseActivity.searchC_2(p, ph.kinase))(infl => ActivatesKinase(infl, ph))
 
     ContF.sequence(indirect :: immediate)
   }

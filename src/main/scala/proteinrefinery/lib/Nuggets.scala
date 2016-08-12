@@ -13,9 +13,7 @@ import scala.language.higherKinds
 
 object Nuggets {
   type PhosphoTarget = (Protein, Protein, Site)
-
   type PhosphoTragetRef = Antichain.Ref[PhosphoTarget]
-  type ProteinPatternRef = Antichain.Ref[ProteinPattern]
 
   private object DomTypes {
     implicit object Rules extends Antichain.DomType[Antichain[Rule]]
@@ -50,7 +48,7 @@ object Nuggets {
     thresholdQuery(DomTypes.Rules: DomType.Aux[Antichain[Rule], Nothing, Nothing])(r => f(r.value))
   def phosphoTargetsF[F[_[_], _]](f: PhosphoTarget => OnceTrigger[PhosphoTragetRef => FreeK[F, Unit]])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     thresholdQuery(DomTypes.PhosphoSites)(pt => f(pt.value))
-  def kinaseActivityF[F[_[_], _]](p: Protein)(f: ProteinPatternRef => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
+  def kinaseActivityF[F[_[_], _]](p: Protein)(f: ProteinPattern.Ref => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     thresholdQuery(DomTypes.Kinases)(pp =>
       if(pp.value.protein == p) OnceTrigger.Fire(f)
       else OnceTrigger.Discard()
@@ -61,7 +59,7 @@ object Nuggets {
     ContF(f => rulesF[F](p andThen (_.map(_ => f))))
   def phosphoTargetsC[F[_[_], _]](p: PhosphoTarget => OnceTrigger[Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, PhosphoTragetRef] =
     ContF(f => phosphoTargetsF[F](p andThen (_.map(_ => f))))
-  def kinaseActivityC[F[_[_], _]](kinase: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, ProteinPatternRef] =
+  def kinaseActivityC[F[_[_], _]](kinase: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, ProteinPattern.Ref] =
     ContF(f => kinaseActivityF[F](kinase)(f))
 
   // derived queries
