@@ -1,27 +1,27 @@
 package proteinrefinery.ui
 
 import nutcracker.IncSet.IncSetRef
-import nutcracker.{Diff, IncSet}
 import nutcracker.PropagationLang._
-
-import scala.language.higherKinds
 import nutcracker.Trigger._
-import nutcracker.util.FreeK
 import nutcracker.util.CoproductK.:++:
+import nutcracker.util.{FreeK, InjectK}
+import nutcracker.{DRef, Diff, Dom, IncSet, PropagationLang}
 import org.reactfx.EventStreams
-import proteinrefinery.lib.{Assoc, Binding, KB, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein, ProteinPattern, Site}
+import proteinrefinery.lib.{Assoc, Binding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, ProteinPattern, Site}
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.UIUpdateLang._
 import proteinrefinery.ui.util.syntax._
+import proteinrefinery.util.Antichain
 
+import scala.language.higherKinds
 import scalaz.Show
 import scalaz.std.tuple._
 
 class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   import Controller._
 
-  val interpreter = (UIUpdateInterpreter(kbWidget, goalWidget) :>>: proteinrefinery.interpreter).freeInstance
-  var state = proteinrefinery.emptyState[Prg[Unit]]
+  val interpreter = (UIUpdateInterpreter(kbWidget, goalWidget) :>>: proteinrefinery.interpreter2).freeInstance
+  var state = proteinrefinery.emptyState2[Prg[Unit]]
 
   EventStreams.merge(kbWidget.requests, goalWidget.requests).forEach(_ match {
     case ReqGoalAssoc(p, q) => exec(addGoalAssoc(p, q))
@@ -38,43 +38,53 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   }
 
   private def addGoalAssoc(p: Protein, q: Protein): Prg[Unit] =
-    Assoc.search(p, q).inject[DSL] >>= {
+    Assoc.search_2(p, q).inject[DSL] >>= {
       observeGoal(s"Association between $p and $q", _)
     }
 
   private def addGoalPhos(kinase: Protein, substrate: Protein): Prg[Unit] =
-    Phosphorylation.search(kinase, substrate).inject[DSL] >>= {
+    Phosphorylation.search_2(kinase, substrate).inject[DSL] >>= {
       observeGoal(s"Phosphorylation of $substrate by $kinase", _)
     }
 
-  private def addGoalPhosNegInfl(agent: Protein, phosGoal: IncSetRef[Phosphorylation], phosDesc: String): Prg[Unit] =
-    IncSet.relBind(phosGoal)(ph => NegativeInfluenceOnPhosphorylation.search(agent, ph)).inject[DSL] >>= {
+  private def addGoalPhosNegInfl(agent: Protein, phosGoal: IncSetRef[_ <: DRef[Antichain[Phosphorylation]]], phosDesc: String): Prg[Unit] =
+    IncSet.relBind(phosGoal)(phRef => NegativeInfluenceOnPhosphorylation.search_2r(agent, phRef.infer)).inject[DSL] >>= {
       observeGoal(s"Negative influence of $agent on $phosDesc", _)
     }
 
   private def addFactBind(p: Protein, ps: Site, q: Protein, qs: Site): Prg[Unit] = {
     val rule = Binding(p, ps, q, qs).witness
-    KB.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
+    Nuggets.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
   }
 
   private def addFactKinase(pp: ProteinPattern): Prg[Unit] = {
-    KB.addKinaseActivityF[DSL](pp) >> newFactF(FactKinase, pp)
+    Nuggets.addKinaseActivityF[DSL](pp) >> newFactF(FactKinase, pp)
   }
 
   private def addFactPhosSite(k: Protein, s: Protein, ss: Site): Prg[Unit] =
-    KB.addPhosphoTargetF[DSL](k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
+    Nuggets.addPhosphoTargetF[DSL](k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
 
-  private def observeGoal[A: Show](desc: String, ref: IncSetRef[A])(implicit t: GoalType[A]): Prg[Unit] =
+  private def observeGoal[A](desc: String, ref: IncSetRef[_ <: DRef[A]])(implicit t: GoalType[A], dom: Dom[A], show: Show[A]): Prg[Unit] =
     domTriggerF(ref)(d => {
-      val now = trackGoalF(t, desc, ref, d).inject[DSL]
-      val onChange = (d: IncSet[A], δ: Diff[Set[A]]) => fireReload(goalUpdatedF(t, ref, d, δ).inject[DSL])
+      val now = initGoalF(t, ref, desc).inject[DSL]
+      val onChange = (d: IncSet[_ <: DRef[A]], δ: Diff[Set[_ <: DRef[A]]]) => fireReload(updateGoal[DSL, A](t, ref, δ))
+      (Some(now), Some(onChange))
+    })
+
+  private def updateGoal[F[_[_], _], A](t: GoalType[A], gref: IncSetRef[_ <: DRef[A]], δ: Diff[Set[_ <: DRef[A]]])(implicit i: InjectK[UIUpdateLang, F], j: InjectK[PropagationLang, F], dom: Dom[A], show: Show[A]): FreeK[F, Unit] =
+    FreeK.sequence_(δ.value.iterator.map(observeSolution[F, A](t, gref, _)).toList)
+
+  private def observeSolution[F[_[_], _], A](t: GoalType[A], gref: IncSetRef[_ <: DRef[A]], sref: DRef[A])(implicit i: InjectK[UIUpdateLang, F], j: InjectK[PropagationLang, F], dom: Dom[A], show: Show[A]): FreeK[F, Unit] =
+    domTriggerF(sref)(a => {
+      val now = addSolutionF[F, A](t, gref, sref, a)
+      val onChange = (a: A, δ: sref.Delta) => fireReload(updateSolutionF[F, A](t, gref, sref, a))
       (Some(now), Some(onChange))
     })
 }
 
 object Controller {
 
-  type DSL[K[_], A] = (UIUpdateLang :++: proteinrefinery.DSL)#Out[K, A]
+  type DSL[K[_], A] = (UIUpdateLang :++: proteinrefinery.DSL2)#Out[K, A]
   type Prg[A] = FreeK[DSL, A]
 
   def apply(kbWidget: KBWidget, goalWidget: GoalWidget): Controller =

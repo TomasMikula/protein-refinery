@@ -4,7 +4,7 @@ import nutcracker.IncSet
 import nutcracker.IncSet.IncSetRef
 import nutcracker.util.ContF
 import proteinrefinery.util.Antichain
-import proteinrefinery.{DSL, DSL2, Prg}
+import proteinrefinery.{DSL, DSL2, Prg, Prg2}
 
 import scalaz.Show
 
@@ -27,6 +27,14 @@ object NegativeInfluenceOnPhosphorylation {
     IncSet.collect(searchC(p, ph))
   }
 
+  def search_2(p: Protein, ph: Phosphorylation): Prg2[IncSetRef[Ref]] = {
+    IncSet.collect(searchC_2(p, ph))
+  }
+
+  def search_2r(p: Protein, phRef: Phosphorylation.Ref): Prg2[IncSetRef[Ref]] = {
+    IncSet.collect(searchC_2r(p, phRef))
+  }
+
   def searchC(p: Protein, ph: Phosphorylation): ContF[DSL, NegativeInfluenceOnPhosphorylation] = {
     // currently the only way a protein can have negative influence on phosphorylation
     // is via negative influence on the association of enzyme and substrate
@@ -37,6 +45,12 @@ object NegativeInfluenceOnPhosphorylation {
     // currently the only way a protein can have negative influence on phosphorylation
     // is via negative influence on the association of the enzyme to the substrate
     Antichain.map(NegativeInfluenceOnAssociation.searchC_2(p, ph.assoc))(byNegativeInfluenceOnAssociation)
+  }
+
+  def searchC_2r(p: Protein, phRef: Phosphorylation.Ref): ContF[DSL2, Ref] = {
+    // currently the only way a protein can have negative influence on phosphorylation
+    // is via negative influence on the association of the enzyme to the substrate
+    phRef.asCont[DSL2] flatMap { searchC_2(p, _) }
   }
 
 

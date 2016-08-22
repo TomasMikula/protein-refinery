@@ -4,7 +4,7 @@ import nutcracker._
 import org.scalatest.FunSuite
 import proteinrefinery._
 import proteinrefinery.capability.syntax._
-import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, KB, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein, Site}
+import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, KB, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, Site}
 
 class Tests extends FunSuite {
 
@@ -20,6 +20,10 @@ class Tests extends FunSuite {
     /* 08 */ ('X @@ 'c) binds ('C @@ 'a)
   )
 
+  val phosphoTargets = List[(Protein, Protein, Site)](
+    ('C, 'B, 's)
+  )
+
   val TestKB = KB[Prg[Unit]](
     rules = bindings.map(_.witness),
 
@@ -28,12 +32,31 @@ class Tests extends FunSuite {
     )
   )
 
+  val initialNuggets: Prg2[Unit] = Nuggets.addAll(
+    rules = bindings.map(_.witness),
+    phosphoSites = phosphoTargets
+  )
+
   val Interpreter = proteinrefinery.interpreterF
+  val Interpreter2 = proteinrefinery.interpreter2F
 
   test("Phosphorylation search") {
     val problem = Phosphorylation.search('C, 'B)
     val (s, ref) = Interpreter(problem)(proteinrefinery.initialState(TestKB))
     val solutions = proteinrefinery.fetch(ref)(s).value
+    val expected = Set(
+      Phosphorylation(Assoc(List[Binding](bindings(1).flip, bindings(0))), Site("s")),              // linter:ignore UseHeadNotApply
+      Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), // linter:ignore UseHeadNotApply
+      Phosphorylation(Assoc(List[Binding](bindings(8).flip, bindings(7), bindings(6).flip)), Site("s"))
+    )
+    assertResult(expected)(solutions)
+  }
+
+  test("Phosphorylation search 2") {
+    val problem = Phosphorylation.search_2('C, 'B)
+    val (s, ref) = Interpreter2(initialNuggets >> problem)(proteinrefinery.emptyState2)
+    val solutionRefs = proteinrefinery.fetchIncSet2(ref)(s)
+    val solutions = solutionRefs.map(fetch2(_)(s).value)
     val expected = Set(
       Phosphorylation(Assoc(List[Binding](bindings(1).flip, bindings(0))), Site("s")),              // linter:ignore UseHeadNotApply
       Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), // linter:ignore UseHeadNotApply
@@ -51,6 +74,26 @@ class Tests extends FunSuite {
 
     val (s, ref) = Interpreter(problem)(proteinrefinery.initialState(TestKB))
     val solutions = proteinrefinery.fetch(ref)(s).value
+
+    val expected = Set[(Phosphorylation, NegativeInfluenceOnPhosphorylation)](
+      (Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(CompetitiveBinding(bindings(3), bindings(4)))), // linter:ignore UseHeadNotApply
+      (Phosphorylation(Assoc(List[Binding](bindings(8).flip, bindings(7), bindings(6).flip)), Site("s")), NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(CompetitiveBinding(bindings(8).flip, bindings(5))))
+    )
+
+    assertResult(expected)(solutions)
+  }
+
+  test("Negative influence on phosphorylation 2") {
+
+    val problem = IncSet.collect(for {
+      phosRef <- Phosphorylation.searchC_2('C, 'B)
+      phos <- phosRef.asCont[DSL2]
+      niRef <- NegativeInfluenceOnPhosphorylation.searchC_2('D, phos)
+      ni <- niRef.asCont[DSL2]
+    } yield (phos, ni))
+
+    val (s, ref) = Interpreter2(initialNuggets >> problem)(proteinrefinery.emptyState2)
+    val solutions = proteinrefinery.fetch2(ref)(s).value
 
     val expected = Set[(Phosphorylation, NegativeInfluenceOnPhosphorylation)](
       (Phosphorylation(Assoc(List[Binding](bindings(3), bindings(2).flip, bindings(0))), Site("s")), NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(CompetitiveBinding(bindings(3), bindings(4)))), // linter:ignore UseHeadNotApply

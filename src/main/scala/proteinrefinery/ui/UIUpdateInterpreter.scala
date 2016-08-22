@@ -8,8 +8,9 @@ import scalaz.Id._
 
 class UIUpdateInterpreter(kbWidget: KBWidget, goalWidget: GoalWidget) extends (UIUpdateLang ≈>> Id) {
   def apply[K[_], A](u: UIUpdateLang[K, A]): A = u match {
-    case TrackGoal(gt, desc, ref, value, show) => goalWidget.addView(GoalView.init(gt, desc, ref, value.value)(show))
-    case GoalUpdated(t, ref, newVal, delta) => goalWidget.updateView(t, ref, newVal, delta)
+    case InitGoal(gt, ref, desc) => goalWidget.addView(GoalView.init(gt, desc, ref))
+    case AddSolution(gt, ref, sref, sol, dom, show) => goalWidget.addSolution(gt, ref, sref, sol)(dom, show)
+    case UpdateSolution(gt, ref, sref, sol, dom, show) => goalWidget.updateSolution(gt, ref, sref, sol)(dom, show)
     case NewFact(t, fact, show) => kbWidget.factAdded(t, fact)(show)
   }
 }

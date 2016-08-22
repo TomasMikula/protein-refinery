@@ -1,22 +1,28 @@
 package proteinrefinery.util
 
 import scala.language.higherKinds
-
 import nutcracker.{DRef, Dom, Extract, PropagationLang}
 import nutcracker.Dom.{Refined, Status}
 import nutcracker.util.{ContF, InjectK}
 
+import scalaz.Show
+
 final case class Antichain[A](value: A) extends AnyVal
 
 object Antichain {
-  type Update[A] = Nothing
-  type Delta[A] = Nothing
+
+  // workaround for https://issues.scala-lang.org/browse/SI-9453
+  // suggested by Miles Sabin
+  type Uninhabited = Nothing { type T = Unit }
+
+  type Update[A] = Uninhabited
+  type Delta[A] = Uninhabited
 
   type Ref[A] = DRef.Aux[Antichain[A], Update[A], Delta[A]]
 
   trait DomType[A] extends proteinrefinery.util.DomType[A] { self: Singleton =>
-    override type Update = Nothing
-    override type Delta = Nothing
+    override type Update = Antichain.Update[A]
+    override type Delta = Antichain.Delta[A]
   }
 
   def map[F[_[_], _], A, B](refC: ContF[F, Ref[A]])(f: A => B)(implicit i: InjectK[PropagationLang, F]): ContF[F, Ref[B]] = for {
@@ -55,6 +61,10 @@ object Antichain {
     type Out = A
 
     def extract(a: Antichain[A]): Option[A] = Some(a.value)
+  }
+
+  implicit def showInstance[A](implicit A: Show[A]): Show[Antichain[A]] = new Show[Antichain[A]] {
+    override def shows(a: Antichain[A]): String = A.shows(a.value)
   }
 
 }

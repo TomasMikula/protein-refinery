@@ -1,9 +1,10 @@
 package proteinrefinery.util
 
-import nutcracker.util.{FreeK, InjectK}
+import nutcracker.util.{FreeK, FunctorKA, InjectK}
 import nutcracker.{DRef, PropagationLang, Trigger}
 
 import scala.language.higherKinds
+import scalaz.~>
 
 sealed abstract class TrackLang[K[_], A]
 
@@ -29,6 +30,12 @@ object TrackLang {
       case OnceTrigger.Fire(h) => Trigger.fire[F](h(ref))
     }))
 
+  implicit def functorKAInstance: FunctorKA[TrackLang] = new FunctorKA[TrackLang] {
+    def transform[K[_], L[_], A](inst: TrackLang[K, A])(f: K ~> L): TrackLang[L, A] = inst match {
+      case Track(t, ref) => Track(t, ref)
+      case Handle(t, h) => Handle(t, h andThen (f.apply))
+    }
+  }
 }
 
 trait DomType[D] { self: Singleton =>

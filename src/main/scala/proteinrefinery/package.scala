@@ -1,5 +1,7 @@
 import scala.language.higherKinds
 import monocle.Lens
+import nutcracker.DSet.DSetRef
+import nutcracker.IncSet.IncSetRef
 import nutcracker._
 import nutcracker.util.FreeK
 import nutcracker.util.CoproductK._
@@ -34,6 +36,13 @@ package object proteinrefinery {
   val interpreter2F = interpreter2.freeInstance
   def propStore2[K]: Lens[State2[K], PropagationStore[K]] = implicitly[Lens[State2[K], PropagationStore[K]]]
   def fetch2[D](ref: DRef[D])(s: State2[PU2]): D = propStore2[PU2].get(s).fetch(ref)
+  def fetchDSet2[D](ref: DSetRef[D])(s: State2[PU2]): Set[D] = {
+    val dset = fetch2(ref)(s)
+    dset.refined.map(fetch2(_)(s))
+  }
+  def fetchIncSet2[D](ref: IncSetRef[D])(s: State2[PU2]): Set[D] = {
+    fetch2(ref)(s).value
+  }
   def initialState2[K](tr: Tracker[K]): State2[K] = tr :*: PropagationStore.empty[K] :**: (DeferStore.empty[Cost, K]: DeferS[K])
   def emptyState2[K]: State2[K] = initialState2(Tracker.empty[K])
 }

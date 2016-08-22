@@ -7,7 +7,7 @@ import nutcracker.util.{ContF, FreeK, InjectK}
 import nutcracker.util.ContF._
 import nutcracker.{DSet, IncSet, PropagationLang}
 import proteinrefinery.util.TrackLang._
-import proteinrefinery.util.{Antichain, DomType, OnceTrigger, TrackLang}
+import proteinrefinery.util.{Antichain, OnceTrigger, TrackLang}
 
 import scala.language.higherKinds
 
@@ -45,7 +45,7 @@ object Nuggets {
 
   // basic programs for querying nuggets
   def rulesF[F[_[_], _]](f: Rule => OnceTrigger[Rule.Ref => FreeK[F, Unit]])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
-    thresholdQuery(DomTypes.Rules: DomType.Aux[Antichain[Rule], Nothing, Nothing])(r => f(r.value))
+    thresholdQuery(DomTypes.Rules)(r => f(r.value))
   def phosphoTargetsF[F[_[_], _]](f: PhosphoTarget => OnceTrigger[PhosphoTragetRef => FreeK[F, Unit]])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     thresholdQuery(DomTypes.PhosphoSites)(pt => f(pt.value))
   def kinaseActivityF[F[_[_], _]](p: Protein)(f: ProteinPattern.Ref => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
@@ -77,7 +77,7 @@ object Nuggets {
       if(kinase == k && substrate == s) OnceTrigger.Fire(_ => f(ss))
       else OnceTrigger.Discard()
     })
-  def phosphoSitesC[F[_[_], _]](kinase: Protein, substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Site] =
+  def phosphoSitesC[F[_[_], _]](kinase: Protein, substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Site] = // TODO: return Site.Ref
     ContF(f => phosphoSitesF[F](kinase, substrate)(f))
   def phosphoSitesS[F[_[_], _]](kinase: Protein, substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, IncSetRef[Site]] =
     IncSet.collect(phosphoSitesC(kinase, substrate))
@@ -91,7 +91,7 @@ object Nuggets {
         else OnceTrigger.Discard()
       })
     } yield res
-  def phosphoSitesC[F[_[_], _]](substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Site] =
+  def phosphoSitesC[F[_[_], _]](substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Site] = // TODO: return Site.Ref
     phosphoSitesS[F](substrate).map(IncSet.forEach(_)).wrapEffect
 
   def kinasesOfF[F[_[_], _]](substrate: Protein, site: Site)(f: Protein => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
@@ -100,7 +100,7 @@ object Nuggets {
       if(substrate == s && site == ss) OnceTrigger.Fire(_ => f(k))
       else OnceTrigger.Discard()
     })
-  def kinasesOfC[F[_[_], _]](substrate: Protein, site: Site)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Protein] =
+  def kinasesOfC[F[_[_], _]](substrate: Protein, site: Site)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Protein] = // TODO: return Protein.Ref
     ContF(f => kinasesOfF[F](substrate, site)(f))
   def kinasesOfS[F[_[_], _]](substrate: Protein, site: Site)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, IncSetRef[Protein]] =
     IncSet.collect(kinasesOfC(substrate, site))

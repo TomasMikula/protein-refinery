@@ -6,13 +6,17 @@ import javafx.scene.control.{ComboBox, Label, Menu, MenuBar, MenuItem, ScrollPan
 import javafx.scene.layout.{Background, BackgroundFill, CornerRadii, GridPane, Region, StackPane, VBox}
 import javafx.scene.paint.Color
 
-import nutcracker.{Diff, IncSet}
 import nutcracker.IncSet.IncSetRef
 import nutcracker.util.KMap
-import org.reactfx.{EventSource, EventStream}
+import nutcracker.{DRef, Dom}
 import org.reactfx.value.Val
+import org.reactfx.{EventSource, EventStream}
 import proteinrefinery.lib.{Assoc, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein}
 import proteinrefinery.ui.util.syntax._
+import proteinrefinery.util.Antichain
+
+import scala.language.higherKinds
+import scalaz.Show
 
 class GoalWidget {
   import GoalType._
@@ -22,7 +26,9 @@ class GoalWidget {
   private val newGoalMenu = new Menu("Add goal") <| { _.getItems.addAll(
     new MenuItem("Association") <| { _.onAction(() => showDialog(new AssocGoalInput)(pq => ReqGoalAssoc(pq._1, pq._2))) },
     new MenuItem("Phosphorylation") <| { _.onAction(() => showDialog(new PhosGoalInput)(ks => ReqGoalPhos(ks._1, ks._2))) },
-    new MenuItem("Negative influence on phosphorylation") <| { _.onAction(() => showDialog(new PhosNegInflInput(goals.getOrElse(GoalPhos)(Nil)))(pgv => ReqGoalPhosNegInfl(pgv._1, pgv._2.ref, pgv._2.desc))) }
+    new MenuItem("Negative influence on phosphorylation") <| { _.onAction(() =>
+      showDialog(new PhosNegInflInput(goals.get(GoalPhos).getOrElse(Nil)))(pgv => ReqGoalPhosNegInfl(pgv._1, pgv._2.ref, pgv._2.desc))
+    ) }
   ).ignoreResult }
 
   private val goalBox = new VBox() <| {
@@ -55,9 +61,22 @@ class GoalWidget {
     ()
   }
 
-  def updateView[A](t: GoalType[A], ref: IncSetRef[A], newVal: IncSet[A], delta: Diff[Set[A]]): Unit = {
-    goals.getOrElse(t)(Nil).find(_.ref == ref).foreach(_.updateSolutions(newVal, delta))
+  def addSolution[A](t: GoalType[A], ref: IncSetRef[_ <: DRef[A]], sref: DRef[A], sol: A)(implicit
+    dom: Dom[A],
+    show: Show[A]
+  ): Unit = {
+    withGoalView(t, ref)(_.addSolution(sref, sol))
   }
+
+  def updateSolution[A](t: GoalType[A], ref: IncSetRef[_ <: DRef[A]], sref: DRef[A], sol: A)(implicit
+    dom: Dom[A],
+    show: Show[A]
+  ): Unit = {
+    withGoalView(t, ref)(_.updateSolution(sref, sol))
+  }
+
+  private def withGoalView[A](t: GoalType[A], ref: IncSetRef[_ <: DRef[A]])(f: GoalView[A] => Unit): Unit =
+    goals.getOrElse(t)(Nil).find(_.ref == ref).foreach(f)
 
   private def showDialog[A](form: InputForm[A])(req: A => UIRequest): Unit =
     InputDialog.show(dialogHolder, form)(a => _requests.push(req(a)))
@@ -73,9 +92,9 @@ object GoalWidget {
 
 trait GoalType[A] { self: Singleton => }
 object GoalType {
-  implicit object GoalAssoc extends GoalType[Assoc]
-  implicit object GoalPhos extends GoalType[Phosphorylation]
-  implicit object GoalPhosNegInfl extends GoalType[NegativeInfluenceOnPhosphorylation]
+  implicit object GoalAssoc extends GoalType[Antichain[Assoc]]
+  implicit object GoalPhos extends GoalType[Antichain[Phosphorylation]]
+  implicit object GoalPhosNegInfl extends GoalType[Antichain[NegativeInfluenceOnPhosphorylation]]
 }
 
 class AssocGoalInput extends InputForm[(Protein, Protein)] {
@@ -110,8 +129,8 @@ class PhosGoalInput extends InputForm[(Protein, Protein)] {
     .map2[String, String, (Protein, Protein)]((p1, p2) => (Protein(p1), Protein(p2)))
 }
 
-class PhosNegInflInput(phosGoals: List[GoalView[Phosphorylation]]) extends InputForm[(Protein, GoalView[Phosphorylation])] {
-  private case class GVWrapper(goalView: GoalView[Phosphorylation]) {
+class PhosNegInflInput(phosGoals: List[GoalView[Antichain[Phosphorylation]]]) extends InputForm[(Protein, GoalView[Antichain[Phosphorylation]])] {
+  private case class GVWrapper(goalView: GoalView[Antichain[Phosphorylation]]) {
     override def toString = goalView.desc
   }
 
@@ -127,7 +146,7 @@ class PhosNegInflInput(phosGoals: List[GoalView[Phosphorylation]]) extends Input
     _.addRow(1, new Label("Phosphorylation"), goalSelection)
   }
 
-  val input: Val[(Protein, GoalView[Phosphorylation])] = (agentInput.textProperty() |@| goalSelection.getSelectionModel.selectedItemProperty()).tuple
+  val input: Val[(Protein, GoalView[Antichain[Phosphorylation]])] = (agentInput.textProperty() |@| goalSelection.getSelectionModel.selectedItemProperty()).tuple
     .filter2[String, GVWrapper]((a, gv) => !a.isEmpty && gv != null)
-    .map2[String, GVWrapper, (Protein, GoalView[Phosphorylation])]((a, gv) => (Protein(a), gv.goalView))
+    .map2[String, GVWrapper, (Protein, GoalView[Antichain[Phosphorylation]])]((a, gv) => (Protein(a), gv.goalView))
 }
