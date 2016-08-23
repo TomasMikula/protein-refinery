@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import nutcracker.util.ContF
-import proteinrefinery.{DSL, DSL2}
+import proteinrefinery.DSL
 import proteinrefinery.util.Antichain
 
 sealed trait PositiveInfluenceOnKinaseActivity {
@@ -24,11 +24,8 @@ object PositiveInfluenceOnKinaseActivity {
 
   // Search
 
-  def searchC(agent: Protein, kinase: Protein): ContF[DSL, PositiveInfluenceOnKinaseActivity] =
-    KB.kinaseActivityC[DSL](kinase).flatMap(PositiveInfluenceOnState.searchC(agent, _).map(positiveInfluenceOnActiveState(_)))
-
-  def searchC_2(agent: Protein, kinase: Protein): ContF[DSL2, Ref] = for {
-    ppref <- Nuggets.kinaseActivityC[DSL2](kinase)
-    res <- Antichain.map(Antichain.mapC(ppref)(pp => PositiveInfluenceOnState.searchC_2(agent, pp)))(positiveInfluenceOnActiveState(_))
+  def searchC(agent: Protein, kinase: Protein): ContF[DSL, Ref] = for {
+    ppref <- Nuggets.kinaseActivityC[DSL](kinase)
+    res <- Antichain.map(Antichain.mapC(ppref)(pp => PositiveInfluenceOnState.searchC(agent, pp)))(positiveInfluenceOnActiveState(_))
   } yield res
 }

@@ -1,9 +1,6 @@
 package proteinrefinery.lib
 
-import nutcracker.IncSet.IncSetRef
-import nutcracker._
 import nutcracker.util.ContF
-import KB._
 import proteinrefinery._
 import proteinrefinery.util.Antichain
 
@@ -40,41 +37,24 @@ object PositiveInfluenceOnPhosphorylation {
 
   // Search
 
-  def search(p: Protein, ph: Phosphorylation): Prg[IncSetRef[PositiveInfluenceOnPhosphorylation]] =
-    IncSet.collect(searchC(p, ph))
-
-  def searchC(p: Protein, ph: Phosphorylation): ContF[DSL, PositiveInfluenceOnPhosphorylation] = {
+  def searchC(p: Protein, ph: Phosphorylation): ContF[DSL, Ref] = {
 
     // we can immediately tell whether `p` is the kinase or part of the scaffold in `ph`
-    val immediate: List[ContF[DSL, PositiveInfluenceOnPhosphorylation]] = {
+    val immediate: List[ContF[DSL, Ref]] = {
       val isKinase = if(ph.kinase == p) List(IsKinase(ph)) else Nil
       val inScaffold = if(ph.assoc.bindings.tail.exists(_.left == p)) List(InScaffold(p, ph)) else Nil
-      (isKinase ++ inScaffold).map(ContF.point[DSL, PositiveInfluenceOnPhosphorylation])
+      (isKinase ++ inScaffold).map(Antichain.cellC[DSL, PositiveInfluenceOnPhosphorylation](_))
     }
 
-    val indirect: ContF[DSL, PositiveInfluenceOnPhosphorylation] = PositiveInfluenceOnKinaseActivity.searchC(p, ph.kinase).map(infl => ActivatesKinase(infl, ph))
-
-    ContF.sequence(indirect :: immediate)
-  }
-
-  def searchC_2(p: Protein, ph: Phosphorylation): ContF[DSL2, Ref] = {
-
-    // we can immediately tell whether `p` is the kinase or part of the scaffold in `ph`
-    val immediate: List[ContF[DSL2, Ref]] = {
-      val isKinase = if(ph.kinase == p) List(IsKinase(ph)) else Nil
-      val inScaffold = if(ph.assoc.bindings.tail.exists(_.left == p)) List(InScaffold(p, ph)) else Nil
-      (isKinase ++ inScaffold).map(Antichain.cellC[DSL2, PositiveInfluenceOnPhosphorylation](_))
-    }
-
-    val indirect: ContF[DSL2, Ref] = Antichain.map(PositiveInfluenceOnKinaseActivity.searchC_2(p, ph.kinase))(infl => ActivatesKinase(infl, ph))
+    val indirect: ContF[DSL, Ref] = Antichain.map(PositiveInfluenceOnKinaseActivity.searchC(p, ph.kinase))(infl => ActivatesKinase(infl, ph))
 
     ContF.sequence(indirect :: immediate)
   }
 }
 
 object PositiveInfluenceOnPhosphorylatedState {
-  def searchC(agent: Protein, target: Protein): ContF[DSL, PositiveInfluenceOnState] =
-    phosphoSitesC[DSL](target).flatMap(site => {
+  def searchC(agent: Protein, target: Protein): ContF[DSL, PositiveInfluenceOnState.Ref] =
+    Nuggets.phosphoSitesC[DSL](target).flatMap(site => {
       val pat = ProteinPattern(target).addModification(site, SiteState("p")).get // XXX
       PositiveInfluenceOnState.searchC(agent, pat)
     })

@@ -20,8 +20,8 @@ import scalaz.std.tuple._
 class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   import Controller._
 
-  val interpreter = (UIUpdateInterpreter(kbWidget, goalWidget) :>>: proteinrefinery.interpreter2).freeInstance
-  var state = proteinrefinery.emptyState2[Prg[Unit]]
+  val interpreter = (UIUpdateInterpreter(kbWidget, goalWidget) :>>: proteinrefinery.interpreter).freeInstance
+  var state = proteinrefinery.emptyState[Prg[Unit]]
 
   EventStreams.merge(kbWidget.requests, goalWidget.requests).forEach(_ match {
     case ReqGoalAssoc(p, q) => exec(addGoalAssoc(p, q))
@@ -38,17 +38,17 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   }
 
   private def addGoalAssoc(p: Protein, q: Protein): Prg[Unit] =
-    Assoc.search_2(p, q).inject[DSL] >>= {
+    Assoc.search(p, q).inject[DSL] >>= {
       observeGoal(s"Association between $p and $q", _)
     }
 
   private def addGoalPhos(kinase: Protein, substrate: Protein): Prg[Unit] =
-    Phosphorylation.search_2(kinase, substrate).inject[DSL] >>= {
+    Phosphorylation.search(kinase, substrate).inject[DSL] >>= {
       observeGoal(s"Phosphorylation of $substrate by $kinase", _)
     }
 
   private def addGoalPhosNegInfl(agent: Protein, phosGoal: IncSetRef[_ <: DRef[Antichain[Phosphorylation]]], phosDesc: String): Prg[Unit] =
-    IncSet.relBind(phosGoal)(phRef => NegativeInfluenceOnPhosphorylation.search_2r(agent, phRef.infer)).inject[DSL] >>= {
+    IncSet.relBind(phosGoal)(phRef => NegativeInfluenceOnPhosphorylation.search_r(agent, phRef.infer)).inject[DSL] >>= {
       observeGoal(s"Negative influence of $agent on $phosDesc", _)
     }
 
@@ -84,7 +84,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
 
 object Controller {
 
-  type DSL[K[_], A] = (UIUpdateLang :++: proteinrefinery.DSL2)#Out[K, A]
+  type DSL[K[_], A] = (UIUpdateLang :++: proteinrefinery.DSL)#Out[K, A]
   type Prg[A] = FreeK[DSL, A]
 
   def apply(kbWidget: KBWidget, goalWidget: GoalWidget): Controller =

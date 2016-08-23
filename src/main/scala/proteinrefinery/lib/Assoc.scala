@@ -1,10 +1,10 @@
 package proteinrefinery.lib
 
-import nutcracker.{DeferLang, IncSet, PropagationLang}
 import nutcracker.IncSet._
 import nutcracker.util.ContF
+import nutcracker.{DeferLang, IncSet, PropagationLang}
 import proteinrefinery.util.Antichain
-import proteinrefinery.{Cost, DSL, DSL2, Prg, Prg2}
+import proteinrefinery.{Cost, DSL, Prg}
 
 import scalaz.Show
 
@@ -16,44 +16,23 @@ object Assoc {
 
   // Search
 
-  def search(p: Protein, q: Protein): Prg[IncSetRef[Assoc]] =
+  def search(p: Protein, q: Protein): Prg[IncSetRef[Antichain.Ref[Assoc]]] =
     IncSet.collect(searchC(p, q))
 
-  def search_2(p: Protein, q: Protein): Prg2[IncSetRef[Antichain.Ref[Assoc]]] =
-    IncSet.collect(searchC_2(p, q))
-
-  def searchC(p: Protein, q: Protein): ContF[DSL, Assoc] =
+  def searchC(p: Protein, q: Protein): ContF[DSL, Antichain.Ref[Assoc]] =
     search0(Nil, p, q, Nil)
 
-  def searchC_2(p: Protein, q: Protein): ContF[DSL2, Antichain.Ref[Assoc]] =
-    search0_2(Nil, p, q, Nil)
-
-  private def search0(leftTail: List[Binding], p: Protein, q: Protein, rightTail: List[Binding]): ContF[DSL, Assoc] =
-    KB.bindingsOfC[DSL](p) flatMap { b =>
-      if(leftTail.nonEmpty && b.leftS == leftTail.head.rightS) ContF.noop // linter:ignore DuplicateIfBranches
-      else if(leftTail.contains(b) || rightTail.contains(b)) ContF.noop
+  private def search0(leftTail: List[Binding], p: Protein, q: Protein, rightTail: List[Binding]): ContF[DSL, Antichain.Ref[Assoc]] = for {
+    bref <- Nuggets.bindingsOfC[DSL](p)
+    b <- bref.asCont[DSL]
+    aref <- {
+      if(leftTail.nonEmpty && b.leftS == leftTail.head.rightS) ContF.noop[DSL, Antichain.Ref[Assoc]] // linter:ignore DuplicateIfBranches
+      else if(leftTail.contains(b) || rightTail.contains(b)) ContF.noop[DSL, Antichain.Ref[Assoc]]
       else {
         val indirect0 = search0(b :: leftTail, b.right, q, rightTail)
         val indirect = DeferLang.deferC(Cost.complexity(10), indirect0)
         if(b.right == q) {
-          val direct = ContF.point[DSL, Assoc](Assoc(leftTail reverse_::: b :: rightTail))
-          ContF.sequence(direct, indirect)
-        } else
-          indirect
-      }
-    }
-
-  private def search0_2(leftTail: List[Binding], p: Protein, q: Protein, rightTail: List[Binding]): ContF[DSL2, Antichain.Ref[Assoc]] = for {
-    bref <- Nuggets.bindingsOfC[DSL2](p)
-    b <- bref.asCont[DSL2]
-    aref <- {
-      if(leftTail.nonEmpty && b.leftS == leftTail.head.rightS) ContF.noop[DSL2, Antichain.Ref[Assoc]] // linter:ignore DuplicateIfBranches
-      else if(leftTail.contains(b) || rightTail.contains(b)) ContF.noop[DSL2, Antichain.Ref[Assoc]]
-      else {
-        val indirect0 = search0_2(b :: leftTail, b.right, q, rightTail)
-        val indirect = DeferLang.deferC(Cost.complexity(10), indirect0)
-        if(b.right == q) {
-          val direct = ContF.liftM(PropagationLang.cellF(Antichain(Assoc(leftTail reverse_::: b :: rightTail))).inject[DSL2])
+          val direct = ContF.liftM(PropagationLang.cellF(Antichain(Assoc(leftTail reverse_::: b :: rightTail))).inject[DSL])
           ContF.sequence(direct, indirect)
         } else
           indirect
