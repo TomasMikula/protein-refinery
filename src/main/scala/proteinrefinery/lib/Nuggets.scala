@@ -5,9 +5,10 @@ import nutcracker.IncSet._
 import nutcracker.PropagationLang._
 import nutcracker.util.{ContF, FreeK, InjectK}
 import nutcracker.util.ContF._
-import nutcracker.{DSet, IncSet, PropagationLang}
+import nutcracker.{Antichain, DSet, IncSet, PropagationLang}
 import proteinrefinery.util.TrackLang._
-import proteinrefinery.util.{Antichain, OnceTrigger, TrackLang}
+import proteinrefinery.util.DomType.AntichainDomType
+import proteinrefinery.util.{OnceTrigger, TrackLang}
 
 import scala.language.higherKinds
 
@@ -16,9 +17,9 @@ object Nuggets {
   type PhosphoTragetRef = Antichain.Ref[PhosphoTarget]
 
   private object DomTypes {
-    implicit object Rules extends Antichain.DomType[Antichain[Rule]]
-    implicit object PhosphoSites extends Antichain.DomType[Antichain[PhosphoTarget]]
-    implicit object Kinases extends Antichain.DomType[Antichain[ProteinPattern]]
+    implicit object Rules extends AntichainDomType[Rule]
+    implicit object PhosphoSites extends AntichainDomType[PhosphoTarget]
+    implicit object Kinases extends AntichainDomType[ProteinPattern]
   }
 
   import DomTypes._

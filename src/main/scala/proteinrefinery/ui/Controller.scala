@@ -5,13 +5,12 @@ import nutcracker.PropagationLang._
 import nutcracker.Trigger._
 import nutcracker.util.CoproductK.:++:
 import nutcracker.util.{FreeK, InjectK}
-import nutcracker.{DRef, Diff, Dom, IncSet, PropagationLang}
+import nutcracker.{Antichain, DRef, Diff, Dom, IncSet, PropagationLang}
 import org.reactfx.EventStreams
 import proteinrefinery.lib.{Assoc, Binding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, ProteinPattern, Site}
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.UIUpdateLang._
 import proteinrefinery.ui.util.syntax._
-import proteinrefinery.util.Antichain
 
 import scala.language.higherKinds
 import scalaz.Show

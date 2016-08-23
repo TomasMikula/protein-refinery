@@ -8,12 +8,11 @@ import javafx.scene.paint.Color
 
 import nutcracker.IncSet.IncSetRef
 import nutcracker.util.KMap
-import nutcracker.{DRef, Dom}
+import nutcracker.{Antichain, DRef, Dom}
 import org.reactfx.value.Val
 import org.reactfx.{EventSource, EventStream}
 import proteinrefinery.lib.{Assoc, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein}
 import proteinrefinery.ui.util.syntax._
-import proteinrefinery.util.Antichain
 
 import scala.language.higherKinds
 import scalaz.Show

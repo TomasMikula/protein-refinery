@@ -1,6 +1,6 @@
 package proteinrefinery.lib
 
-import proteinrefinery.util.Antichain
+import nutcracker.Antichain
 
 sealed trait Binding {
 

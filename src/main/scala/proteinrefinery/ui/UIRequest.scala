@@ -1,11 +1,9 @@
 package proteinrefinery.ui
 
 import scala.language.existentials
-
-import nutcracker.DRef
+import nutcracker.{Antichain, DRef}
 import nutcracker.IncSet.IncSetRef
 import proteinrefinery.lib.{Phosphorylation, Protein, ProteinPattern, Site}
-import proteinrefinery.util.Antichain
 
 sealed abstract class UIRequest
 

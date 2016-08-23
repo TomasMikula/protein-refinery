@@ -1,8 +1,8 @@
 package proteinrefinery.lib
 
+import nutcracker.Antichain
 import nutcracker.util.ContF
 import proteinrefinery.DSL
-import proteinrefinery.util.Antichain
 
 sealed trait PositiveInfluenceOnKinaseActivity {
   def agent: Protein

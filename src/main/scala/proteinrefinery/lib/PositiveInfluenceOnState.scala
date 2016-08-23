@@ -1,9 +1,10 @@
 package proteinrefinery.lib
 
+import nutcracker.Antichain
 import nutcracker.util.ContF
 import proteinrefinery.DSL
 import proteinrefinery.util.syntax._
-import proteinrefinery.util.{Antichain, OnceTrigger}
+import proteinrefinery.util.OnceTrigger
 
 sealed trait PositiveInfluenceOnState {
   def agent: Protein

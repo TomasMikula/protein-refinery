@@ -1,7 +1,7 @@
 package proteinrefinery.util
 
 import nutcracker.util.{FreeK, FunctorKA, InjectK}
-import nutcracker.{DRef, PropagationLang, Trigger}
+import nutcracker.{Antichain, DRef, PropagationLang, Trigger}
 
 import scala.language.higherKinds
 import scalaz.~>
@@ -45,6 +45,11 @@ trait DomType[D] { self: Singleton =>
 
 object DomType {
   type Aux[D, U, Δ] = DomType[D] { type Update = U; type Delta = Δ }
+
+  trait AntichainDomType[A] extends proteinrefinery.util.DomType[Antichain[A]] { self: Singleton =>
+    override type Update = Antichain.Update[A]
+    override type Delta = Antichain.Delta[A]
+  }
 }
 
 sealed trait OnceTrigger[A] {

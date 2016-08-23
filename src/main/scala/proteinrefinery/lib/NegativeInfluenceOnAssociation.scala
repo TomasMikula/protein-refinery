@@ -1,9 +1,8 @@
 package proteinrefinery.lib
 
-import nutcracker.IncSet
+import nutcracker.{Antichain, IncSet}
 import nutcracker.IncSet.IncSetRef
 import nutcracker.util.ContF
-import proteinrefinery.util.Antichain
 import proteinrefinery.{DSL, Prg}
 
 import scalaz.Show

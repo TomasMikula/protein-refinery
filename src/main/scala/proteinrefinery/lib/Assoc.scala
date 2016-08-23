@@ -2,8 +2,7 @@ package proteinrefinery.lib
 
 import nutcracker.IncSet._
 import nutcracker.util.ContF
-import nutcracker.{DeferLang, IncSet, PropagationLang}
-import proteinrefinery.util.Antichain
+import nutcracker.{Antichain, DeferLang, IncSet, PropagationLang}
 import proteinrefinery.{Cost, DSL, Prg}
 
 import scalaz.Show

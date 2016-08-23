@@ -1,8 +1,7 @@
 package proteinrefinery.lib
 
 import nutcracker.util.{ContF, FreeK, InjectK}
-import nutcracker.{PropagationLang, Trigger}
-import proteinrefinery.util.Antichain
+import nutcracker.{Antichain, PropagationLang, Trigger}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds

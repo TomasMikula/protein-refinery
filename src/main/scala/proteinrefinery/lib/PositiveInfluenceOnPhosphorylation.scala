@@ -1,8 +1,8 @@
 package proteinrefinery.lib
 
+import nutcracker.Antichain
 import nutcracker.util.ContF
 import proteinrefinery._
-import proteinrefinery.util.Antichain
 
 sealed trait PositiveInfluenceOnPhosphorylation {
   def agent: Protein

@@ -1,6 +1,6 @@
 package proteinrefinery.lib
 
-import proteinrefinery.util.Antichain
+import nutcracker.Antichain
 import proteinrefinery.util.syntax._
 
 import scalaz.Show
