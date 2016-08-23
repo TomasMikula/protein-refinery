@@ -1,8 +1,7 @@
-package proteinrefinery.demo
+package proteinrefinery
 
 import nutcracker._
 import org.scalatest.FunSuite
-import proteinrefinery._
 import proteinrefinery.capability.syntax._
 import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, KB, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, Site}
 
