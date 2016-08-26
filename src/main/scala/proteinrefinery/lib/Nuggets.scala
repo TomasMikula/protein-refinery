@@ -13,8 +13,6 @@ import proteinrefinery.util.{OnceTrigger, TrackLang}
 import scala.language.higherKinds
 
 object Nuggets {
-  type PhosphoTarget = (Protein, Protein, Site)
-  type PhosphoTragetRef = Antichain.Ref[PhosphoTarget]
 
   private object DomTypes {
     implicit object Rules extends AntichainDomType[Rule]
@@ -40,14 +38,14 @@ object Nuggets {
   def addRuleF[F[_[_], _]](r: Rule)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     cellF(Antichain(r)).inject[F] >>= { trackF(_) }
   def addPhosphoTargetF[F[_[_], _]](kinase: Protein, substrate: Protein, site: Site)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
-    cellF(Antichain((kinase, substrate, site))).inject[F] >>= { trackF(_) }
+    cellF(Antichain(PhosphoTarget(kinase, substrate, site))).inject[F] >>= { trackF(_) }
   def addKinaseActivityF[F[_[_], _]](activeState: ProteinPattern)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     cellF(Antichain(activeState)).inject[F] >>= { trackF(_) }
 
   // basic programs for querying nuggets
   def rulesF[F[_[_], _]](f: Rule => OnceTrigger[Rule.Ref => FreeK[F, Unit]])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     thresholdQuery(DomTypes.Rules)(r => f(r.value))
-  def phosphoTargetsF[F[_[_], _]](f: PhosphoTarget => OnceTrigger[PhosphoTragetRef => FreeK[F, Unit]])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
+  def phosphoTargetsF[F[_[_], _]](f: PhosphoTarget => OnceTrigger[PhosphoTarget.Ref => FreeK[F, Unit]])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     thresholdQuery(DomTypes.PhosphoSites)(pt => f(pt.value))
   def kinaseActivityF[F[_[_], _]](p: Protein)(f: ProteinPattern.Ref => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     thresholdQuery(DomTypes.Kinases)(pp =>
@@ -58,7 +56,7 @@ object Nuggets {
   // queries in CPS style
   def rulesC[F[_[_], _]](p: Rule => OnceTrigger[Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Rule.Ref] =
     ContF(f => rulesF[F](p andThen (_.map(_ => f))))
-  def phosphoTargetsC[F[_[_], _]](p: PhosphoTarget => OnceTrigger[Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, PhosphoTragetRef] =
+  def phosphoTargetsC[F[_[_], _]](p: PhosphoTarget => OnceTrigger[Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, PhosphoTarget.Ref] =
     ContF(f => phosphoTargetsF[F](p andThen (_.map(_ => f))))
   def kinaseActivityC[F[_[_], _]](kinase: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, ProteinPattern.Ref] =
     ContF(f => kinaseActivityF[F](kinase)(f))
@@ -73,8 +71,8 @@ object Nuggets {
     DSet.collect(bindingsOfC[F](p))
 
   def phosphoSitesF[F[_[_], _]](kinase: Protein, substrate: Protein)(f: Site => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
-    phosphoTargetsF[F](kss => {
-      val (k, s, ss) = kss
+    phosphoTargetsF[F](pt => {
+      val PhosphoTarget(k, s, ss) = pt
       if(kinase == k && substrate == s) OnceTrigger.Fire(_ => f(ss))
       else OnceTrigger.Discard()
     })
@@ -86,8 +84,8 @@ object Nuggets {
   def phosphoSitesS[F[_[_], _]](substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, IncSetRef[Site]] =
     for {
       res <- IncSet.init[F, Site]
-      _   <- phosphoTargetsF[F](kss => {
-        val (k, s, ss) = kss
+      _   <- phosphoTargetsF[F](pt => {
+        val PhosphoTarget(k, s, ss) = pt
         if(s == substrate) OnceTrigger.Fire(_ => IncSet.insert(ss, res))
         else OnceTrigger.Discard()
       })
@@ -96,8 +94,8 @@ object Nuggets {
     phosphoSitesS[F](substrate).map(IncSet.forEach(_)).wrapEffect
 
   def kinasesOfF[F[_[_], _]](substrate: Protein, site: Site)(f: Protein => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
-    phosphoTargetsF[F](kss => {
-      val (k, s, ss) = kss
+    phosphoTargetsF[F](pt => {
+      val PhosphoTarget(k, s, ss) = pt
       if(substrate == s && site == ss) OnceTrigger.Fire(_ => f(k))
       else OnceTrigger.Discard()
     })
