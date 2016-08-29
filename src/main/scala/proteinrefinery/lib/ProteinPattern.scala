@@ -5,12 +5,12 @@ import proteinrefinery.util.syntax._
 
 import scalaz.Show
 
-case class ProteinPattern(protein: Protein, mods: ProteinModifications) {
+case class ProteinPattern(protein: Protein, mods: AdmissibleProteinModifications) {
   def isCompatibleWith(that: ProteinPattern): Boolean =
-    (this.protein == that.protein) && (this.mods combine that.mods).isDefined
+    (this.protein == that.protein) && (this.mods combine that.mods).isAdmissible
 
   def addModification(site: Site, state: SiteState): Option[ProteinPattern] =
-    mods.addModification(site, state).map(ProteinPattern(protein, _))
+    mods.addModification(site, state).toOption.map(ProteinPattern(protein, _))
 
   override def toString: String = toString(Map())
 

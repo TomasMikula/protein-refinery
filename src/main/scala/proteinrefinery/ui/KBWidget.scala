@@ -10,7 +10,7 @@ import nutcracker.util.KMap
 import org.reactfx.collection.LiveArrayList
 import org.reactfx.value.{Val, Var}
 import org.reactfx.{EventSource, EventStream, EventStreams}
-import proteinrefinery.lib.{Protein, ProteinModifications, ProteinPattern, Rule, Site, SiteState}
+import proteinrefinery.lib.{InvalidProteinModifications, Protein, ProteinModifications, ProteinPattern, Rule, Site, SiteState}
 import proteinrefinery.ui.FactType.{FactKinase, FactPhosTarget, FactRule}
 import proteinrefinery.ui.util.syntax._
 
@@ -133,22 +133,21 @@ class KinaseActivityInput extends InputForm[ProteinPattern] {
 
   val input: Val[ProteinPattern] = {
     val p = protein.textProperty().map1(s => if(s.nonEmpty) Protein(s) else null)
-    val mods: Var[Option[ProteinModifications]] = Var.newSimpleVar(Some(ProteinModifications.noModifications))
+    val mods: Var[ProteinModifications] = Var.newSimpleVar(ProteinModifications.noModifications)
     EventStreams.merge(siteFields, j((tf: TextField) => EventStreams.valuesOf(tf.textProperty()))).forEach(mod => {
-      var m: Option[ProteinModifications] = Some(ProteinModifications.noModifications)
+      var m: ProteinModifications = ProteinModifications.noModifications
       val it = siteStates.iterator()
       while(it.hasNext) {
         val (siteField, stateField)  = it.next()
         val (site, state) = (siteField.getText, stateField.getText)
-        m = m.flatMap(m => {
+        m =
           if (site.nonEmpty && state.nonEmpty) m.addModification(Site(site), SiteState(state))
-          else if (site.isEmpty && state.isEmpty) Some(m)
-          else None
-        })
+          else if (site.isEmpty && state.isEmpty) m
+          else InvalidProteinModifications
       }
       mods.setValue(m)
     })
-    (p |@| mods)((p, m) => m.map(ProteinPattern(p, _)).getOrElse(null))
+    (p |@| mods)((p, m) => m.toOption.map(ProteinPattern(p, _)).getOrElse(null))
   }
 
   addSiteRow()
