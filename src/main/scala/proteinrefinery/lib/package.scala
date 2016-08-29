@@ -1,21 +1,21 @@
 package proteinrefinery
 
-import nutcracker.{Dom, Meet}
+import nutcracker.{Dom, Join}
 
 package object lib {
 
   type ProteinModificationsLattice = Option[ProteinModifications]
 
-  implicit def proteinModificationsLattice: Dom.Aux[ProteinModificationsLattice, Meet[ProteinModificationsLattice], Unit] =
+  implicit def proteinModificationsLattice: Dom.Aux[ProteinModificationsLattice, Join[ProteinModificationsLattice], Unit] =
     new Dom[ProteinModificationsLattice] {
-      type Update = Meet[ProteinModificationsLattice]
+      type Update = Join[ProteinModificationsLattice]
       type Delta = Unit
-      override def assess(d: ProteinModificationsLattice): Dom.Status[Meet[ProteinModificationsLattice]] = d match {
+      override def assess(d: ProteinModificationsLattice): Dom.Status[Join[ProteinModificationsLattice]] = d match {
         case None => Dom.Failed
         case Some(a) => Dom.Refined
       }
 
-      override def update(d: ProteinModificationsLattice, u: Meet[ProteinModificationsLattice]): Option[(ProteinModificationsLattice, Unit)] = {
+      override def update(d: ProteinModificationsLattice, u: Join[ProteinModificationsLattice]): Option[(ProteinModificationsLattice, Unit)] = {
         val res = (d, u.value) match {
           case (Some(p), Some(q)) => p combine q
           case _ => None
