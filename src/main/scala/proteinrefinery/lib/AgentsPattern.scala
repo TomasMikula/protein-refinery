@@ -123,4 +123,4 @@ sealed abstract class Action
 case class Link(i1: AgentIndex, s1: Site, i2: AgentIndex, s2: Site) extends Action
 case class Unlink(id: LinkId) extends Action
 case class Modify(i: AgentIndex, rm: AdmissibleProteinModifications, add: AdmissibleProteinModifications) extends Action
-case class Replace(from: AgentIndex, to: AgentIndex, insert: List[ModifiedProtein]) extends Action
+case class Replace(from: AgentIndex, to: AgentIndex, insert: List[ProteinPattern]) extends Action

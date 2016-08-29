@@ -9,7 +9,7 @@ import scalaz.Show
 
 final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
   lazy val rhs: AgentsPattern = actions.foldLeft(lhs)((p, a) => p.modify(a))
-  def apply(lhs: Agents): Agents = ???
+  def apply(lhs: AgentsPattern): AgentsPattern = ???
   def canConsume(ptrn: AgentsPattern): Boolean = ???
   def canProduce(ptrn: AgentsPattern): Boolean = ???
 
@@ -40,7 +40,7 @@ final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
           buf ++= add.mods.keys
         }
       case Replace(_, _, insert) =>
-        insert.iterator.filter(_.p == p).foreach(mp => buf ++= mp.mods.mods.keys)
+        insert.iterator.filter(_.protein == p).foreach(mp => buf ++= mp.mods.mods.keys)
     })
 
     buf.toSet
