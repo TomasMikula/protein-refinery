@@ -3,6 +3,11 @@ package proteinrefinery.lib
 import nutcracker.{Dom, Join}
 
 import scala.collection.mutable
+import scalaz.{Applicative, Semigroup, Validation}
+import scalaz.std.list._
+import scalaz.std.anyVal._
+import scalaz.syntax.applicative._
+import scalaz.syntax.traverse._
 
 sealed trait ProteinModifications {
 
@@ -37,28 +42,10 @@ case object InvalidProteinModifications extends ProteinModifications
 case class AdmissibleProteinModifications(mods: Map[Site, SiteState]) extends ProteinModifications {
 
   def combine0(that: AdmissibleProteinModifications): ProteinModifications = {
-
-    val entries: Iterator[Option[(Site, SiteState)]] =
-      (this.mods.keySet union that.mods.keySet).iterator.map {
-        s => (this.get(s), that.get(s)) match {
-          case (Some(s1), Some(s2)) => if (s1 == s2) Some((s, s1)) else None
-          case (Some(s1), None) => Some((s, s1))
-          case (None, Some(s2)) => Some((s, s2))
-          case (None, None) => sys.error("Unreachable code")
-        }
-      }
-
-    val builder = mutable.Map[Site, SiteState]()
-    val isCollision = entries.foldLeft(false) { (collision, entry) =>
-      if (collision) collision
-      else entry match {
-        case None => true
-        case Some((s, st)) => builder += ((s, st)); false
-      }
-    }
-
-    if (!isCollision) AdmissibleProteinModifications(builder.toMap)
-    else InvalidProteinModifications
+    mapUnion(this.mods, that.mods)((st1, st2) =>
+      if(st1 == st2) st1.point[Validation[Unit, ?]]
+      else Validation.failure(())
+    ).fold((_: Unit) => InvalidProteinModifications, AdmissibleProteinModifications(_))
   }
 
   /** Returns ProteinModifications that is less specific than either `this` or `that`
@@ -78,6 +65,15 @@ case class AdmissibleProteinModifications(mods: Map[Site, SiteState]) extends Pr
   override def toString = mods.iterator.map({ case (s, st) => s"$s~$st" }).mkString("(", ",", ")")
 
   private def get(s: Site): Option[SiteState] = mods.get(s)
+
+  private def mapUnion[K, V, E: Semigroup](m1: Map[K, V], m2: Map[K, V])(f: (V, V) => Validation[E, V]): Validation[E, Map[K, V]] = {
+    (m1.keySet union m2.keySet).iterator.map(k => (m1.get(k), m2.get(k)) match {
+      case (Some(v1), Some(v2)) => f(v1, v2).map((k, _))
+      case (Some(v1), None) => (k, v1).point[Validation[E, ?]]
+      case (None, Some(v2)) => (k, v2).point[Validation[E, ?]]
+      case (None, None) => sys.error("Unreachable code")
+    }).toList.sequence.map(_.toMap)
+  }
 }
 
 object ProteinModifications {
