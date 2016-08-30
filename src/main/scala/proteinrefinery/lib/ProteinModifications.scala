@@ -53,13 +53,7 @@ case class AdmissibleProteinModifications(mods: Map[Site, SiteState]) extends Pr
     * greatest lower bound of the two in the (partial) ordering given by specificity.
     */
   def meet(that: AdmissibleProteinModifications): AdmissibleProteinModifications = {
-    val keys = this.mods.keySet intersect that.mods.keySet
-    val builder = mutable.Map[Site, SiteState]()
-    keys.foreach(s => {
-      val (s1, s2) = (this.mods(s), that.mods(s))
-      if(s1 == s2) builder.put(s, s1)
-    })
-    AdmissibleProteinModifications(builder.toMap)
+    AdmissibleProteinModifications(mapIntersect(this.mods, that.mods)((st1, st2) => if(st1 == st2) Some(st1) else None))
   }
 
   override def toString = mods.iterator.map({ case (s, st) => s"$s~$st" }).mkString("(", ",", ")")
@@ -71,6 +65,13 @@ case class AdmissibleProteinModifications(mods: Map[Site, SiteState]) extends Pr
       case (None, Some(v2)) => (k, v2).point[Validation[E, ?]]
       case (None, None) => sys.error("Unreachable code")
     }).toList.sequence.map(_.toMap)
+  }
+
+  private def mapIntersect[K, V](m1: Map[K, V], m2: Map[K, V])(f: (V, V) => Option[V]): Map[K, V] = {
+    val keys = m1.keySet intersect m2.keySet
+    val builder = mutable.Map[K, V]()
+    keys.foreach(k => f(m1(k), m2(k)).foreach(builder.put(k, _)))
+    builder.toMap
   }
 }
 
