@@ -53,18 +53,16 @@ case class AdmissibleProteinModifications(mods: Map[Site, SiteState]) extends Pr
     * greatest lower bound of the two in the (partial) ordering given by specificity.
     */
   def meet(that: AdmissibleProteinModifications): AdmissibleProteinModifications = {
-    val keys = this.mods.keySet union that.mods.keySet
+    val keys = this.mods.keySet intersect that.mods.keySet
     val builder = mutable.Map[Site, SiteState]()
-    keys.foreach(s => (this.get(s), that.get(s)) match {
-      case (Some(s1), Some(s2)) if s1 == s2 => builder.put(s, s1)
-      case _ => // do nothing
+    keys.foreach(s => {
+      val (s1, s2) = (this.mods(s), that.mods(s))
+      if(s1 == s2) builder.put(s, s1)
     })
     AdmissibleProteinModifications(builder.toMap)
   }
 
   override def toString = mods.iterator.map({ case (s, st) => s"$s~$st" }).mkString("(", ",", ")")
-
-  private def get(s: Site): Option[SiteState] = mods.get(s)
 
   private def mapUnion[K, V, E: Semigroup](m1: Map[K, V], m2: Map[K, V])(f: (V, V) => Validation[E, V]): Validation[E, Map[K, V]] = {
     (m1.keySet union m2.keySet).iterator.map(k => (m1.get(k), m2.get(k)) match {
