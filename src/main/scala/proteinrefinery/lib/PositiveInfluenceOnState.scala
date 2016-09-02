@@ -44,8 +44,8 @@ object PositiveInfluenceOnState {
   }
 
   private def searchByPhosphorylation(agent: Protein, target: ProteinPattern): ContF[DSL, Ref] = {
-    val conts = target.mods.mods.iterator.mapFilter({ case (site, state) =>
-      if (state.label == "p") Some(site) // XXX
+    val conts = target.mods.finalSiteMods.mods.iterator.mapFilter({ case (site, (state, _)) =>
+      if (state.label == "p") Some(site) // XXX hardcoded phosphorylated state as "p"
       else None
     }).map[ContF[DSL, Ref]](site =>
       for {

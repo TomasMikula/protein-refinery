@@ -33,7 +33,7 @@ javacOptions ++= Seq(
   "-Xlint:deprecation")
 
 libraryDependencies ++= Seq(
-  "com.github.tomasmikula" %% "nutcracker" % "0.1.4",
+  "com.github.tomasmikula" %% "nutcracker" % "0.1.5-SNAPSHOT",
   "org.spire-math" %% "algebra" % "0.4.2",
   "org.spire-math" %% "algebra-std" % "0.4.2",
   "org.scalaz" %% "scalaz-core" % "7.3.0-M4",

@@ -8,7 +8,7 @@ package object syntax {
   implicit class SymbolOps(sym: Symbol) {
 
     def apply(ss: (Site, SiteState)*): ProteinPattern =
-      ProteinPattern(Protein(sym), AdmissibleProteinModifications(ss.toMap))
+      ProteinPattern(Protein(sym), AdmissibleProteinModifications(ss))
 
     def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(Protein(sym), s)
 
