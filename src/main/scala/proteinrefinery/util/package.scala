@@ -17,9 +17,8 @@ package object util {
     }).toList.sequence.map(_.toMap)
   }
 
-  def buildMap[K, V, M[_]](kvs: Iterator[(K, V)])(f: (V, V) => M[V])(implicit M0: Applicative[M], M1: BindRec[M]): M[Map[K, V]] = {
-
-    def go(builder: mutable.Map[K, V]): M[mutable.Map[K, V] \/ Map[K, V]] =
+  def buildMap[K, V, M[_]](kvs: Iterator[(K, V)])(f: (V, V) => M[V])(implicit M0: Applicative[M], M1: BindRec[M]): M[Map[K, V]] =
+    M1.tailrecM(mutable.Map[K, V]())(builder => {
       if(kvs.hasNext) {
         val (k, v) = kvs.next()
         builder.get(k) match {
@@ -29,9 +28,7 @@ package object util {
       } else {
         M0.point(\/.right(builder.toMap))
       }
-
-    M1.tailrecM(go)(mutable.Map[K, V]())
-  }
+    })
 
   def mapSplit[K, V, A, B](m: Map[K, V])(f: V => Either[A, B]): (Map[K, A], Map[K, B]) = {
     val builderA = mutable.Map[K, A]()
