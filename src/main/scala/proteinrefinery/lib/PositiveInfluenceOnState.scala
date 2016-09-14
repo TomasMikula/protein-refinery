@@ -49,8 +49,8 @@ object PositiveInfluenceOnState {
       else None
     }).map[ContF[DSL, Ref]](site =>
       for {
-        k <- Nuggets.kinasesOfC[DSL](target.protein, site)
-        phRef <- Phosphorylation.searchC(k, target.protein, site)
+        k <- Nuggets.kinasesOfC[DSL](target.protein, site.value)
+        phRef <- Phosphorylation.searchC(k, target.protein, site.value)
         ph <- phRef.asCont[DSL]
         inflRef <- PositiveInfluenceOnPhosphorylation.searchC(agent, ph)
         infl <- inflRef.asCont[DSL]

@@ -52,7 +52,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
     }
 
   private def addFactBind(p: Protein, ps: Site, q: Protein, qs: Site): Prg[Unit] = {
-    val rule = Binding(p, ps, q, qs).witness
+    val rule = Binding(p, Antichain(ps), q, Antichain(qs)).witness
     Nuggets.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
   }
 

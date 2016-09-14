@@ -13,8 +13,8 @@ final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
   def canConsume(ptrn: AgentsPattern): Boolean = ???
   def canProduce(ptrn: AgentsPattern): Boolean = ???
 
-  def mentionedSitesOf(p: Protein): Set[Site] = {
-    val buf = ArrayBuffer[Site]()
+  def mentionedSitesOf(p: Protein): Set[Site.Dom] = {
+    val buf = ArrayBuffer[Site.Dom]()
 
     // sites mentioned in agent patterns
     lhs.agentIterator.filter(_.protein == p).foreach(buf ++= _.mods.finalSiteMods.mods.keys)

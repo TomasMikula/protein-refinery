@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import nutcracker.Dom.Status
-import nutcracker.{Dom, Final, Join, JoinDom}
+import nutcracker.{Antichain, Dom, Final, Join, JoinDom}
 import proteinrefinery.lib.AdmissibleProteinModifications.{FinalSiteModifications, NonFinalSiteModifications}
 
 import scala.language.higherKinds
@@ -21,7 +21,10 @@ sealed trait ProteinModifications {
     case InvalidProteinModifications => None
   }
 
-  def addModification(site: Site, state: SiteState): ProteinModifications
+  final def addModification(site: Site, state: SiteState): ProteinModifications =
+    addModification0(Antichain(site), state)
+
+  def addModification0(site: Site.Dom, state: SiteState): ProteinModifications
 
   def combine(that: ProteinModifications): ProteinModifications = (this, that) match {
     case (a @ AdmissibleProteinModifications(_, _), b @ AdmissibleProteinModifications(_, _)) => a.combine0(b)
@@ -30,7 +33,7 @@ sealed trait ProteinModifications {
 }
 
 case object InvalidProteinModifications extends ProteinModifications {
-  def addModification(site: Site, state: SiteState): ProteinModifications = this
+  def addModification0(site: Site.Dom, state: SiteState): ProteinModifications = this
 }
 
 case class AdmissibleProteinModifications(
@@ -38,8 +41,8 @@ case class AdmissibleProteinModifications(
   finalSiteMods: FinalSiteModifications
 ) extends ProteinModifications {
 
-  def addModification(site: Site, state: SiteState): ProteinModifications =
-    ProteinModifications.fromOption(finalSiteMods.addModification(site, state).map(AdmissibleProteinModifications(nonFinalSiteMods, _)))
+  def addModification0(site: Site.Dom, state: SiteState): ProteinModifications =
+    ProteinModifications.fromOption(finalSiteMods.addModification0(site, state).map(AdmissibleProteinModifications(nonFinalSiteMods, _)))
 
   def combine0(that: AdmissibleProteinModifications): ProteinModifications =
     ProteinModifications.fromOption(for {
@@ -54,13 +57,13 @@ object AdmissibleProteinModifications {
   def apply(mods: Iterable[(Site, SiteState)]): AdmissibleProteinModifications =
     AdmissibleProteinModifications(
       NonFinalSiteModifications.noModifications,
-      FinalSiteModifications(mods.iterator.map(ss => (ss._1, (ss._2, Set[Site.Ref]()))).toMap)
+      FinalSiteModifications(mods.iterator.map(ss => (Antichain(ss._1), (ss._2, Set[Site.Ref]()))).toMap)
     )
 
   private[AdmissibleProteinModifications]
-  final case class FinalSiteModifications(mods: Map[Site, (SiteState, Set[Site.Ref])]) extends AnyVal {
+  final case class FinalSiteModifications(mods: Map[Site.Dom, (SiteState, Set[Site.Ref])]) extends AnyVal {
 
-    def addModification(site: Site, state: SiteState): Option[FinalSiteModifications] =
+    def addModification0(site: Site.Dom, state: SiteState): Option[FinalSiteModifications] =
       mods.get(site).fold[Option[FinalSiteModifications]](
         Some(FinalSiteModifications(mods.updated(site, (state, Set())))))(
         sr => if(sr._1 == state) Some(this) else None
@@ -78,7 +81,7 @@ object AdmissibleProteinModifications {
       * and are the most specific such modifications. In other words, returns the
       * greatest lower bound of the two in the (partial) ordering given by specificity.
       */
-    def meet(that: FinalSiteModifications): Map[Site, SiteState] = {
+    def meet(that: FinalSiteModifications): Map[Site.Dom, SiteState] = {
       mapIntersect(this.mods, that.mods)((sr1, sr2) => {
         val (st1, refs1) = sr1
         val (st2, refs2) = sr2
@@ -100,21 +103,21 @@ object AdmissibleProteinModifications {
   }
 
   private[AdmissibleProteinModifications]
-  final case class NonFinalSiteModifications(mods: Map[Site.Ref, (Site, SiteState)]) extends AnyVal {
+  final case class NonFinalSiteModifications(mods: Map[Site.Ref, (Site.Dom, SiteState)]) extends AnyVal {
 
     def combine(that: NonFinalSiteModifications): Option[(NonFinalSiteModifications, FinalSiteModifications)] = {
-      implicit val sDom: JoinDom[Site] = new JoinDom.Template[Site] {
-        def ljoin0(d1: Site, d2: Site): Option[Site] = ???
-        def assess(d: Site): Status[Site] = ???
+      implicit val sDom: JoinDom[Site.Dom] = new JoinDom.Template[Site.Dom] {
+        def ljoin0(d1: Site.Dom, d2: Site.Dom): Option[Site.Dom] = ???
+        def assess(d: Site.Dom): Status[Site.Dom] = ???
       }
       implicit val stDom: JoinDom[SiteState] = new JoinDom.Template[SiteState] {
         def ljoin0(d1: SiteState, d2: SiteState): Option[SiteState] = ???
         def assess(d: SiteState): Status[SiteState] = ???
       }
-      implicit val sFin: Final[Site] = new Final[Site] {
+      implicit val sFin: Final.Aux[Site.Dom, Site] = new Final[Site.Dom] {
         type Out = Site
-        def embed(a: Site): Site = ???
-        def extract(d: Site): Option[Site] = ???
+        def embed(a: Site): Site.Dom = ???
+        def extract(d: Site.Dom): Option[Site] = ???
       }
 
       for {

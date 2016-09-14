@@ -14,10 +14,10 @@ sealed trait Binding {
   def qi: AgentIndex
 
   /** binding site at [[p]] */
-  def ps: Site
+  def ps: Site.Dom
 
   /** binding site at [[q]] */
-  def qs: Site
+  def qs: Site.Dom
 
   /** first binding partner */
   def p: Protein = witness.lhs(pi).protein
@@ -48,13 +48,13 @@ sealed trait Binding {
 }
 
 object Binding {
-  private case class Binding0(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: Site, qs: Site) extends Binding
+  private case class Binding0(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: Site.Dom, qs: Site.Dom) extends Binding
 
   type Ref = Antichain.Ref[Binding]
 
-  def apply(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: Site, qs: Site): Binding =
+  def apply(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: Site.Dom, qs: Site.Dom): Binding =
     Binding0(witness, pi, qi, ps, qs)
 
-  def apply(p: Protein, ps: Site, q: Protein, qs: Site): Binding =
+  def apply(p: Protein, ps: Site.Dom, q: Protein, qs: Site.Dom): Binding =
     BindingPartnerPattern(p, ps) bind BindingPartnerPattern(q, qs)
 }

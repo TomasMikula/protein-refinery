@@ -11,6 +11,7 @@ case class Site(name: String) {
 
 object Site {
 
+  type Dom = Antichain[Site]
   type Ref = Antichain.Ref[Site]
 
   implicit def eqInstance: Eq[Site] = new Eq[Site] {
