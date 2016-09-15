@@ -2,6 +2,7 @@ package proteinrefinery.lib
 
 import nutcracker.util.{ContF, FreeK, InjectK}
 import nutcracker.{Antichain, PropagationLang, Trigger}
+import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds
@@ -13,11 +14,14 @@ final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
   def canConsume(ptrn: AgentsPattern): Boolean = ???
   def canProduce(ptrn: AgentsPattern): Boolean = ???
 
-  def mentionedSitesOf(p: Protein): Set[Site.Dom] = {
-    val buf = ArrayBuffer[Site.Dom]()
+  def mentionedSitesOf(p: Protein): Set[LocalSiteId] = {
+    val buf = ArrayBuffer[LocalSiteId]()
 
     // sites mentioned in agent patterns
-    lhs.agentIterator.filter(_.protein == p).foreach(buf ++= _.mods.finalSiteMods.mods.keys)
+    lhs.agentIterator.filter(_.protein == p).foreach(agent => {
+      buf ++= agent.mods.finalSiteMods.mods.keysIterator.map(LocalSiteId(_))
+      buf ++= agent.mods.nonFinalSiteMods.mods.keysIterator.map(LocalSiteId(_))
+    })
 
     // sites mentioned in existing bonds
     lhs.bonds.foreach({
@@ -36,11 +40,16 @@ final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
       case Unlink(_) => // do nothing
       case Modify(i, rm, add) =>
         if(lhs(i).protein == p) {
-          buf ++= rm.finalSiteMods.mods.keys
-          buf ++= add.finalSiteMods.mods.keys
+          buf ++= rm.finalSiteMods.mods.keysIterator.map(LocalSiteId(_))
+          buf ++= rm.nonFinalSiteMods.mods.keysIterator.map(LocalSiteId(_))
+          buf ++= add.finalSiteMods.mods.keysIterator.map(LocalSiteId(_))
+          buf ++= add.nonFinalSiteMods.mods.keysIterator.map(LocalSiteId(_))
         }
       case Replace(_, _, insert) =>
-        insert.iterator.filter(_.protein == p).foreach(mp => buf ++= mp.mods.finalSiteMods.mods.keys)
+        insert.iterator.filter(_.protein == p).foreach(mp => {
+          buf ++= mp.mods.finalSiteMods.mods.keysIterator.map(LocalSiteId(_))
+          buf ++= mp.mods.nonFinalSiteMods.mods.keysIterator.map(LocalSiteId(_))
+        })
     })
 
     buf.toSet

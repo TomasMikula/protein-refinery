@@ -1,6 +1,7 @@
 package proteinrefinery.lib
 
 import nutcracker.Antichain
+import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.Site._
 import proteinrefinery.util.syntax._
 
@@ -16,19 +17,25 @@ case class ProteinPattern(protein: Protein, mods: AdmissibleProteinModifications
 
   override def toString: String = toString(Map())
 
-  def toString(bonds: Map[Site.Dom, Either[Unbound.type, LinkId]]): String = {
-    val siteString = mods.finalSiteMods.mods.pairWithOpt(bonds).iterator.map[String]({
-      case (site, state_link) => state_link match {
-        case (Some((state, _)), Some(Right(link))) => s"${site.shows}~${state.label}!${link.value}"
-        case (Some((state, _)), Some(Left(_))) => s"${site.shows}~${state.label}"
-        case (Some((state, _)), None) => s"${site.shows}~${state.label}?"
-        case (None, Some(Right(link))) => s"${site.shows}!${link.value}"
-        case (None, Some(Left(_))) => s"${site.shows}"
-        case (None, None) => sys.error("unreachable code")
-      }
-    }).mkString(",")
+  def toString(bonds: Map[LocalSiteId, Either[Unbound.type, LinkId]]): String = {
+    val (definiteBonds, nonDefiniteBonds) = bonds.splitKeys(identity)
 
-    s"${protein.name.name}($siteString)"
+    def siteString[SiteId: Show](modsBonds: Map[SiteId, (Option[SiteState], Option[Either[Unbound.type, LinkId]])]): String =
+      modsBonds.iterator.map[String]({
+        case (site, state_link) => state_link match {
+          case (Some(state), Some(Right(link))) => s"${site.shows}~${state.label}!${link.value}"
+          case (Some(state), Some(Left(_))) => s"${site.shows}~${state.label}"
+          case (Some(state), None) => s"${site.shows}~${state.label}?"
+          case (None, Some(Right(link))) => s"${site.shows}!${link.value}"
+          case (None, Some(Left(_))) => s"${site.shows}"
+          case (None, None) => sys.error("unreachable code")
+        }
+      }).mkString(",")
+
+    val    definiteSiteString = siteString[Site.Definite](mods.   finalSiteMods.mods.mapValues(_._1).pairWithOpt(   definiteBonds))
+    val nonDefiniteSiteString = siteString[Site.Ref     ](mods.nonFinalSiteMods.mods.mapValues(_._2).pairWithOpt(nonDefiniteBonds))
+
+    s"${protein.name.name}($definiteSiteString,$nonDefiniteSiteString)"
   }
 }
 

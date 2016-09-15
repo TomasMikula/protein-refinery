@@ -8,6 +8,7 @@ import nutcracker.util.{FreeK, InjectK}
 import nutcracker.{Antichain, DRef, Diff, Dom, IncSet, PropagationLang}
 import org.reactfx.EventStreams
 import proteinrefinery.lib.{Assoc, Binding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, ProteinPattern, Site}
+import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.UIUpdateLang._
 import proteinrefinery.ui.util.syntax._
@@ -52,7 +53,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
     }
 
   private def addFactBind(p: Protein, ps: Site, q: Protein, qs: Site): Prg[Unit] = {
-    val rule = Binding(p, Antichain(ps), q, Antichain(qs)).witness
+    val rule = Binding(p, LocalSiteId(ps), q, LocalSiteId(qs)).witness
     Nuggets.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
   }
 

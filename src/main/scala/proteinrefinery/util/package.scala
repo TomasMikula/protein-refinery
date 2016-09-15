@@ -30,13 +30,25 @@ package object util {
       }
     })
 
-  def mapSplit[K, V, A, B](m: Map[K, V])(f: V => Either[A, B]): (Map[K, A], Map[K, B]) = {
+  def mapSplitValues[K, V, A, B](m: Map[K, V])(f: V => Either[A, B]): (Map[K, A], Map[K, B]) = {
     val builderA = mutable.Map[K, A]()
     val builderB = mutable.Map[K, B]()
 
     m.foreach(kv => {
       val (k, v) = kv
       f(v).fold(builderA.put(k, _), builderB.put(k, _))
+    })
+
+    (builderA.toMap, builderB.toMap)
+  }
+
+  def mapSplitKeys[K, V, A, B](m: Map[K, V])(f: K => Either[A, B]): (Map[A, V], Map[B, V]) = {
+    val builderA = mutable.Map[A, V]()
+    val builderB = mutable.Map[B, V]()
+
+    m.foreach(kv => {
+      val (k, v) = kv
+      f(k).fold(builderA.put(_, v), builderB.put(_, v))
     })
 
     (builderA.toMap, builderB.toMap)

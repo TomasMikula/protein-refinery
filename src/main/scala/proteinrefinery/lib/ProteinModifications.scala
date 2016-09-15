@@ -1,11 +1,13 @@
 package proteinrefinery.lib
 
 import nutcracker.Dom.Status
-import nutcracker.{Antichain, Dom, Final, Join, JoinDom}
+import nutcracker.{Dom, Final, Join, JoinDom}
 import proteinrefinery.lib.AdmissibleProteinModifications.{FinalSiteModifications, NonFinalSiteModifications}
 
 import scalaz.std.option._
-import proteinrefinery.util.{buildMap, mapIntersect, mapSplit, mapUnion}
+import proteinrefinery.util.{buildMap, mapIntersect, mapSplitValues, mapUnion}
+
+import scalaz.Show
 
 sealed trait ProteinModifications {
 
@@ -20,10 +22,7 @@ sealed trait ProteinModifications {
     case InvalidProteinModifications => None
   }
 
-  final def addModification(site: Site, state: SiteState): ProteinModifications =
-    addModification0(Antichain(site), state)
-
-  def addModification0(site: Site.Dom, state: SiteState): ProteinModifications
+  def addModification(site: Site, state: SiteState): ProteinModifications
 
   def combine(that: ProteinModifications): ProteinModifications = (this, that) match {
     case (a @ AdmissibleProteinModifications(_, _), b @ AdmissibleProteinModifications(_, _)) => a.combine0(b)
@@ -32,7 +31,7 @@ sealed trait ProteinModifications {
 }
 
 case object InvalidProteinModifications extends ProteinModifications {
-  def addModification0(site: Site.Dom, state: SiteState): ProteinModifications = this
+  def addModification(site: Site.Definite, state: SiteState): ProteinModifications = this
 }
 
 case class AdmissibleProteinModifications(
@@ -40,8 +39,8 @@ case class AdmissibleProteinModifications(
   finalSiteMods: FinalSiteModifications
 ) extends ProteinModifications {
 
-  def addModification0(site: Site.Dom, state: SiteState): ProteinModifications =
-    ProteinModifications.fromOption(finalSiteMods.addModification0(site, state).map(AdmissibleProteinModifications(nonFinalSiteMods, _)))
+  override def addModification(site: Site.Definite, state: SiteState): ProteinModifications =
+    ProteinModifications.fromOption(finalSiteMods.addModification(site, state).map(AdmissibleProteinModifications(nonFinalSiteMods, _)))
 
   def combine0(that: AdmissibleProteinModifications): ProteinModifications =
     ProteinModifications.fromOption(for {
@@ -56,13 +55,13 @@ object AdmissibleProteinModifications {
   def apply(mods: Iterable[(Site, SiteState)]): AdmissibleProteinModifications =
     AdmissibleProteinModifications(
       NonFinalSiteModifications.noModifications,
-      FinalSiteModifications(mods.iterator.map(ss => (Antichain(ss._1), (ss._2, Set[Site.Ref]()))).toMap)
+      FinalSiteModifications(mods.iterator.map(ss => (ss._1, (ss._2, Set[Site.Ref]()))).toMap)
     )
 
   private[AdmissibleProteinModifications]
-  final case class FinalSiteModifications(mods: Map[Site.Dom, (SiteState, Set[Site.Ref])]) extends AnyVal {
+  final case class FinalSiteModifications(mods: Map[Site.Definite, (SiteState, Set[Site.Ref])]) extends AnyVal {
 
-    def addModification0(site: Site.Dom, state: SiteState): Option[FinalSiteModifications] =
+    def addModification(site: Site.Definite, state: SiteState): Option[FinalSiteModifications] =
       mods.get(site).fold[Option[FinalSiteModifications]](
         Some(FinalSiteModifications(mods.updated(site, (state, Set())))))(
         sr => if(sr._1 == state) Some(this) else None
@@ -80,7 +79,7 @@ object AdmissibleProteinModifications {
       * and are the most specific such modifications. In other words, returns the
       * greatest lower bound of the two in the (partial) ordering given by specificity.
       */
-    def meet(that: FinalSiteModifications): Map[Site.Dom, SiteState] = {
+    def meet(that: FinalSiteModifications): Map[Site.Definite, SiteState] = {
       mapIntersect(this.mods, that.mods)((sr1, sr2) => {
         val (st1, refs1) = sr1
         val (st2, refs2) = sr2
@@ -134,9 +133,11 @@ object AdmissibleProteinModifications {
           }
         })
 
-        (nonFinMods, m2) = mapSplit(m1)({ case (s, st) =>
-          if (sFin.isFinal(s)) Right((s, st))
-          else Left((s, st))
+        (nonFinMods, m2) = mapSplitValues(m1)({ case (s, st) =>
+          sFin.extract(s) match {
+            case Some(s) => Right((s, st))
+            case None => Left((s, st))
+          }
         })
 
         finMods <- buildMap(m2.iterator.map({ case (ref, (s, st)) => (s, (st, Set(ref))) }))({ case ((st1, refs1), (st2, refs2)) =>
@@ -163,6 +164,21 @@ object AdmissibleProteinModifications {
 }
 
 object ProteinModifications {
+  /** Type that is able to uniquely identify a site within a protein. */
+  type LocalSiteId = Either[Site.Definite, Site.Ref]
+  object LocalSiteId {
+    def apply(label: Site): LocalSiteId = Left(label)
+    def apply(ref: Site.Ref): LocalSiteId = Right(ref)
+
+    implicit def showInstance: Show[LocalSiteId] = new Show[LocalSiteId] {
+      import scalaz.syntax.show._
+      override def shows(id: LocalSiteId): String = id match {
+        case Left(s) => s.shows
+        case Right(ref) => s"<site#${ref.shows}>"
+      }
+    }
+  }
+
   def noModifications: AdmissibleProteinModifications = AdmissibleProteinModifications.noModifications
 
   def fromOption(pm: Option[AdmissibleProteinModifications]): ProteinModifications =

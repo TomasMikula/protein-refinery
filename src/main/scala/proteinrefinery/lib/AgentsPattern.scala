@@ -1,14 +1,14 @@
 package proteinrefinery.lib
 
-import nutcracker.Antichain
+import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.util.syntax._
 
 import scalaz.State
 
 case class AgentsPattern(
   private val agents: Vector[Option[ProteinPattern]],
-  bonds: Vector[Option[(AgentIndex, Site.Dom, AgentIndex, Site.Dom)]],
-  unbound: List[(AgentIndex, Site.Dom)]
+  bonds: Vector[Option[(AgentIndex, LocalSiteId, AgentIndex, LocalSiteId)]],
+  unbound: List[(AgentIndex, LocalSiteId)]
 ) {
 
   def apply(i: AgentIndex): ProteinPattern = agents(i.value).get
@@ -30,18 +30,18 @@ case class AgentsPattern(
   def removeAgent(i: AgentIndex): AgentsPattern = ???
 
   def requireUnbound(i: AgentIndex, s: Site): AgentsPattern =
-    requireUnbound0(i, Antichain(s))
+    requireUnbound0(i, LocalSiteId(s))
 
-  def requireUnbound0(i: AgentIndex, s: Site.Dom): AgentsPattern = {
+  def requireUnbound0(i: AgentIndex, s: LocalSiteId): AgentsPattern = {
     require(hasAgent(i.value))
     require(isNotBound(i, s))
     AgentsPattern(agents, bonds, (i, s) :: unbound)
   }
 
   def link(i: AgentIndex, si: Site, j: AgentIndex, sj: Site): (AgentsPattern, LinkId) =
-    link0(i, Antichain(si), j, Antichain(sj))
+    link0(i, LocalSiteId(si), j, LocalSiteId(sj))
 
-  def link0(i: AgentIndex, si: Site.Dom, j: AgentIndex, sj: Site.Dom): (AgentsPattern, LinkId) = {
+  def link0(i: AgentIndex, si: LocalSiteId, j: AgentIndex, sj: LocalSiteId): (AgentsPattern, LinkId) = {
     require(hasAgent(i.value))
     require(hasAgent(j.value))
     require(isUnbound(i, si))
@@ -55,34 +55,34 @@ case class AgentsPattern(
     AgentsPattern(agents, bonds.updated(id.value, None), (i, si) :: (j, sj) :: unbound)
   }
 
-  def getBond(id: LinkId): Option[(ProteinPattern, Site.Dom, ProteinPattern, Site.Dom)] =
+  def getBond(id: LinkId): Option[(ProteinPattern, LocalSiteId, ProteinPattern, LocalSiteId)] =
     bonds(id.value).map(reifyBond)
 
-  def getBonds: List[(ProteinPattern, Site.Dom, ProteinPattern, Site.Dom)] =
+  def getBonds: List[(ProteinPattern, LocalSiteId, ProteinPattern, LocalSiteId)] =
     bonds.iterator.collectToList(_.map(reifyBond))
 
-  def getUnbound: List[(ProteinPattern, Site.Dom)] =
+  def getUnbound: List[(ProteinPattern, LocalSiteId)] =
     unbound map { case (i, s) => (apply(i), s) }
 
   def unify(that: AgentsPattern): Option[AgentsPattern] = ???
   def partition(that: AgentsPattern): (Option[AgentsPattern], Option[AgentsPattern], Option[AgentsPattern]) = ???
 
   override def toString: String = {
-    val bondsByAgent = bonds.iterator.zipWithIndex.mapFilter({ case (l, i) => l.map((_, i)) }).flatMap[(AgentIndex, (Site.Dom, Either[Unbound.type , LinkId]))]{
+    val bondsByAgent = bonds.iterator.zipWithIndex.mapFilter({ case (l, i) => l.map((_, i)) }).flatMap[(AgentIndex, (LocalSiteId, Either[Unbound.type , LinkId]))]{
       case ((pi, ps, qi, qs), linkIdx) =>
         Iterator((pi, (ps, Right(LinkId(linkIdx)))), (qi, (qs, Right(LinkId(linkIdx)))))
     }
-    val nonBondsByAgent = unbound.iterator.map[(AgentIndex, (Site.Dom, Either[Unbound.type , LinkId]))]{
+    val nonBondsByAgent = unbound.iterator.map[(AgentIndex, (LocalSiteId, Either[Unbound.type , LinkId]))]{
       case (i, s) => (i, (s, Left(Unbound)))
     }
-    val linksByAgent = (bondsByAgent ++ nonBondsByAgent).toMultiMap[AgentIndex, (Site.Dom, Either[Unbound.type , LinkId])]
+    val linksByAgent = (bondsByAgent ++ nonBondsByAgent).toMultiMap[AgentIndex, (LocalSiteId, Either[Unbound.type , LinkId])]
 
     agents.iterator.zipWithIndex.mapFilter({ case (pp, i) => pp.map(pp =>
       pp.toString(linksByAgent.getOrElse(AgentIndex(i), Nil).toMap)
     )}).mkString(", ")
   }
 
-  private def reifyBond(b: (AgentIndex, Site.Dom, AgentIndex, Site.Dom)): (ProteinPattern, Site.Dom, ProteinPattern, Site.Dom) = b match {
+  private def reifyBond(b: (AgentIndex, LocalSiteId, AgentIndex, LocalSiteId)): (ProteinPattern, LocalSiteId, ProteinPattern, LocalSiteId) = b match {
     case (i, si, j, sj) => (apply(i), si, apply(j), sj)
   }
 
@@ -92,10 +92,10 @@ case class AgentsPattern(
   @inline private def hasBond(i: Int): Boolean =
     i >= 0 && i < bonds.size && bonds(i).isDefined
 
-  @inline private def isUnbound(i: AgentIndex, s: Site.Dom): Boolean =
+  @inline private def isUnbound(i: AgentIndex, s: LocalSiteId): Boolean =
     unbound.contains((i, s))
 
-  @inline private def isNotBound(i: AgentIndex, s: Site.Dom): Boolean =
+  @inline private def isNotBound(i: AgentIndex, s: LocalSiteId): Boolean =
     bonds.forall(_ match {
       case Some((p, ps, q, qs)) => (p != i || ps != s) && (q != i || qs != s)
       case None => true
@@ -112,7 +112,7 @@ object AgentsPattern {
   def removeAgent(i: AgentIndex): State[AgentsPattern, Unit] =
     State(s => (s.removeAgent(i), ()))
 
-  def requireUnbound0(i: AgentIndex, site: Site.Dom): State[AgentsPattern, Unit] =
+  def requireUnbound0(i: AgentIndex, site: LocalSiteId): State[AgentsPattern, Unit] =
     State(s => (s.requireUnbound0(i, site), ()))
 
   def requireUnbound(i: AgentIndex, site: Site): State[AgentsPattern, Unit] =
@@ -130,7 +130,12 @@ final case class LinkId(value: Int) extends AnyVal
 object Unbound
 
 sealed abstract class Action
-case class Link(i1: AgentIndex, s1: Site.Dom, i2: AgentIndex, s2: Site.Dom) extends Action
+case class Link(i1: AgentIndex, s1: LocalSiteId, i2: AgentIndex, s2: LocalSiteId) extends Action
 case class Unlink(id: LinkId) extends Action
 case class Modify(i: AgentIndex, rm: AdmissibleProteinModifications, add: AdmissibleProteinModifications) extends Action
 case class Replace(from: AgentIndex, to: AgentIndex, insert: List[ProteinPattern]) extends Action
+
+object Link {
+  def apply(i1: AgentIndex, s1: Site.Definite, i2: AgentIndex, s2: Site.Definite): Link =
+    Link(i1, LocalSiteId(s1), i2, LocalSiteId(s2))
+}

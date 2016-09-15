@@ -1,6 +1,6 @@
 package proteinrefinery.capability
 
-import nutcracker.Antichain
+import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 import scala.language.implicitConversions
 import proteinrefinery.lib.{AdmissibleProteinModifications, Binding, BindingPartnerPattern, Protein, ProteinPattern, Site, SiteState}
@@ -12,7 +12,7 @@ package object syntax {
     def apply(ss: (Site, SiteState)*): ProteinPattern =
       ProteinPattern(Protein(sym), AdmissibleProteinModifications(ss))
 
-    def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(Protein(sym), Antichain(s))
+    def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(Protein(sym), LocalSiteId(s))
 
     def ~(s: SiteState): (Site, SiteState) = (Site(sym.name), s)
 
@@ -20,7 +20,7 @@ package object syntax {
 
   implicit class ProteinPatternOps(p: ProteinPattern) {
 
-    def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(p, Antichain(s))
+    def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(p, LocalSiteId(s))
 
   }
 

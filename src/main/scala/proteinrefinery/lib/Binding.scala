@@ -1,6 +1,7 @@
 package proteinrefinery.lib
 
 import nutcracker.Antichain
+import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 sealed trait Binding {
 
@@ -14,10 +15,10 @@ sealed trait Binding {
   def qi: AgentIndex
 
   /** binding site at [[p]] */
-  def ps: Site.Dom
+  def ps: LocalSiteId
 
   /** binding site at [[q]] */
-  def qs: Site.Dom
+  def qs: LocalSiteId
 
   /** first binding partner */
   def p: Protein = witness.lhs(pi).protein
@@ -48,13 +49,13 @@ sealed trait Binding {
 }
 
 object Binding {
-  private case class Binding0(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: Site.Dom, qs: Site.Dom) extends Binding
+  private case class Binding0(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId, qs: LocalSiteId) extends Binding
 
   type Ref = Antichain.Ref[Binding]
 
-  def apply(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: Site.Dom, qs: Site.Dom): Binding =
+  def apply(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId, qs: LocalSiteId): Binding =
     Binding0(witness, pi, qi, ps, qs)
 
-  def apply(p: Protein, ps: Site.Dom, q: Protein, qs: Site.Dom): Binding =
+  def apply(p: Protein, ps: LocalSiteId, q: Protein, qs: LocalSiteId): Binding =
     BindingPartnerPattern(p, ps) bind BindingPartnerPattern(q, qs)
 }
