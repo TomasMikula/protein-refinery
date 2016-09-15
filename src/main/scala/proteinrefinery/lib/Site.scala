@@ -21,4 +21,8 @@ object Site {
   implicit def showInstance: Show[Site] = new Show[Site] {
     override def shows(s: Site): String = s.toString
   }
+
+  implicit def domShowInstance: Show[Site.Dom] = new Show[Site.Dom] {
+    override def shows(s: Site.Dom): String = s.value.toString
+  }
 }
