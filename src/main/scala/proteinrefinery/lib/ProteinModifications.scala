@@ -23,7 +23,7 @@ sealed trait ProteinModifications {
     case InvalidProteinModifications => None
   }
 
-  def addModification(site: Site, state: SiteState): ProteinModifications
+  def addModification(site: SiteLabel, state: SiteState): ProteinModifications
 
   def combine(that: ProteinModifications): ProteinModifications = (this, that) match {
     case (a @ AdmissibleProteinModifications(_, _), b @ AdmissibleProteinModifications(_, _)) => a.combine0(b)
@@ -60,7 +60,7 @@ case class AdmissibleProteinModifications(
 
 object AdmissibleProteinModifications {
 
-  def apply(mods: Iterable[(Site, SiteState)]): AdmissibleProteinModifications =
+  def apply(mods: Iterable[(SiteLabel, SiteState)]): AdmissibleProteinModifications =
     AdmissibleProteinModifications(
       NonFinalSiteModifications.noModifications,
       FinalSiteModifications(mods.iterator.map(ss => (ss._1, (ss._2, Set[Site.Ref]()))).toMap)
@@ -120,10 +120,10 @@ object AdmissibleProteinModifications {
         def ljoin0(d1: SiteState, d2: SiteState): Option[SiteState] = ???
         def assess(d: SiteState): Status[SiteState] = ???
       }
-      implicit val sFin: Final.Aux[Site.Dom, Site] = new Final[Site.Dom] {
-        type Out = Site
-        def embed(a: Site): Site.Dom = ???
-        def extract(d: Site.Dom): Option[Site] = ???
+      implicit val sFin: Final.Aux[Site.Dom, SiteLabel] = new Final[Site.Dom] {
+        type Out = SiteLabel
+        def embed(a: SiteLabel): Site.Dom = ???
+        def extract(d: Site.Dom): Option[SiteLabel] = ???
       }
 
       for {
@@ -175,7 +175,7 @@ object ProteinModifications {
   /** Type that is able to uniquely identify a site within a protein. */
   type LocalSiteId = Either[Site.Definite, Site.Ref]
   object LocalSiteId {
-    def apply(label: Site): LocalSiteId = Left(label)
+    def apply(label: SiteLabel): LocalSiteId = Left(label)
     def apply(ref: Site.Ref): LocalSiteId = Right(ref)
 
     implicit def showInstance: Show[LocalSiteId] = new Show[LocalSiteId] {

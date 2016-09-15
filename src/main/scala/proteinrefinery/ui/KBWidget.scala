@@ -10,7 +10,7 @@ import nutcracker.util.KMap
 import org.reactfx.collection.LiveArrayList
 import org.reactfx.value.{Val, Var}
 import org.reactfx.{EventSource, EventStream, EventStreams}
-import proteinrefinery.lib.{InvalidProteinModifications, Protein, ProteinModifications, ProteinPattern, Rule, Site, SiteState}
+import proteinrefinery.lib.{InvalidProteinModifications, Protein, ProteinModifications, ProteinPattern, Rule, SiteLabel, SiteState}
 import proteinrefinery.ui.FactType.{FactKinase, FactPhosTarget, FactRule}
 import proteinrefinery.ui.util.syntax._
 
@@ -26,7 +26,7 @@ class KBWidget {
 
   private val dialogHolder = new StackPane()
   private val rules = new ListView[Rule]
-  private val phosSites = new ListView[(Protein, Protein, Site)]
+  private val phosSites = new ListView[(Protein, Protein, SiteLabel)]
   private val kinases = new ListView[ProteinPattern]
 
   val node: Node = new ScrollPane(
@@ -60,7 +60,7 @@ class KBWidget {
 
   private def ruleAdded(r: Rule): Unit = rules.getItems.add(r).ignoreResult()
 
-  private def phosTargetAdded(k: Protein, s: Protein, ss: Site): Unit = phosSites.getItems.add((k, s, ss)).ignoreResult()
+  private def phosTargetAdded(k: Protein, s: Protein, ss: SiteLabel): Unit = phosSites.getItems.add((k, s, ss)).ignoreResult()
 
   private def kinaseAdded(pp: ProteinPattern): Unit = kinases.getItems.add(pp).ignoreResult()
 
@@ -76,10 +76,10 @@ trait FactType[A] { self: Singleton => }
 object FactType {
   object FactRule extends FactType[Rule]
   object FactKinase extends FactType[ProteinPattern]
-  object FactPhosTarget extends FactType[(Protein, Protein, Site)]
+  object FactPhosTarget extends FactType[(Protein, Protein, SiteLabel)]
 }
 
-class BindFactInput extends InputForm[(Protein, Site, Protein, Site)] {
+class BindFactInput extends InputForm[(Protein, SiteLabel, Protein, SiteLabel)] {
   private val p1 = new TextField()
   private val s1 = new TextField()
   private val p2 = new TextField()
@@ -92,12 +92,12 @@ class BindFactInput extends InputForm[(Protein, Site, Protein, Site)] {
     _.addRow(1, new Label("Protein 2"), p2, new Label("site"), s2)
   }
 
-  val input: Val[(Protein, Site, Protein, Site)] = (p1.textProperty() |@| s1.textProperty() |@| p2.textProperty() |@| s2.textProperty()).tuple
+  val input: Val[(Protein, SiteLabel, Protein, SiteLabel)] = (p1.textProperty() |@| s1.textProperty() |@| p2.textProperty() |@| s2.textProperty()).tuple
     .filter4[String, String, String, String]((p1, s1, p2, s2) => !p1.isEmpty && !s1.isEmpty && !p2.isEmpty && !s2.isEmpty)
-    .map4[String, String, String, String, (Protein, Site, Protein, Site)]((p1, s1, p2, s2) => (Protein(p1), Site(s1), Protein(p2), Site(s2)))
+    .map4[String, String, String, String, (Protein, SiteLabel, Protein, SiteLabel)]((p1, s1, p2, s2) => (Protein(p1), SiteLabel(s1), Protein(p2), SiteLabel(s2)))
 }
 
-class PhosSiteFactInput extends InputForm[(Protein, Protein, Site)] {
+class PhosSiteFactInput extends InputForm[(Protein, Protein, SiteLabel)] {
   private val kinase = new TextField()
   private val substrate = new TextField()
   private val phosSite = new TextField()
@@ -109,9 +109,9 @@ class PhosSiteFactInput extends InputForm[(Protein, Protein, Site)] {
     gp.addRow(1, new Label("Substrate"), substrate, new Label("Target site"), phosSite)
   }
 
-  val input: Val[(Protein, Protein, Site)] = (kinase.textProperty() |@| substrate.textProperty() |@| phosSite.textProperty()).tuple
+  val input: Val[(Protein, Protein, SiteLabel)] = (kinase.textProperty() |@| substrate.textProperty() |@| phosSite.textProperty()).tuple
     .filter3[String, String, String]((k, s, ss) => !k.isEmpty && !s.isEmpty && !ss.isEmpty)
-    .map3[String, String, String, (Protein, Protein, Site)]((k, s, ss) => (Protein(k), Protein(s), Site(ss)))
+    .map3[String, String, String, (Protein, Protein, SiteLabel)]((k, s, ss) => (Protein(k), Protein(s), SiteLabel(ss)))
 }
 
 class KinaseActivityInput extends InputForm[ProteinPattern] {
@@ -141,7 +141,7 @@ class KinaseActivityInput extends InputForm[ProteinPattern] {
         val (siteField, stateField)  = it.next()
         val (site, state) = (siteField.getText, stateField.getText)
         m =
-          if (site.nonEmpty && state.nonEmpty) m.addModification(Site(site), SiteState(state))
+          if (site.nonEmpty && state.nonEmpty) m.addModification(SiteLabel(site), SiteState(state))
           else if (site.isEmpty && state.isEmpty) m
           else InvalidProteinModifications
       }

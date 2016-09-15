@@ -29,7 +29,7 @@ case class AgentsPattern(
 
   def removeAgent(i: AgentIndex): AgentsPattern = ???
 
-  def requireUnbound(i: AgentIndex, s: Site): AgentsPattern =
+  def requireUnbound(i: AgentIndex, s: SiteLabel): AgentsPattern =
     requireUnbound0(i, LocalSiteId(s))
 
   def requireUnbound0(i: AgentIndex, s: LocalSiteId): AgentsPattern = {
@@ -38,7 +38,7 @@ case class AgentsPattern(
     AgentsPattern(agents, bonds, (i, s) :: unbound)
   }
 
-  def link(i: AgentIndex, si: Site, j: AgentIndex, sj: Site): (AgentsPattern, LinkId) =
+  def link(i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel): (AgentsPattern, LinkId) =
     link0(i, LocalSiteId(si), j, LocalSiteId(sj))
 
   def link0(i: AgentIndex, si: LocalSiteId, j: AgentIndex, sj: LocalSiteId): (AgentsPattern, LinkId) = {
@@ -115,10 +115,10 @@ object AgentsPattern {
   def requireUnbound0(i: AgentIndex, site: LocalSiteId): State[AgentsPattern, Unit] =
     State(s => (s.requireUnbound0(i, site), ()))
 
-  def requireUnbound(i: AgentIndex, site: Site): State[AgentsPattern, Unit] =
+  def requireUnbound(i: AgentIndex, site: SiteLabel): State[AgentsPattern, Unit] =
     State(s => (s.requireUnbound(i, site), ()))
 
-  def addLink(i: AgentIndex, si: Site, j: AgentIndex, sj: Site): State[AgentsPattern, LinkId] =
+  def addLink(i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel): State[AgentsPattern, LinkId] =
     State(_.link(i, si, j, sj))
 
   def removeLink(id: LinkId): State[AgentsPattern, Unit] =

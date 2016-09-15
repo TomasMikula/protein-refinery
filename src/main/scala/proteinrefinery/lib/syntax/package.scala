@@ -3,24 +3,24 @@ package proteinrefinery.capability
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 import scala.language.implicitConversions
-import proteinrefinery.lib.{AdmissibleProteinModifications, Binding, BindingPartnerPattern, Protein, ProteinPattern, Site, SiteState}
+import proteinrefinery.lib.{AdmissibleProteinModifications, Binding, BindingPartnerPattern, Protein, ProteinPattern, SiteLabel, SiteState}
 
 package object syntax {
 
   implicit class SymbolOps(sym: Symbol) {
 
-    def apply(ss: (Site, SiteState)*): ProteinPattern =
+    def apply(ss: (SiteLabel, SiteState)*): ProteinPattern =
       ProteinPattern(Protein(sym), AdmissibleProteinModifications(ss))
 
-    def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(Protein(sym), LocalSiteId(s))
+    def @@ (s: SiteLabel): BindingPartnerPattern = BindingPartnerPattern(Protein(sym), LocalSiteId(s))
 
-    def ~(s: SiteState): (Site, SiteState) = (Site(sym.name), s)
+    def ~(s: SiteState): (SiteLabel, SiteState) = (SiteLabel(sym.name), s)
 
   }
 
   implicit class ProteinPatternOps(p: ProteinPattern) {
 
-    def @@ (s: Site): BindingPartnerPattern = BindingPartnerPattern(p, LocalSiteId(s))
+    def @@ (s: SiteLabel): BindingPartnerPattern = BindingPartnerPattern(p, LocalSiteId(s))
 
   }
 
@@ -30,7 +30,7 @@ package object syntax {
 
   implicit def symbolToProtein(sym: Symbol): Protein = Protein(sym)
 
-  implicit def symbolToSite(sym: Symbol): Site = Site(sym.name)
+  implicit def symbolToSite(sym: Symbol): SiteLabel = SiteLabel(sym.name)
 
   implicit def stringToState(s: String): SiteState = SiteState(s)
 

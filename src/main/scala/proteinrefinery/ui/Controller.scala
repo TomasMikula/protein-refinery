@@ -7,7 +7,7 @@ import nutcracker.util.CoproductK.:++:
 import nutcracker.util.{FreeK, InjectK}
 import nutcracker.{Antichain, DRef, Diff, Dom, IncSet, PropagationLang}
 import org.reactfx.EventStreams
-import proteinrefinery.lib.{Assoc, Binding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, ProteinPattern, Site}
+import proteinrefinery.lib.{Assoc, Binding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, ProteinPattern, SiteLabel}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.UIUpdateLang._
@@ -52,7 +52,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
       observeGoal(s"Negative influence of $agent on $phosDesc", _)
     }
 
-  private def addFactBind(p: Protein, ps: Site, q: Protein, qs: Site): Prg[Unit] = {
+  private def addFactBind(p: Protein, ps: SiteLabel, q: Protein, qs: SiteLabel): Prg[Unit] = {
     val rule = Binding(p, LocalSiteId(ps), q, LocalSiteId(qs)).witness
     Nuggets.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
   }
@@ -61,7 +61,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
     Nuggets.addKinaseActivityF[DSL](pp) >> newFactF(FactKinase, pp)
   }
 
-  private def addFactPhosSite(k: Protein, s: Protein, ss: Site): Prg[Unit] =
+  private def addFactPhosSite(k: Protein, s: Protein, ss: SiteLabel): Prg[Unit] =
     Nuggets.addPhosphoTargetF[DSL](k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
 
   private def observeGoal[A](desc: String, ref: IncSetRef[_ <: DRef[A]])(implicit t: GoalType[A], dom: Dom[A], show: Show[A]): Prg[Unit] =

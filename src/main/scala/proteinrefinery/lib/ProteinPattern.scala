@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import nutcracker.Antichain
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
-import proteinrefinery.lib.Site._
+import proteinrefinery.lib.SiteLabel._
 import proteinrefinery.util.syntax._
 
 import scalaz.Show
@@ -12,7 +12,7 @@ case class ProteinPattern(protein: Protein, mods: AdmissibleProteinModifications
   def isCompatibleWith(that: ProteinPattern): Boolean =
     (this.protein == that.protein) && (this.mods combine that.mods).isAdmissible
 
-  def addModification(site: Site, state: SiteState): Option[ProteinPattern] =
+  def addModification(site: SiteLabel, state: SiteState): Option[ProteinPattern] =
     mods.addModification(site, state).toOption.map(ProteinPattern(protein, _))
 
   def mentionedSites: Set[LocalSiteId] = mods.mentionedSites

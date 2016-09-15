@@ -24,7 +24,7 @@ object Nuggets {
 
   def addAll[F[_[_], _]](
     rules: List[Rule] = Nil,
-    phosphoSites: List[(Protein, Protein, Site)] = Nil
+    phosphoSites: List[(Protein, Protein, SiteLabel)] = Nil
   )(implicit
     i: InjectK[PropagationLang, F],
     j: InjectK[TrackLang, F]
@@ -37,7 +37,7 @@ object Nuggets {
   // basic programs for adding nuggets
   def addRuleF[F[_[_], _]](r: Rule)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     cellF(Antichain(r)).inject[F] >>= { trackF(_) }
-  def addPhosphoTargetF[F[_[_], _]](kinase: Protein, substrate: Protein, site: Site)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
+  def addPhosphoTargetF[F[_[_], _]](kinase: Protein, substrate: Protein, site: SiteLabel)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     cellF(Antichain(PhosphoTarget(kinase, substrate, site))).inject[F] >>= { trackF(_) }
   def addKinaseActivityF[F[_[_], _]](activeState: ProteinPattern)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     cellF(Antichain(activeState)).inject[F] >>= { trackF(_) }
@@ -70,38 +70,38 @@ object Nuggets {
   def bindingsOfS[F[_[_], _]](p: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, DSetRef[Antichain[Binding]]] =
     DSet.collect(bindingsOfC[F](p))
 
-  def phosphoSitesF[F[_[_], _]](kinase: Protein, substrate: Protein)(f: Site => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
+  def phosphoSitesF[F[_[_], _]](kinase: Protein, substrate: Protein)(f: SiteLabel => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     phosphoTargetsF[F](pt => {
       val PhosphoTarget(k, s, ss) = pt
       if(kinase == k && substrate == s) OnceTrigger.Fire(_ => f(ss))
       else OnceTrigger.Discard()
     })
-  def phosphoSitesC[F[_[_], _]](kinase: Protein, substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Site] = // TODO: return Site.Ref
+  def phosphoSitesC[F[_[_], _]](kinase: Protein, substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, SiteLabel] = // TODO: return Site.Ref
     ContF(f => phosphoSitesF[F](kinase, substrate)(f))
-  def phosphoSitesS[F[_[_], _]](kinase: Protein, substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, IncSetRef[Site]] =
+  def phosphoSitesS[F[_[_], _]](kinase: Protein, substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, IncSetRef[SiteLabel]] =
     IncSet.collect(phosphoSitesC(kinase, substrate))
 
-  def phosphoSitesS[F[_[_], _]](substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, IncSetRef[Site]] =
+  def phosphoSitesS[F[_[_], _]](substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, IncSetRef[SiteLabel]] =
     for {
-      res <- IncSet.init[F, Site]
+      res <- IncSet.init[F, SiteLabel]
       _   <- phosphoTargetsF[F](pt => {
         val PhosphoTarget(k, s, ss) = pt
         if(s == substrate) OnceTrigger.Fire(_ => IncSet.insert(ss, res))
         else OnceTrigger.Discard()
       })
     } yield res
-  def phosphoSitesC[F[_[_], _]](substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Site] = // TODO: return Site.Ref
+  def phosphoSitesC[F[_[_], _]](substrate: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, SiteLabel] = // TODO: return Site.Ref
     phosphoSitesS[F](substrate).map(IncSet.forEach(_)).wrapEffect
 
-  def kinasesOfF[F[_[_], _]](substrate: Protein, site: Site)(f: Protein => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
+  def kinasesOfF[F[_[_], _]](substrate: Protein, site: SiteLabel)(f: Protein => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     phosphoTargetsF[F](pt => {
       val PhosphoTarget(k, s, ss) = pt
       if(substrate == s && site == ss) OnceTrigger.Fire(_ => f(k))
       else OnceTrigger.Discard()
     })
-  def kinasesOfC[F[_[_], _]](substrate: Protein, site: Site)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Protein] = // TODO: return Protein.Ref
+  def kinasesOfC[F[_[_], _]](substrate: Protein, site: SiteLabel)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Protein] = // TODO: return Protein.Ref
     ContF(f => kinasesOfF[F](substrate, site)(f))
-  def kinasesOfS[F[_[_], _]](substrate: Protein, site: Site)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, IncSetRef[Protein]] =
+  def kinasesOfS[F[_[_], _]](substrate: Protein, site: SiteLabel)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, IncSetRef[Protein]] =
     IncSet.collect(kinasesOfC(substrate, site))
 
 }
