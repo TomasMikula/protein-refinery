@@ -8,7 +8,6 @@ import javafx.scene.control.{Button, MenuItem}
 import org.reactfx.util.{TetraFunction, TriFunction}
 import org.reactfx.{EventStream, Subscription}
 import org.reactfx.value.Val
-import proteinrefinery.ui.util.syntax.{Ap3Builder, Ap4Builder}
 
 package object syntax {
 

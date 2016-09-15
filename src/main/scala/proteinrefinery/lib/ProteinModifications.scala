@@ -4,7 +4,6 @@ import nutcracker.Dom.Status
 import nutcracker.{Antichain, Dom, Final, Join, JoinDom}
 import proteinrefinery.lib.AdmissibleProteinModifications.{FinalSiteModifications, NonFinalSiteModifications}
 
-import scala.language.higherKinds
 import scalaz.std.option._
 import proteinrefinery.util.{buildMap, mapIntersect, mapSplit, mapUnion}
 

@@ -1,7 +1,5 @@
 package proteinrefinery.ui
 
-import scala.language.higherKinds
-
 import javafx.scene.Node
 import javafx.scene.control.TitledPane
 import javafx.scene.layout.VBox

@@ -14,7 +14,6 @@ import org.reactfx.{EventSource, EventStream}
 import proteinrefinery.lib.{Assoc, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein}
 import proteinrefinery.ui.util.syntax._
 
-import scala.language.higherKinds
 import scalaz.Show
 
 class GoalWidget {
