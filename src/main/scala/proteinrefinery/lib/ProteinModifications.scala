@@ -3,6 +3,7 @@ package proteinrefinery.lib
 import nutcracker.Dom.Status
 import nutcracker.{Dom, Final, Join, JoinDom}
 import proteinrefinery.lib.AdmissibleProteinModifications.{FinalSiteModifications, NonFinalSiteModifications}
+import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 import scalaz.std.option._
 import proteinrefinery.util.{buildMap, mapIntersect, mapSplitValues, mapUnion}
@@ -47,6 +48,13 @@ case class AdmissibleProteinModifications(
       (nf, fin) <- (this.nonFinalSiteMods combine that.nonFinalSiteMods)
       fin <- FinalSiteModifications.combine(this.finalSiteMods, that.finalSiteMods, fin)
     } yield AdmissibleProteinModifications(nf, fin))
+
+  def mentionedSites: Set[LocalSiteId] = {
+    val buf = Set.newBuilder[LocalSiteId]
+    buf ++= finalSiteMods.mods.keysIterator.map(LocalSiteId(_))
+    buf ++= nonFinalSiteMods.mods.keysIterator.map(LocalSiteId(_))
+    buf.result()
+  }
 
 }
 

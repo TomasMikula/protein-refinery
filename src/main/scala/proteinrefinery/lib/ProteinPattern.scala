@@ -15,6 +15,8 @@ case class ProteinPattern(protein: Protein, mods: AdmissibleProteinModifications
   def addModification(site: Site, state: SiteState): Option[ProteinPattern] =
     mods.addModification(site, state).toOption.map(ProteinPattern(protein, _))
 
+  def mentionedSites: Set[LocalSiteId] = mods.mentionedSites
+
   override def toString: String = toString(Map())
 
   def toString(bonds: Map[LocalSiteId, Either[Unbound.type, LinkId]]): String = {

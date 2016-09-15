@@ -18,10 +18,7 @@ final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
     val buf = ArrayBuffer[LocalSiteId]()
 
     // sites mentioned in agent patterns
-    lhs.agentIterator.filter(_.protein == p).foreach(agent => {
-      buf ++= agent.mods.finalSiteMods.mods.keysIterator.map(LocalSiteId(_))
-      buf ++= agent.mods.nonFinalSiteMods.mods.keysIterator.map(LocalSiteId(_))
-    })
+    lhs.agentIterator.filter(_.protein == p).foreach(buf ++= _.mentionedSites)
 
     // sites mentioned in existing bonds
     lhs.bonds.foreach({
@@ -40,16 +37,11 @@ final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
       case Unlink(_) => // do nothing
       case Modify(i, rm, add) =>
         if(lhs(i).protein == p) {
-          buf ++= rm.finalSiteMods.mods.keysIterator.map(LocalSiteId(_))
-          buf ++= rm.nonFinalSiteMods.mods.keysIterator.map(LocalSiteId(_))
-          buf ++= add.finalSiteMods.mods.keysIterator.map(LocalSiteId(_))
-          buf ++= add.nonFinalSiteMods.mods.keysIterator.map(LocalSiteId(_))
+          buf ++= rm.mentionedSites
+          buf ++= add.mentionedSites
         }
       case Replace(_, _, insert) =>
-        insert.iterator.filter(_.protein == p).foreach(mp => {
-          buf ++= mp.mods.finalSiteMods.mods.keysIterator.map(LocalSiteId(_))
-          buf ++= mp.mods.nonFinalSiteMods.mods.keysIterator.map(LocalSiteId(_))
-        })
+        insert.iterator.filter(_.protein == p).foreach(buf ++= _.mentionedSites)
     })
 
     buf.toSet
