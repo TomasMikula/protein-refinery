@@ -1,7 +1,7 @@
 package proteinrefinery.util
 
 import nutcracker.util.{FreeK, FunctorKA, InjectK}
-import nutcracker.{Antichain, DRef, PropagationLang, Trigger}
+import nutcracker.{Alternator, Antichain, DRef, DomSet, PropagationLang, Revocable, Trigger}
 
 import scala.language.higherKinds
 import scalaz.~>
@@ -29,6 +29,30 @@ object TrackLang {
       case OnceTrigger.Discard() => Trigger.discard[F]
       case OnceTrigger.Fire(h) => Trigger.fire[F](h(ref))
     }))
+
+  def dynamicQuery[F[_[_], _], D, Q](t: DomType[D])(qref: DRef[Q])(rel: QueryRel[Q, D])(implicit
+    i: InjectK[TrackLang, F],
+    j: InjectK[PropagationLang, F]
+  ): FreeK[F, DomSet.Ref[Revocable[DRef[D]]]] = for {
+    res <- DomSet.init[F, Revocable[DRef[D]]]
+    _ <- handleF[F, D, t.Update, t.Delta](t)(dref =>
+      PropagationLang.alternate[F, Q, D, Unit, Revocable.Ref[DRef[D]]](qref, dref)(
+        (q, d) => rel(q, d) match {
+          case QueryRel.Match => Alternator.Left
+          case QueryRel.NoMatch => Alternator.Right
+          case QueryRel.Irreconcilable => Alternator.Stop
+        },
+        onStartLeft = () => FreeK.pure[F, Unit](()),
+        onStartRight = () => Revocable.init[F, DRef[D]](dref) effect { DomSet.insert(_, res) },
+        onSwitchToLeft = revref => Revocable.revoke(revref),
+        onSwitchToRight = (_: Unit) => Revocable.init[F, DRef[D]](dref) effect { DomSet.insert(_, res) },
+        onStop = (_ match {
+          case Some(Right(revref)) => Revocable.revoke(revref)
+          case _ => FreeK.pure[F, Unit](())
+        })
+      )
+    )
+  } yield res
 
   implicit def functorKAInstance: FunctorKA[TrackLang] = new FunctorKA[TrackLang] {
     def transform[K[_], L[_], A](inst: TrackLang[K, A])(f: K ~> L): TrackLang[L, A] = inst match {
