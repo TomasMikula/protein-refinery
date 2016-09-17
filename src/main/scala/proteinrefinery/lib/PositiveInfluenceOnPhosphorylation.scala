@@ -55,7 +55,7 @@ object PositiveInfluenceOnPhosphorylation {
 object PositiveInfluenceOnPhosphorylatedState {
   def searchC(agent: Protein, target: Protein): ContF[DSL, PositiveInfluenceOnState.Ref] =
     Nuggets.phosphoSitesC[DSL](target).flatMap(site => {
-      val pat = ProteinPattern(target).addModification(site, SiteState("p")).get // XXX
+      val pat = AdmissibleProteinPattern(target).addModification(site, SiteState("p")).get // XXX
       PositiveInfluenceOnState.searchC(agent, pat)
     })
 }

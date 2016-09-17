@@ -1,6 +1,8 @@
 package proteinrefinery.lib
 
-import nutcracker.Antichain
+import nutcracker.Dom.Status
+import nutcracker.{Antichain, Dom}
+import nutcracker.syntax.dom._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteLabel._
 import proteinrefinery.util.syntax._
@@ -8,12 +10,46 @@ import proteinrefinery.util.syntax._
 import scalaz.Show
 import scalaz.syntax.show._
 
-case class ProteinPattern(protein: Protein, mods: AdmissibleProteinModifications) {
-  def isCompatibleWith(that: ProteinPattern): Boolean =
+sealed trait ProteinPattern
+
+object ProteinPattern {
+  type Update = ProteinModifications.Update
+  type Delta = ProteinModifications.Delta
+
+  def apply(p: Protein, mods: ProteinModifications): ProteinPattern = mods match {
+    case am @ AdmissibleProteinModifications(_, _) => AdmissibleProteinPattern(p, am)
+    case InvalidProteinModifications => InvalidProteinPattern
+  }
+
+  implicit def domInstance: Dom.Aux[ProteinPattern, Update, Delta] =
+    new Dom[ProteinPattern] {
+      type Update = ProteinPattern.Update
+      type Delta = ProteinPattern.Delta
+
+      def update(d: ProteinPattern, u: Update): Option[(ProteinPattern, Delta)] = d match {
+        case AdmissibleProteinPattern(p, mods) =>
+          Dom[ProteinModifications].update(mods, u).map({ case (mods, delta) => (ProteinPattern(p, mods), delta) })
+        case InvalidProteinPattern =>
+          None
+      }
+
+      def combineDeltas(d1: Delta, d2: Delta): Delta = Dom[ProteinModifications].combineDeltas(d1, d2)
+
+      def assess(d: ProteinPattern): Status[Update] = d match {
+        case AdmissibleProteinPattern(p, mods) => (mods: ProteinModifications).assess
+        case InvalidProteinPattern => Dom.Failed
+      }
+    }
+}
+
+case object InvalidProteinPattern extends ProteinPattern
+
+case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinModifications) extends ProteinPattern {
+  def isCompatibleWith(that: AdmissibleProteinPattern): Boolean =
     (this.protein == that.protein) && (this.mods combine that.mods).isAdmissible
 
-  def addModification(site: SiteLabel, state: SiteState): Option[ProteinPattern] =
-    mods.addModification(site, state).toOption.map(ProteinPattern(protein, _))
+  def addModification(site: SiteLabel, state: SiteState): Option[AdmissibleProteinPattern] =
+    mods.addModification(site, state).toOption.map(AdmissibleProteinPattern(protein, _))
 
   def mentionedSites: Set[LocalSiteId] = mods.mentionedSites
 
@@ -41,12 +77,12 @@ case class ProteinPattern(protein: Protein, mods: AdmissibleProteinModifications
   }
 }
 
-object ProteinPattern {
-  type Ref = Antichain.Ref[ProteinPattern]
+object AdmissibleProteinPattern {
+  type Ref = Antichain.Ref[AdmissibleProteinPattern]
 
-  def apply(p: Protein): ProteinPattern = ProteinPattern(p, ProteinModifications.noModifications)
+  def apply(p: Protein): AdmissibleProteinPattern = AdmissibleProteinPattern(p, ProteinModifications.noModifications)
 
-  implicit def showInstance: Show[ProteinPattern] = new Show[ProteinPattern] {
-    override def shows(pp: ProteinPattern) = pp.toString
+  implicit def showInstance: Show[AdmissibleProteinPattern] = new Show[AdmissibleProteinPattern] {
+    override def shows(pp: AdmissibleProteinPattern) = pp.toString
   }
 }

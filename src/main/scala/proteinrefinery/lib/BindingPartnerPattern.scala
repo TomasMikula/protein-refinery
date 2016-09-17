@@ -5,7 +5,7 @@ import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 import scalaz.State
 
-case class BindingPartnerPattern(p: ProteinPattern, s: LocalSiteId) {
+case class BindingPartnerPattern(p: AdmissibleProteinPattern, s: LocalSiteId) {
   def overlaps(that: BindingPartnerPattern): Boolean = (this.s == that.s) && (this.p isCompatibleWith that.p)
 
   def bind(that: BindingPartnerPattern): Binding = (for {
@@ -20,5 +20,5 @@ case class BindingPartnerPattern(p: ProteinPattern, s: LocalSiteId) {
 
 object BindingPartnerPattern {
   def apply(p: Protein, s: LocalSiteId): BindingPartnerPattern =
-    BindingPartnerPattern(ProteinPattern(p), s)
+    BindingPartnerPattern(AdmissibleProteinPattern(p), s)
 }

@@ -3,7 +3,7 @@ package proteinrefinery.ui
 import scala.language.existentials
 import nutcracker.{Antichain, DRef}
 import nutcracker.IncSet.IncSetRef
-import proteinrefinery.lib.{Phosphorylation, Protein, ProteinPattern, SiteLabel}
+import proteinrefinery.lib.{Phosphorylation, Protein, AdmissibleProteinPattern, SiteLabel}
 
 sealed abstract class UIRequest
 
@@ -12,5 +12,5 @@ final case class ReqGoalPhos(kinase: Protein, substrate: Protein) extends UIRequ
 final case class ReqGoalPhosNegInfl(agent: Protein, phosGoal: IncSetRef[_ <: DRef[Antichain[Phosphorylation]]], phosDesc: String) extends UIRequest
 
 final case class ReqAssertBind(p: Protein, ps: SiteLabel, q: Protein, qs: SiteLabel) extends UIRequest
-final case class ReqAssertKinaseActivity(pp: ProteinPattern) extends UIRequest
+final case class ReqAssertKinaseActivity(pp: AdmissibleProteinPattern) extends UIRequest
 final case class ReqAssertPhosSite(k: Protein, s: Protein, ss: SiteLabel) extends UIRequest

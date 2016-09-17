@@ -6,14 +6,14 @@ import proteinrefinery.util.syntax._
 import scalaz.State
 
 case class AgentsPattern(
-  private val agents: Vector[Option[ProteinPattern]],
+  private val agents: Vector[Option[AdmissibleProteinPattern]],
   bonds: Vector[Option[(AgentIndex, LocalSiteId, AgentIndex, LocalSiteId)]],
   unbound: List[(AgentIndex, LocalSiteId)]
 ) {
 
-  def apply(i: AgentIndex): ProteinPattern = agents(i.value).get
+  def apply(i: AgentIndex): AdmissibleProteinPattern = agents(i.value).get
 
-  def agentIterator: Iterator[ProteinPattern] = agents.iterator.mapFilter(identity)
+  def agentIterator: Iterator[AdmissibleProteinPattern] = agents.iterator.mapFilter(identity)
 
   def modify(a: Action): AgentsPattern = a match {
     case Link(i, si, j, sj) => link0(i, si, j, sj)._1
@@ -24,7 +24,7 @@ case class AgentsPattern(
       ???
   }
 
-  def addAgent(a: ProteinPattern): (AgentsPattern, AgentIndex) =
+  def addAgent(a: AdmissibleProteinPattern): (AgentsPattern, AgentIndex) =
     (copy(agents = agents :+ Some(a)), AgentIndex(agents.size))
 
   def removeAgent(i: AgentIndex): AgentsPattern = ???
@@ -55,13 +55,13 @@ case class AgentsPattern(
     AgentsPattern(agents, bonds.updated(id.value, None), (i, si) :: (j, sj) :: unbound)
   }
 
-  def getBond(id: LinkId): Option[(ProteinPattern, LocalSiteId, ProteinPattern, LocalSiteId)] =
+  def getBond(id: LinkId): Option[(AdmissibleProteinPattern, LocalSiteId, AdmissibleProteinPattern, LocalSiteId)] =
     bonds(id.value).map(reifyBond)
 
-  def getBonds: List[(ProteinPattern, LocalSiteId, ProteinPattern, LocalSiteId)] =
+  def getBonds: List[(AdmissibleProteinPattern, LocalSiteId, AdmissibleProteinPattern, LocalSiteId)] =
     bonds.iterator.collectToList(_.map(reifyBond))
 
-  def getUnbound: List[(ProteinPattern, LocalSiteId)] =
+  def getUnbound: List[(AdmissibleProteinPattern, LocalSiteId)] =
     unbound map { case (i, s) => (apply(i), s) }
 
   def unify(that: AgentsPattern): Option[AgentsPattern] = ???
@@ -82,7 +82,7 @@ case class AgentsPattern(
     )}).mkString(", ")
   }
 
-  private def reifyBond(b: (AgentIndex, LocalSiteId, AgentIndex, LocalSiteId)): (ProteinPattern, LocalSiteId, ProteinPattern, LocalSiteId) = b match {
+  private def reifyBond(b: (AgentIndex, LocalSiteId, AgentIndex, LocalSiteId)): (AdmissibleProteinPattern, LocalSiteId, AdmissibleProteinPattern, LocalSiteId) = b match {
     case (i, si, j, sj) => (apply(i), si, apply(j), sj)
   }
 
@@ -106,7 +106,7 @@ object AgentsPattern {
   val empty: AgentsPattern =
     AgentsPattern(Vector.empty, Vector.empty, Nil)
 
-  def addAgent(a: ProteinPattern): State[AgentsPattern, AgentIndex] =
+  def addAgent(a: AdmissibleProteinPattern): State[AgentsPattern, AgentIndex] =
     State(_.addAgent(a))
 
   def removeAgent(i: AgentIndex): State[AgentsPattern, Unit] =
@@ -133,7 +133,7 @@ sealed abstract class Action
 case class Link(i1: AgentIndex, s1: LocalSiteId, i2: AgentIndex, s2: LocalSiteId) extends Action
 case class Unlink(id: LinkId) extends Action
 case class Modify(i: AgentIndex, rm: AdmissibleProteinModifications, add: AdmissibleProteinModifications) extends Action
-case class Replace(from: AgentIndex, to: AgentIndex, insert: List[ProteinPattern]) extends Action
+case class Replace(from: AgentIndex, to: AgentIndex, insert: List[AdmissibleProteinPattern]) extends Action
 
 object Link {
   def apply(i1: AgentIndex, s1: Site.Definite, i2: AgentIndex, s2: Site.Definite): Link =

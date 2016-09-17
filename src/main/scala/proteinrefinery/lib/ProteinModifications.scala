@@ -187,25 +187,28 @@ object ProteinModifications {
     }
   }
 
+  type Update = Join[ProteinModifications]
+  type Delta = Unit
+
   def noModifications: AdmissibleProteinModifications = AdmissibleProteinModifications.noModifications
 
   def fromOption(pm: Option[AdmissibleProteinModifications]): ProteinModifications =
     pm.fold[ProteinModifications](InvalidProteinModifications)(x => x)
 
-  implicit def domInstance: Dom.Aux[ProteinModifications, Join[ProteinModifications], Unit] =
+  implicit def domInstance: Dom.Aux[ProteinModifications, Update, Delta] =
     new Dom[ProteinModifications] {
-      type Update = Join[ProteinModifications]
-      type Delta = Unit
-      override def assess(d: ProteinModifications): Dom.Status[Join[ProteinModifications]] = d match {
+      type Update = ProteinModifications.Update
+      type Delta = ProteinModifications.Delta
+      override def assess(d: ProteinModifications): Dom.Status[Update] = d match {
         case InvalidProteinModifications => Dom.Failed
         case AdmissibleProteinModifications(_, _) => Dom.Refined
       }
 
-      override def update(d: ProteinModifications, u: Join[ProteinModifications]): Option[(ProteinModifications, Unit)] = {
+      override def update(d: ProteinModifications, u: Update): Option[(ProteinModifications, Delta)] = {
         val res = d combine u.value
         if(res == d) None else Some((res, ()))
       }
 
-      override def combineDeltas(d1: Unit, d2: Unit): Unit = ()
+      override def combineDeltas(d1: Delta, d2: Delta): Delta = ()
     }
 }

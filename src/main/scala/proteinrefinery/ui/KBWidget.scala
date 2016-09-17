@@ -10,7 +10,7 @@ import nutcracker.util.KMap
 import org.reactfx.collection.LiveArrayList
 import org.reactfx.value.{Val, Var}
 import org.reactfx.{EventSource, EventStream, EventStreams}
-import proteinrefinery.lib.{InvalidProteinModifications, Protein, ProteinModifications, ProteinPattern, Rule, SiteLabel, SiteState}
+import proteinrefinery.lib.{InvalidProteinModifications, Protein, ProteinModifications, AdmissibleProteinPattern, Rule, SiteLabel, SiteState}
 import proteinrefinery.ui.FactType.{FactKinase, FactPhosTarget, FactRule}
 import proteinrefinery.ui.util.syntax._
 
@@ -27,7 +27,7 @@ class KBWidget {
   private val dialogHolder = new StackPane()
   private val rules = new ListView[Rule]
   private val phosSites = new ListView[(Protein, Protein, SiteLabel)]
-  private val kinases = new ListView[ProteinPattern]
+  private val kinases = new ListView[AdmissibleProteinPattern]
 
   val node: Node = new ScrollPane(
     new VBox(
@@ -62,7 +62,7 @@ class KBWidget {
 
   private def phosTargetAdded(k: Protein, s: Protein, ss: SiteLabel): Unit = phosSites.getItems.add((k, s, ss)).ignoreResult()
 
-  private def kinaseAdded(pp: ProteinPattern): Unit = kinases.getItems.add(pp).ignoreResult()
+  private def kinaseAdded(pp: AdmissibleProteinPattern): Unit = kinases.getItems.add(pp).ignoreResult()
 
   private def showDialog[A](form: InputForm[A])(req: A => UIRequest): Unit =
     InputDialog.show(dialogHolder, form)(a => _requests.push(req(a)))
@@ -75,7 +75,7 @@ object KBWidget {
 trait FactType[A] { self: Singleton => }
 object FactType {
   object FactRule extends FactType[Rule]
-  object FactKinase extends FactType[ProteinPattern]
+  object FactKinase extends FactType[AdmissibleProteinPattern]
   object FactPhosTarget extends FactType[(Protein, Protein, SiteLabel)]
 }
 
@@ -114,7 +114,7 @@ class PhosSiteFactInput extends InputForm[(Protein, Protein, SiteLabel)] {
     .map3[String, String, String, (Protein, Protein, SiteLabel)]((k, s, ss) => (Protein(k), Protein(s), SiteLabel(ss)))
 }
 
-class KinaseActivityInput extends InputForm[ProteinPattern] {
+class KinaseActivityInput extends InputForm[AdmissibleProteinPattern] {
   private val protein = new TextField()
   private val siteStates = new LiveArrayList[(TextField, TextField)]
   private val siteGrid = new GridPane() <| {
@@ -131,7 +131,7 @@ class KinaseActivityInput extends InputForm[ProteinPattern] {
     new Button("+") <| { _.onAction(addSiteRow) }
   )
 
-  val input: Val[ProteinPattern] = {
+  val input: Val[AdmissibleProteinPattern] = {
     val p = protein.textProperty().map1(s => if(s.nonEmpty) Protein(s) else null)
     val mods: Var[ProteinModifications] = Var.newSimpleVar(ProteinModifications.noModifications)
     EventStreams.merge(siteFields, j((tf: TextField) => EventStreams.valuesOf(tf.textProperty()))).forEach(mod => {
@@ -147,7 +147,7 @@ class KinaseActivityInput extends InputForm[ProteinPattern] {
       }
       mods.setValue(m)
     })
-    (p |@| mods)((p, m) => m.toOption.map(ProteinPattern(p, _)).getOrElse(null))
+    (p |@| mods)((p, m) => m.toOption.map(AdmissibleProteinPattern(p, _)).getOrElse(null))
   }
 
   addSiteRow()
