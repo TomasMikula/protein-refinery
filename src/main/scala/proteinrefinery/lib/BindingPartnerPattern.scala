@@ -1,6 +1,6 @@
 package proteinrefinery.lib
 
-import proteinrefinery.lib.AgentsPattern._
+import proteinrefinery.lib.AdmissibleAgentsPattern._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 import scalaz.State
@@ -13,9 +13,9 @@ case class BindingPartnerPattern(p: AdmissibleProteinPattern, s: LocalSiteId) {
     j <- addAgent(that.p)
     _ <- requireUnbound0(i, this.s)
     _ <- requireUnbound0(j, that.s)
-    lhs <- State.get[AgentsPattern]
+    lhs <- State.get[AdmissibleAgentsPattern]
     a = Link(i, this.s, j, that.s)
-  } yield Binding(Rule(lhs, List(a)), i, j, this.s, that.s)).eval(AgentsPattern.empty)
+  } yield Binding(Rule(lhs, List(a)), i, j, this.s, that.s)).eval(AdmissibleAgentsPattern.empty)
 }
 
 object BindingPartnerPattern {

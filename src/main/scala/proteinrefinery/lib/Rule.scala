@@ -8,11 +8,11 @@ import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds
 import scalaz.Show
 
-final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
-  lazy val rhs: AgentsPattern = actions.foldLeft(lhs)((p, a) => p.modify(a))
-  def apply(lhs: AgentsPattern): AgentsPattern = ???
-  def canConsume(ptrn: AgentsPattern): Boolean = ???
-  def canProduce(ptrn: AgentsPattern): Boolean = ???
+final case class Rule(lhs: AdmissibleAgentsPattern, actions: List[Action]) {
+  lazy val rhs: AdmissibleAgentsPattern = actions.foldLeft(lhs)((p, a) => p.modify(a))
+  def apply(lhs: AdmissibleAgentsPattern): AdmissibleAgentsPattern = ???
+  def canConsume(ptrn: AdmissibleAgentsPattern): Boolean = ???
+  def canProduce(ptrn: AdmissibleAgentsPattern): Boolean = ???
 
   def mentionedSitesOf(p: Protein): Set[LocalSiteId] = {
     val buf = ArrayBuffer[LocalSiteId]()
@@ -61,9 +61,9 @@ final case class Rule(lhs: AgentsPattern, actions: List[Action]) {
     buf.toSet
   }
 
-  def enables(pat: AgentsPattern): Boolean = {
+  def enables(pat: AdmissibleAgentsPattern): Boolean = {
 
-    def enables(a: Action, pat: AgentsPattern): Boolean = a match {
+    def enables(a: Action, pat: AdmissibleAgentsPattern): Boolean = a match {
 
       case Link(i, si, j, sj) =>
         // does `pat` need this link?
