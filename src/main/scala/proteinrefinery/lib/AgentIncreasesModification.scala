@@ -6,5 +6,5 @@ final case class AgentIncreasesModification(
   subject: Protein,
   target: Protein,
   targetMods: ProteinModifications,
-  rules: NonEmptyList[Rule]
+  rules: NonEmptyList[AdmissibleRule]
 )

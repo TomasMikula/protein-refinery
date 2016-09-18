@@ -10,28 +10,28 @@ import scala.language.higherKinds
 
 object KB {
   private object Tables {
-    object Rules extends TableId[Rule]
+    object Rules extends TableId[AdmissibleRule]
     object PhosphoSites extends TableId[(Protein, Protein, SiteLabel)]
     object Kinases extends TableId[AdmissibleProteinPattern]
   }
 
   def apply[K](
-    rules: List[Rule] = Nil,
+    rules: List[AdmissibleRule] = Nil,
     phosphoSites: List[(Protein, Protein, SiteLabel)] = Nil
   ): DB[K] = {
     DB.empty[K]
-      .setTable(Tables.Rules, Table[K, Rule](rules))
+      .setTable(Tables.Rules, Table[K, AdmissibleRule](rules))
       .setTable(Tables.PhosphoSites, Table[K, (Protein, Protein, SiteLabel)](phosphoSites))
   }
 
   // instructions specialized to concrete tables
-  def addRuleF[F[_[_], _]](r: Rule)(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
+  def addRuleF[F[_[_], _]](r: AdmissibleRule)(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
     DBLang.insertF(Tables.Rules, r)
   def addPhosphoTargetF[F[_[_], _]](kinase: Protein, substrate: Protein, site: SiteLabel)(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
     DBLang.insertF(Tables.PhosphoSites, (kinase, substrate, site))
   def addKinaseActivityF[F[_[_], _]](activeState: AdmissibleProteinPattern)(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
     DBLang.insertF(Tables.Kinases, activeState)
-  def rulesF[F[_[_], _]](f: Rule => Lst[FreeK[F, Unit]])(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
+  def rulesF[F[_[_], _]](f: AdmissibleRule => Lst[FreeK[F, Unit]])(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
     DBLang.queryF(Tables.Rules)(f)
   def phosphoTargetsF[F[_[_], _]](f: (Protein, Protein, SiteLabel) => FreeK[F, Unit])(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
     DBLang.queryF(Tables.PhosphoSites)({ case (k, s, ss) => Lst.singleton(f(k, s, ss)) })
@@ -42,7 +42,7 @@ object KB {
     })
 
   // KB queries in CPS style
-  def rulesC[F[_[_], _]](implicit inj: InjectK[DBLang, F]): ContF[F, Rule] =
+  def rulesC[F[_[_], _]](implicit inj: InjectK[DBLang, F]): ContF[F, AdmissibleRule] =
     ContF(f => rulesF[F](f andThen Lst.singleton))
   def phosphoTargetsC[F[_[_], _]](implicit inj: InjectK[DBLang, F]): ContF[F, (Protein, Protein, SiteLabel)] =
     ContF(f => phosphoTargetsF[F]((k, s, ss) => f((k, s, ss))))

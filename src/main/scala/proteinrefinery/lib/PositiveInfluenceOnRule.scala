@@ -7,7 +7,7 @@ import proteinrefinery.util.OnceTrigger
 
 sealed trait PositiveInfluenceOnRule {
   def agent: Protein
-  def rule: Rule
+  def rule: AdmissibleRule
 }
 
 object PositiveInfluenceOnRule {
@@ -17,8 +17,8 @@ object PositiveInfluenceOnRule {
 
   // Constructors
 
-  final case class InLhs(agent: Protein, rule: Rule) extends PositiveInfluenceOnRule
-  final case class Indirect(influenceOnEnablingRule: PositiveInfluenceOnRule, rule: Rule) extends PositiveInfluenceOnRule {
+  final case class InLhs(agent: Protein, rule: AdmissibleRule) extends PositiveInfluenceOnRule
+  final case class Indirect(influenceOnEnablingRule: PositiveInfluenceOnRule, rule: AdmissibleRule) extends PositiveInfluenceOnRule {
     def agent = influenceOnEnablingRule.agent
   }
 
@@ -26,11 +26,11 @@ object PositiveInfluenceOnRule {
   // Search
 
   // TODO: make `rule: Rule.Ref`
-  def searchC(agent: Protein, rule: Rule): ContF[DSL, Ref] =
+  def searchC(agent: Protein, rule: AdmissibleRule): ContF[DSL, Ref] =
     searchC(agent, rule, List(rule))
 
   // TODO: make `avoid: List[Rule.Ref]`
-  private def searchC(agent: Protein, r: Rule, avoid: List[Rule]): ContF[DSL, Ref] = {
+  private def searchC(agent: Protein, r: AdmissibleRule, avoid: List[AdmissibleRule]): ContF[DSL, Ref] = {
     val inLhs: Option[PositiveInfluenceOnRule] = if(r.lhs.agentIterator.exists(_.protein == agent)) Some(InLhs(agent, r)) else None
     val indirect: ContF[DSL, Ref] = Nuggets.rulesC[DSL](q => // TODO: penalize indirect influence
       if(avoid.contains(q)) OnceTrigger.Discard()

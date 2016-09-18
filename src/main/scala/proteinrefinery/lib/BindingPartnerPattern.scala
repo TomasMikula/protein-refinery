@@ -15,7 +15,7 @@ case class BindingPartnerPattern(p: AdmissibleProteinPattern, s: LocalSiteId) {
     _ <- requireUnbound0(j, that.s)
     lhs <- State.get[AdmissibleAgentsPattern]
     a = Link(i, this.s, j, that.s)
-  } yield Binding(Rule(lhs, List(a)), i, j, this.s, that.s)).eval(AdmissibleAgentsPattern.empty)
+  } yield Binding(AdmissibleRule(lhs, List(a)), i, j, this.s, that.s)).eval(AdmissibleAgentsPattern.empty)
 }
 
 object BindingPartnerPattern {
