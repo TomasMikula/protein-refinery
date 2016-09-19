@@ -29,6 +29,13 @@ sealed trait ProteinModifications {
     case (a @ AdmissibleProteinModifications(_, _), b @ AdmissibleProteinModifications(_, _)) => a.combine0(b)
     case _ => InvalidProteinModifications
   }
+
+  def refines(that: ProteinModifications): Option[List[List[ProteinModifications.Update]]] =
+    (this, that) match {
+      case (InvalidProteinModifications, _) => None
+      case (_, InvalidProteinModifications) => Some(Nil)
+      case (thiz @ AdmissibleProteinModifications(_, _), that @ AdmissibleProteinModifications(_, _)) => Some(thiz refines0 that)
+    }
 }
 
 case object InvalidProteinModifications extends ProteinModifications {
@@ -55,6 +62,8 @@ case class AdmissibleProteinModifications(
     buf ++= nonFinalSiteMods.mods.keysIterator.map(LocalSiteId(_))
     buf.result()
   }
+
+  def refines0(that: AdmissibleProteinModifications): List[List[ProteinModifications.Update]] = ???
 
 }
 
