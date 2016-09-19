@@ -8,19 +8,11 @@ import scalaz.std.list._
 import scalaz.syntax.applicative._
 import scalaz.syntax.foldable._
 
-class AutoUnificationBag[M[_], A, Δ] private(
-  elems: List[A],
-  unify: (A, A) => M[Option[(Option[Δ], A, Option[Δ])]], // - unify(a, a) = Some(None, a, None)
-                                                         // - symmetry
-                                                         // - if update(a, u) = Some((b, δ)), then unify(a, b) =  Some(Some(δ), b, None)
-                                                         // - if unify(a, b) = None, unify(a, c) = None, unify(b, c) = Some(_, d, _), then
-                                                         //     unify(a, d) = None
-  combineDeltas: (Δ, Δ) => Δ // must be associative, i.e. semigroup
-) {
-  def add(a: A)(implicit M: Monad[M]): M[(AutoUnificationBag[M, A, Δ], A, List[(A, Δ)])] =
-    update(a).map(_.getOrElse((new AutoUnificationBag(a::elems, unify, combineDeltas), a, Nil)))
+class AutoUnificationBag[M[_], A, Δ] private(private[util] val elems: List[A]) extends AnyVal {
+  def add(a: A)(implicit M: Monad[M], U: ObligatoryUnification[M, A, Δ]): M[(AutoUnificationBag[M, A, Δ], A, List[(A, Δ)])] =
+    update(a).map(_.getOrElse((new AutoUnificationBag(a::elems), a, Nil)))
 
-  def update(a: A)(implicit M: Monad[M]): M[Option[(AutoUnificationBag[M, A, Δ], A, List[(A, Δ)])]] = {
+  def update(a: A)(implicit M: Monad[M], U: ObligatoryUnification[M, A, Δ]): M[Option[(AutoUnificationBag[M, A, Δ], A, List[(A, Δ)])]] = {
     //                     +---------------------------------------------- elems not touched by unification
     //                     |     +---------------------------------------- accumulation of the unified value
     //                     |     |      +--------------------------------- diff that takes `a` to the unified value
@@ -33,7 +25,7 @@ class AutoUnificationBag[M[_], A, Δ] private(
     //                     v     v      v        v   v      v         v
     elems.foldLeftM[M, (List[A], A, Option[Δ], List[(A, Option[Δ], Option[Δ])])]((Nil, a, None, Nil))((acc, elem) => {
       val (untouched, a, da, unified) = acc
-      unify(a, elem) map {
+      U.unify(a, elem) map {
         case Some((da1, a, de)) => (untouched, a, combineDeltasO(da, da1), (elem, de, da1) :: unified)
         case None => (elem::untouched, a, da, unified)
       }
@@ -51,13 +43,13 @@ class AutoUnificationBag[M[_], A, Δ] private(
         case (_, None) :: Nil => None // only one element was unified and its value has not changed
         case _ =>
           val unified1 = unified.map({ case (a, d) => (a, d.get) }) // more than one element were unified => all must have changed
-          Some((new AutoUnificationBag(aa::untouched, unify, combineDeltas), aa, unified1))
+          Some((new AutoUnificationBag(aa::untouched), aa, unified1))
       }
     }
   }
 
-  private def combineDeltasO(d1: Option[Δ], d2: Option[Δ]): Option[Δ] = (d1, d2) match {
-    case (Some(d1), Some(d2)) => Some(combineDeltas(d1, d2))
+  private def combineDeltasO(d1: Option[Δ], d2: Option[Δ])(implicit U: ObligatoryUnification[M, A, Δ]): Option[Δ] = (d1, d2) match {
+    case (Some(d1), Some(d2)) => Some(U.dom.combineDeltas(d1, d2))
     case (None, d2) => d2
     case _ => d1
   }
