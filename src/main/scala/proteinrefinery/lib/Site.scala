@@ -1,17 +1,19 @@
 package proteinrefinery.lib
 
-import nutcracker.Promise
+import nutcracker.{Dom, Promise}
 import nutcracker.Promise.{Complete, Completed, Conflict, Empty}
-import proteinrefinery.util.HomSet
+import proteinrefinery.util.{HomSet, Unification}
 import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
 
 import scalaz.Show
+import scalaz.syntax.equal._
 
 object Site {
 
   type Dom = Promise[SiteLabel]
   type Ref = Promise.Ref[SiteLabel]
-  type Update = Promise.Complete[SiteLabel]
+  type Update = Promise.Update[SiteLabel]
+  type Delta = Promise.Delta[SiteLabel]
 
   type Definite = SiteLabel
 
@@ -36,5 +38,31 @@ object Site {
       case (Empty, Completed(a)) => Morphisms(List(List(Complete(a))))
       case (Completed(_), Empty) => Morphisms(Nil)
     }
+  }
+
+  implicit def unificationInstance: Unification[Option, Site.Dom] = new Unification[Option, Site.Dom] {
+    type Update = Site.Update
+    type Delta = Site.Delta
+
+    def mustUnify(s1: Site.Dom, s2: Site.Dom): Option[Option[(Option[Delta], Site.Dom, Option[Delta])]] =
+      (s1, s2) match {
+        case (Completed(t1), Completed(t2)) => if(t1 === t2) Some(Some((None, s1, None))) else Some(None)
+        case (Conflict, _) => None // pretend failure to unify, instead unifying with a failure (which is always possible)
+        case (_, Conflict) => None // pretend failure to unify, instead unifying with a failure (which is always possible)
+        case _ => Some(None)
+      }
+
+    def canUnify(s1: Site.Dom, s2: Site.Dom): Option[(Option[Delta], Site.Dom, Option[Delta])] =
+      (s1, s2) match {
+        case (Empty, Empty) => Some((None, Empty, None))
+        case (Empty, Completed(_)) => Some((Some(()), s2, None))
+        case (Completed(_), Empty) => Some((None, s1, Some(())))
+        case (Completed(t1), Completed(t2)) => if(t1 === t2) Some((None, s1, None)) else None
+        case (Conflict, Conflict) => Some((None, Conflict, None))
+        case (Conflict, _) => Some((None, Conflict, Some(())))
+        case (_, Conflict) => Some((Some(()), Conflict, None))
+      }
+
+    def dom: Dom.Aux[Site.Dom, Update, Delta] = implicitly[Dom.Aux[Site.Dom, Update, Delta]]
   }
 }
