@@ -10,7 +10,12 @@ import proteinrefinery.util.syntax._
 import scalaz.Show
 import scalaz.syntax.show._
 
-sealed trait ProteinPattern
+sealed trait ProteinPattern {
+  def isCompatibleWith(that: ProteinPattern): Boolean = (this, that) match {
+    case (a @ AdmissibleProteinPattern(_, _), b @ AdmissibleProteinPattern(_, _)) => a isCompatibleWith b
+    case _ => false
+  }
+}
 
 object ProteinPattern {
   type Update = ProteinModifications.Update

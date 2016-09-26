@@ -4,11 +4,10 @@ import nutcracker.Dom.Status
 import nutcracker.{Dom, Final, Join, JoinDom}
 import proteinrefinery.lib.AdmissibleProteinModifications.{FinalSiteModifications, NonFinalSiteModifications}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
-
-import scalaz.std.option._
 import proteinrefinery.util.{buildMap, mapIntersect, mapSplitValues, mapUnion}
 
 import scalaz.Show
+import scalaz.std.option._
 
 sealed trait ProteinModifications {
 
@@ -69,11 +68,9 @@ case class AdmissibleProteinModifications(
 
 object AdmissibleProteinModifications {
 
-  def apply(mods: Iterable[(SiteLabel, SiteState)]): AdmissibleProteinModifications =
-    AdmissibleProteinModifications(
-      NonFinalSiteModifications.noModifications,
-      FinalSiteModifications(mods.iterator.map(ss => (ss._1, (ss._2, Set[Site.Ref]()))).toMap)
-    )
+  def apply(mods: Iterable[(SiteLabel, SiteState)]): Option[AdmissibleProteinModifications] = for {
+    fsm <- FinalSiteModifications(mods)
+  } yield AdmissibleProteinModifications(NonFinalSiteModifications.noModifications, fsm)
 
   private[AdmissibleProteinModifications]
   final case class FinalSiteModifications(mods: Map[Site.Definite, (SiteState, Set[Site.Ref])]) extends AnyVal {
@@ -110,6 +107,12 @@ object AdmissibleProteinModifications {
 
   object FinalSiteModifications {
     def noModifications: FinalSiteModifications = FinalSiteModifications(Map())
+
+    def apply(mods: Iterable[(SiteLabel, SiteState)]): Option[FinalSiteModifications] =
+      mods.foldLeft(Option(FinalSiteModifications.noModifications))((ofsm, ss) => for {
+        fsm <- ofsm
+        fsm1 <- fsm.addModification(ss._1, ss._2)
+      } yield fsm1)
 
     def combine(modss: FinalSiteModifications*): Option[FinalSiteModifications] = modss.headOption match {
       case None => Some(FinalSiteModifications.noModifications)
@@ -200,6 +203,9 @@ object ProteinModifications {
   type Delta = Unit
 
   def noModifications: AdmissibleProteinModifications = AdmissibleProteinModifications.noModifications
+
+  def apply(mods: Iterable[(SiteLabel, SiteState)]): ProteinModifications =
+    fromOption(AdmissibleProteinModifications(mods))
 
   def fromOption(pm: Option[AdmissibleProteinModifications]): ProteinModifications =
     pm.fold[ProteinModifications](InvalidProteinModifications)(x => x)

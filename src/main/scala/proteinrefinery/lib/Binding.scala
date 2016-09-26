@@ -57,5 +57,5 @@ object Binding {
     Binding0(witness, pi, qi, ps, qs)
 
   def apply(p: Protein, ps: LocalSiteId, q: Protein, qs: LocalSiteId): Binding =
-    BindingPartnerPattern(p, ps) bind BindingPartnerPattern(q, qs)
+    (BindingPartnerPattern(p, ps) bind BindingPartnerPattern(q, qs)).get // no failure possible
 }

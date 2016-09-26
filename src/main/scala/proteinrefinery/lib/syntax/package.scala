@@ -3,14 +3,14 @@ package proteinrefinery.capability
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 import scala.language.implicitConversions
-import proteinrefinery.lib.{AdmissibleProteinModifications, Binding, BindingPartnerPattern, Protein, AdmissibleProteinPattern, SiteLabel, SiteState}
+import proteinrefinery.lib.{Binding, BindingPartnerPattern, Protein, ProteinModifications, ProteinPattern, SiteLabel, SiteState}
 
 package object syntax {
 
   implicit class SymbolOps(sym: Symbol) {
 
-    def apply(ss: (SiteLabel, SiteState)*): AdmissibleProteinPattern =
-      AdmissibleProteinPattern(Protein(sym), AdmissibleProteinModifications(ss))
+    def apply(ss: (SiteLabel, SiteState)*): ProteinPattern =
+      ProteinPattern(Protein(sym), ProteinModifications(ss))
 
     def @@ (s: SiteLabel): BindingPartnerPattern = BindingPartnerPattern(Protein(sym), LocalSiteId(s))
 
@@ -18,14 +18,14 @@ package object syntax {
 
   }
 
-  implicit class ProteinPatternOps(p: AdmissibleProteinPattern) {
+  implicit class ProteinPatternOps(p: ProteinPattern) {
 
     def @@ (s: SiteLabel): BindingPartnerPattern = BindingPartnerPattern(p, LocalSiteId(s))
 
   }
 
   implicit class BindingPartnerPatternOps(bp: BindingPartnerPattern) {
-    def binds(that: BindingPartnerPattern): Binding = bp bind that
+    def binds(that: BindingPartnerPattern): Option[Binding] = bp bind that
   }
 
   implicit def symbolToProtein(sym: Symbol): Protein = Protein(sym)

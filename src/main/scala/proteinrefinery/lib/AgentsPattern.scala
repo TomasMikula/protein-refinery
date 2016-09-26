@@ -8,7 +8,8 @@ import proteinrefinery.util.mapUnion
 import proteinrefinery.util.syntax._
 
 import scalaz.Id.Id
-import scalaz.State
+import scalaz.{State, StateT}
+import scalaz.std.option._
 
 sealed trait AgentsPattern
 
@@ -151,6 +152,12 @@ object AdmissibleAgentsPattern {
 
   def addAgent(a: AdmissibleProteinPattern): State[AdmissibleAgentsPattern, AgentIndex] =
     State(_.addAgent(a))
+
+  def addAgentOpt(pp: ProteinPattern): StateT[Option, AdmissibleAgentsPattern, AgentIndex] =
+    pp match {
+      case app @ AdmissibleProteinPattern(_, _) => StateT(aap => Option(aap.addAgent(app)))
+      case InvalidProteinPattern                => StateT(_   => Option.empty[(AdmissibleAgentsPattern, AgentIndex)])
+    }
 
   def removeAgent(i: AgentIndex): State[AdmissibleAgentsPattern, Unit] =
     State(s => (s.removeAgent(i), ()))
