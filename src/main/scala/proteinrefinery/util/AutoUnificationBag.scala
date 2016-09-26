@@ -9,6 +9,8 @@ import scalaz.syntax.applicative._
 import scalaz.syntax.foldable._
 
 class AutoUnificationBag[M[_], A] private(private[util] val elems: List[A]) extends AnyVal {
+  def size: Int = elems.size
+
   def add(a: A)(implicit M: Monad[M], U: Unification[M, A]): M[(AutoUnificationBag[M, A], A, List[(A, U.Delta)])] =
     update(a).map(_.getOrElse((new AutoUnificationBag(a::elems), a, Nil)))
 
@@ -47,6 +49,11 @@ class AutoUnificationBag[M[_], A] private(private[util] val elems: List[A]) exte
           Some((new AutoUnificationBag(aa::untouched), aa, unified1))
       }
     }
+  }
+
+  def union(that: AutoUnificationBag[M, A])(implicit M: Monad[M], U: Unification[M, A]): M[AutoUnificationBag[M, A]] = {
+    val (bag, elems) = if (this.size >= that.size) (this, that.elems) else (that, this.elems)
+    elems.foldLeftM(bag)((bag, elem) => bag.add(elem).map(_._1))
   }
 
   private def combineDeltasO[Δ](d1: Option[Δ], d2: Option[Δ])(implicit U: Unification[M, A]{ type Delta = Δ }): Option[Δ] = (d1, d2) match {
