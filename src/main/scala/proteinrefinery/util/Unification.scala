@@ -98,7 +98,7 @@ object Unification {
       }
     }
 
-  implicit def promiseUnification[A: Equal]: Unification[Option, Promise[A]] = new Unification[Option, Promise[A]] {
+  def obligatoryPromiseUnification[A: Equal]: Unification[Option, Promise[A]] = new Unification[Option, Promise[A]] {
     type Update = Promise.Update[A]
     type Delta = Promise.Delta[A]
 
@@ -111,15 +111,31 @@ object Unification {
       }
 
     def canUnify(p1: Promise[A], p2: Promise[A]): Option[(Option[Delta], Promise[A], Option[Delta])] =
-      (p1, p2) match {
-        case (Completed(a1), Completed(a2)) => if (a1 === a2) Some((None, p1, None)) else None
-        case (Conflict, _) => None
-        case (_, Conflict) => None
-        case (Empty, Completed(a2)) => Some((Some(()), Completed(a2), None))
-        case (Completed(a1), Empty) => Some((None, Completed(a1), Some(())))
-        case (Empty, Empty) => Some((None, Empty, None))
-      }
+      canUnifyPromise(p1, p2)
 
     def dom: Dom.Aux[Promise[A], Update, Delta] = Promise.promiseDomain[A]
   }
+
+  def optionalPromiseUnification[A: Equal]: Unification[Option, Promise[A]] = new Unification[Option, Promise[A]] {
+    type Update = Promise.Update[A]
+    type Delta = Promise.Delta[A]
+
+    def mustUnify(p1: Promise[A], p2: Promise[A]): Option[Option[(Option[Delta], Promise[A], Option[Delta])]] =
+      Some(None)
+
+    def canUnify(p1: Promise[A], p2: Promise[A]): Option[(Option[Delta], Promise[A], Option[Delta])] =
+      canUnifyPromise(p1, p2)
+
+    def dom: Dom.Aux[Promise[A], Update, Delta] = Promise.promiseDomain[A]
+  }
+
+  private def canUnifyPromise[A: Equal](p1: Promise[A], p2: Promise[A]): Option[(Option[Promise.Delta[A]], Promise[A], Option[Promise.Delta[A]])] =
+    (p1, p2) match {
+      case (Completed(a1), Completed(a2)) => if (a1 === a2) Some((None, p1, None)) else None
+      case (Conflict, _) => None
+      case (_, Conflict) => None
+      case (Empty, Completed(a2)) => Some((Some(()), Completed(a2), None))
+      case (Completed(a1), Empty) => Some((None, Completed(a1), Some(())))
+      case (Empty, Empty) => Some((None, Empty, None))
+    }
 }
