@@ -1,10 +1,14 @@
 package proteinrefinery.util
 
+import nutcracker.Dom.Aux
+import nutcracker.Promise.{Completed, Conflict, Empty}
+
 import scala.language.higherKinds
-import nutcracker.Dom
+import nutcracker.{Dom, Promise}
 
 import scalaz.\&/.{Both, That, This}
-import scalaz.{Monad, \&/}
+import scalaz.{Equal, Monad, MonadPartialOrder, \&/}
+import scalaz.syntax.equal._
 import scalaz.syntax.monad._
 
 trait Unification[M[_], A] {
@@ -36,6 +40,19 @@ trait Unification[M[_], A] {
   //                                                            impossibility to unify at the same time)
 
   def dom: Dom.Aux[A, Update, Delta]
+
+  def promote[N[_]](implicit mn: MonadPartialOrder[N, M]): Unification[N, A] = new Unification[N, A] {
+    type Update = Unification.this.Update
+    type Delta = Unification.this.Delta
+
+    def mustUnify(a1: A, a2: A): N[Option[(Option[Delta], A, Option[Delta])]] =
+      mn(Unification.this.mustUnify(a1, a2))
+
+    def canUnify(a1: A, a2: A): N[(Option[Delta], A, Option[Delta])] =
+      mn(Unification.this.canUnify(a1, a2))
+
+    def dom: Aux[A, Update, Delta] = Unification.this.dom
+  }
 }
 
 object Unification {
@@ -80,4 +97,29 @@ object Unification {
         case (None   , None   ) => None
       }
     }
+
+  implicit def promiseUnification[A: Equal]: Unification[Option, Promise[A]] = new Unification[Option, Promise[A]] {
+    type Update = Promise.Update[A]
+    type Delta = Promise.Delta[A]
+
+    def mustUnify(p1: Promise[A], p2: Promise[A]): Option[Option[(Option[Delta], Promise[A], Option[Delta])]] =
+      (p1, p2) match {
+        case (Completed(a1), Completed(a2)) => if (a1 === a2) Some(Some((None, p1, None))) else Some(None)
+        case (Conflict, _) => None
+        case (_, Conflict) => None
+        case _ => Some(None)
+      }
+
+    def canUnify(p1: Promise[A], p2: Promise[A]): Option[(Option[Delta], Promise[A], Option[Delta])] =
+      (p1, p2) match {
+        case (Completed(a1), Completed(a2)) => if (a1 === a2) Some((None, p1, None)) else None
+        case (Conflict, _) => None
+        case (_, Conflict) => None
+        case (Empty, Completed(a2)) => Some((Some(()), Completed(a2), None))
+        case (Completed(a1), Empty) => Some((None, Completed(a1), Some(())))
+        case (Empty, Empty) => Some((None, Empty, None))
+      }
+
+    def dom: Dom.Aux[Promise[A], Update, Delta] = Promise.promiseDomain[A]
+  }
 }
