@@ -5,6 +5,8 @@ import nutcracker.Dom.Status
 import nutcracker.util.Uninhabited
 import proteinrefinery.util.{HomSet, Unification}
 
+import scalaz.Equal
+
 case class SiteState(label: String) {
   override def toString = label
 }
@@ -20,6 +22,10 @@ object SiteState {
     def combineDeltas(d1: Delta, d2: Delta): Delta = sys.error("unreachable code")
 
     def assess(d: SiteState): Status[Update] = Dom.Refined
+  }
+
+  implicit def EqualInstance: Equal[SiteState] = new Equal[SiteState] {
+    def equal(s1: SiteState, s2: SiteState): Boolean = s1.label == s2.label
   }
 
   implicit def homSet: HomSet.Aux[SiteState, List[Unit]] = new HomSet[SiteState] {

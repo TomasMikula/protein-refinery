@@ -8,7 +8,7 @@ import proteinrefinery.util.mapUnion
 import proteinrefinery.util.syntax._
 
 import scalaz.Id.Id
-import scalaz.{State, StateT}
+import scalaz.{Equal, State, StateT}
 import scalaz.std.option._
 
 sealed trait AgentsPattern
@@ -176,8 +176,19 @@ object AdmissibleAgentsPattern {
 }
 
 final case class AgentIndex(value: Int) extends AnyVal
+
 final case class LinkId(value: Int) extends AnyVal
-object Unbound
+object LinkId {
+  implicit def equalInstance: Equal[LinkId] = new Equal[LinkId] {
+    def equal(a1: LinkId, a2: LinkId): Boolean = a1.value == a2.value
+  }
+}
+
+object Unbound {
+  implicit def equalInstance: Equal[Unbound.type] = new Equal[Unbound.type] {
+    def equal(a1: Unbound.type, a2: Unbound.type): Boolean = true
+  }
+}
 
 sealed abstract class Action
 case class Link(i1: AgentIndex, s1: LocalSiteId, i2: AgentIndex, s2: LocalSiteId) extends Action
