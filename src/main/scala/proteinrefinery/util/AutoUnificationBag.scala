@@ -2,6 +2,7 @@ package proteinrefinery.util
 
 import scala.annotation.tailrec
 import scala.language.higherKinds
+import scalaz.Leibniz.===
 import scalaz.{Foldable, Monad, Monoid}
 import scalaz.std.list._
 import scalaz.syntax.applicative._
@@ -73,6 +74,13 @@ class AutoUnificationBag[M[_], A] private(private[util] val elems: List[A]) exte
     */
   def inject[B](f: A => B): AutoUnificationBag[M, B] =
     new AutoUnificationBag(elems.map(f))
+
+  /** For when `A =:= (K, V)`, this bag can be transformed to a map. This method assumes that
+    * the unification on `K` (as later used with the map) doesn't have to unify `k1` with `k2` if the
+    * unification on `(K, V)` doesn't have to unify `(k1, v1)` with `(k2, v2)` for any `v1`, `v2`.
+    */
+  def restrictToMap[K, V](implicit ev: A === (K, V)): AutoUnificationMap[K, V] =
+    new AutoUnificationMap[K, V](ev.subst[List](elems))
 
   private def combineDeltasO[Δ](d1: Option[Δ], d2: Option[Δ])(implicit U: Unification[M, A]{ type Delta = Δ }): Option[Δ] = (d1, d2) match {
     case (Some(d1), Some(d2)) => Some(U.dom.combineDeltas(d1, d2))
