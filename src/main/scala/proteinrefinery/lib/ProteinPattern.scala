@@ -1,13 +1,18 @@
 package proteinrefinery.lib
 
 import nutcracker.Dom.Status
-import nutcracker.{Antichain, Dom}
+import nutcracker.Promise.{Completed, Conflict, Empty}
+import nutcracker.{Antichain, Dom, Promise}
 import nutcracker.syntax.dom._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteLabel._
-import proteinrefinery.util.syntax._
+import proteinrefinery.util.Unification
 
-import scalaz.Show
+
+import scalaz.{Monad, Show}
+import scalaz.std.either._
+import scalaz.std.list._
+import scalaz.std.option._
 import scalaz.syntax.show._
 
 sealed trait ProteinPattern {
@@ -22,7 +27,7 @@ object ProteinPattern {
   type Delta = ProteinModifications.Delta
 
   def apply(p: Protein, mods: ProteinModifications): ProteinPattern = mods match {
-    case am @ AdmissibleProteinModifications(_, _) => AdmissibleProteinPattern(p, am)
+    case am @ AdmissibleProteinModifications(_) => AdmissibleProteinPattern(p, am)
     case InvalidProteinModifications => InvalidProteinPattern
   }
 
@@ -61,24 +66,67 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
   override def toString: String = toString(Map())
 
   def toString(bonds: Map[LocalSiteId, Either[Unbound.type, LinkId]]): String = {
-    val (definiteBonds, nonDefiniteBonds) = bonds.splitKeys(identity)
+    type LinkDesc = Either[Unbound.type, LinkId]
+    type LinkDom  = Promise[LinkDesc]
+    type SiteDesc = (Site.Dom, Set[Site.Ref])
+    type SiteAttr = (LinkDom, Promise[SiteState])
 
-    def siteString[SiteId: Show](modsBonds: Map[SiteId, (Option[SiteState], Option[Either[Unbound.type, LinkId]])]): String =
-      modsBonds.iterator.map[String]({
-        case (site, state_link) => state_link match {
-          case (Some(state), Some(Right(link))) => s"${site.shows}~${state.label}!${link.value}"
-          case (Some(state), Some(Left(_))) => s"${site.shows}~${state.label}"
-          case (Some(state), None) => s"${site.shows}~${state.label}?"
-          case (None, Some(Right(link))) => s"${site.shows}!${link.value}"
-          case (None, Some(Left(_))) => s"${site.shows}"
-          case (None, None) => sys.error("unreachable code")
+    val bonds1: List[(SiteDesc, SiteAttr)] =
+      bonds.foldLeft[List[(SiteDesc, SiteAttr)]](Nil)((l, siteIdLink) => {
+        val (siteId, link) = siteIdLink
+        val siteDesc: SiteDesc = siteId match {
+          case Left(label) => (Site.fromLabel(label), Set())
+          case Right(ref)  => (Site.unknown, Set(ref))
         }
-      }).mkString(",")
+        val linkDom = Promise.completed(link)
+        (siteDesc, (linkDom, Promise.empty)) :: l
+      })
 
-    val    definiteSiteString = siteString[Site.Definite](mods.   finalSiteMods.mods.mapValues(_._1).pairWithOpt(   definiteBonds))
-    val nonDefiniteSiteString = siteString[Site.Ref     ](mods.nonFinalSiteMods.mods.mapValues(_._2).pairWithOpt(nonDefiniteBonds))
+    val mods1 = mods.mods.inject(x => {
+      val (siteDesc, state) = x
+      (siteDesc, (Promise.empty[LinkDesc], Promise.completed(state)))
+    })
 
-    s"${protein.name.name}($definiteSiteString,$nonDefiniteSiteString)"
+    import AdmissibleProteinModifications.siteUnification
+    implicit val siteAttrUnif: Unification[Option, SiteAttr] =
+      Unification.tuple2(Unification.optionalPromiseUnification[LinkDesc], Unification.optionalPromiseUnification[SiteState], Monad[Option])
+    implicit val unif: Unification[Option, (SiteDesc, SiteAttr)] =
+      Unification.tuple2[Option, SiteDesc, SiteAttr]
+
+    val bagOpt = mods1.addAll(bonds1)
+
+    def siteStr(s: (SiteDesc, SiteAttr)): String = {
+      val ((site, refs), (link, state)) = s
+      val siteDesc = site match {
+        case Completed(label) => label.shows
+        case Empty => refs.headOption match {
+          case Some(ref) => ref.shows
+          case None => "???"
+        }
+        case Conflict => "⊥"
+      }
+      val stateS = state match {
+        case Empty => ""
+        case Completed(st) => st.label
+        case Conflict => "⊥"
+      }
+      val linkS = link match {
+        case Empty => "?"
+        case Completed(lnk) => lnk match {
+          case Left(_) => ""
+          case Right(lnkId) => "!" + lnkId.value
+        }
+        case Conflict => "!⊥"
+      }
+      siteDesc + stateS + linkS
+    }
+
+    val str = bagOpt match {
+      case Some(bag) => bag.list.map(siteStr).mkString(",")
+      case None => "⊥"
+    }
+
+    s"${protein.name.name}($str)"
   }
 }
 

@@ -1,6 +1,6 @@
 package proteinrefinery.lib
 
-import nutcracker.{Antichain, Dom, PropagationLang, Trigger}
+import nutcracker.{Antichain, Dom, Promise, PropagationLang, Trigger}
 import nutcracker.Dom.Status
 import nutcracker.syntax.dom._
 import nutcracker.util.{ContF, FreeK, InjectK}
@@ -9,6 +9,8 @@ import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds
 import scalaz.Show
+import scalaz.std.option._
+import scalaz.syntax.equal._
 
 sealed trait Rule
 
@@ -123,7 +125,14 @@ final case class AdmissibleRule(lhs: AdmissibleAgentsPattern, actions: List[Acti
         // does `pat` need some of the introduced modifications?
         val p = lhs(i).protein
         pat.agentIterator.exists(q => {
-          (q.protein == p) && (addMods.finalSiteMods meet q.mods.finalSiteMods).nonEmpty
+          if(q.protein =/= p) false
+          else {
+            val addModsMap = addMods.mods.restrictToMap[(Site.Dom, Set[Site.Ref]), SiteState].mapValues(st => Promise.completed(st))
+            val qModsMap   =  q.mods.mods.restrictToMap[(Site.Dom, Set[Site.Ref]), SiteState].mapValues(st => Promise.completed(st))
+            import AdmissibleProteinModifications.siteUnification
+            val meet = addModsMap.intersect(qModsMap)((p1, p2) => Option(Promise.meet(p1, p2)))
+            meet.fold(false)(_.entries.exists(_._2.nonEmpty))
+          }
         })
 
       case Replace(from, to, insert) => ???

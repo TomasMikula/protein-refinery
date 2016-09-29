@@ -1,17 +1,22 @@
 package proteinrefinery.lib
 
-import nutcracker.Dom
+import nutcracker.{Dom, Promise}
 import nutcracker.Dom.Status
 import nutcracker.util.Uninhabited
 import proteinrefinery.util.{HomSet, Unification}
 
 import scalaz.Equal
+import scalaz.syntax.equal._
 
 case class SiteState(label: String) {
   override def toString = label
 }
 
 object SiteState {
+
+  def meet(s1: SiteState, s2: SiteState): Promise[SiteState] =
+    if(s1 === s2) Promise.completed(s1)
+    else Promise.empty
 
   implicit def domInstance: Dom.Aux[SiteState, Uninhabited, Uninhabited] = new Dom[SiteState] {
     type Update = Uninhabited

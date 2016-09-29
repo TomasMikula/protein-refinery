@@ -17,6 +17,7 @@ object Site {
 
   type Definite = SiteLabel
 
+  def unknown: Site.Dom = Promise.empty
   def fromLabel(label: SiteLabel): Site.Dom = Promise.completed(label)
 
   implicit def showInstance: Show[Site.Dom] = new Show[Site.Dom] {

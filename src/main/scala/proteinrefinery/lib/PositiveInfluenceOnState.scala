@@ -1,6 +1,7 @@
 package proteinrefinery.lib
 
 import nutcracker.Antichain
+import nutcracker.Promise.Completed
 import nutcracker.util.ContF
 import proteinrefinery.DSL
 import proteinrefinery.util.syntax._
@@ -44,13 +45,18 @@ object PositiveInfluenceOnState {
   }
 
   private def searchByPhosphorylation(agent: Protein, target: AdmissibleProteinPattern): ContF[DSL, Ref] = {
-    val conts = target.mods.finalSiteMods.mods.iterator.mapFilter({ case (site, (state, _)) =>
-      if (state.label == "p") Some(site) // XXX hardcoded phosphorylated state as "p"
-      else None
-    }).map[ContF[DSL, Ref]](site =>
+    val conts = target.mods.mods.list.iterator.mapFilter({ case (site, state) =>
+      if (state.label == "p") // XXX hardcoded phosphorylated state as "p"
+        site._1 match {
+          case Completed(label) => Some(label)
+          case _ => None
+        }
+      else
+        None
+    }).map[ContF[DSL, Ref]](siteLabel =>
       for {
-        k <- Nuggets.kinasesOfC[DSL](target.protein, site)
-        phRef <- Phosphorylation.searchC(k, target.protein, site)
+        k <- Nuggets.kinasesOfC[DSL](target.protein, siteLabel)
+        phRef <- Phosphorylation.searchC(k, target.protein, siteLabel)
         ph <- phRef.asCont[DSL]
         inflRef <- PositiveInfluenceOnPhosphorylation.searchC(agent, ph)
         infl <- inflRef.asCont[DSL]

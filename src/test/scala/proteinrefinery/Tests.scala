@@ -2,7 +2,7 @@ package proteinrefinery
 
 import nutcracker._
 import org.scalatest.FunSuite
-import proteinrefinery.capability.syntax._
+import proteinrefinery.lib.syntax._
 import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, SiteLabel}
 
 import scalaz.std.list._
