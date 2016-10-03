@@ -3,9 +3,10 @@ package proteinrefinery.util
 import scala.annotation.tailrec
 import scala.language.higherKinds
 import scalaz.Leibniz.===
-import scalaz.{Foldable, Monad, Monoid}
+import scalaz.{Equal, Foldable, Monad, Monoid}
 import scalaz.std.list._
 import scalaz.syntax.applicative._
+import scalaz.syntax.equal._
 import scalaz.syntax.foldable._
 
 class AutoUnificationBag[M[_], A] private(private[util] val elems: List[A]) extends AnyVal {
@@ -94,6 +95,11 @@ object AutoUnificationBag {
 
   def apply[M[_], A](as: A*)(implicit M: Monad[M], U: Unification[M, A]): M[AutoUnificationBag[M, A]] =
     empty[M, A].addAll(as)
+
+  implicit def equalInstance[M[_], A: Equal]: Equal[AutoUnificationBag[M, A]] = new Equal[AutoUnificationBag[M, A]] {
+    def equal(bag1: AutoUnificationBag[M, A], bag2: AutoUnificationBag[M, A]): Boolean =
+      (bag1.size == bag2.size) && (bag1.elems.forall(a1 => bag2.elems.exists(a2 => a1 === a2)))
+  }
 
   implicit def foldableInstance[M[_]]: Foldable[AutoUnificationBag[M, ?]] = new Foldable[AutoUnificationBag[M, ?]] {
 
