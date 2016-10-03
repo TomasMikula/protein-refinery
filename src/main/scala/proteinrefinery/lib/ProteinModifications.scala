@@ -67,7 +67,14 @@ case class AdmissibleProteinModifications(mods: AutoUnificationBag[Option, SiteW
     buf.result()
   }
 
-  def refines0(that: AdmissibleProteinModifications): List[List[ProteinModifications.Update]] = ???
+  def refines0(that: AdmissibleProteinModifications): List[List[ProteinModifications.Update]] =
+    (this combine0 that) match {
+      case InvalidProteinModifications => Nil
+      case m @ AdmissibleProteinModifications(_) =>
+        if(m =/= this) Nil
+        else if(m === that) List(Nil)
+        else List(List(Join(this)))
+    }
 
 }
 
@@ -77,6 +84,13 @@ object AdmissibleProteinModifications {
   object SiteWithState {
     def apply(s: SiteLabel, st: SiteState): SiteWithState =
       ((Site.fromLabel(s), Set()), st)
+
+    private implicit def setEqual[A: Equal]: Equal[Set[A]] = new Equal[Set[A]] {
+      def equal(s1: Set[A], s2: Set[A]): Boolean = s1.size == s2.size && s1.forall(a1 => s2.exists(a2 => a1 === a2))
+    }
+
+    implicit val equalInstance: Equal[SiteWithState] =
+      scalaz.std.tuple.tuple2Equal[(Site.Dom, Set[Site.Ref]), SiteState]
   }
 
   private implicit def setUnificationByNonEmptyIntersection[A]: Unification[Id, Set[A]] = new Unification[Id, Set[A]] {

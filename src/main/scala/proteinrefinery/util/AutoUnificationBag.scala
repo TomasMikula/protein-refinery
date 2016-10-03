@@ -12,10 +12,10 @@ import scalaz.syntax.foldable._
 class AutoUnificationBag[M[_], A] private(private[util] val elems: List[A]) extends AnyVal {
   def size: Int = elems.size
 
-  def add(a: A)(implicit M: Monad[M], U: Unification[M, A]): M[(AutoUnificationBag[M, A], A, List[(A, U.Delta)])] =
-    update(a).map(_.getOrElse((new AutoUnificationBag(a::elems), a, Nil)))
+  def add(a: A)(implicit M: Monad[M], U: Unification[M, A]): M[(AutoUnificationBag[M, A], A, List[(A, Option[U.Delta])])] =
+    collect(a).map({ case (untouched, a, deltas) => (new AutoUnificationBag[M, A](a::untouched.elems), a, deltas) })
 
-  def update(a: A)(implicit M: Monad[M], U: Unification[M, A]): M[Option[(AutoUnificationBag[M, A], A, List[(A, U.Delta)])]] = {
+  def collect(a: A)(implicit M: Monad[M], U: Unification[M, A]): M[(AutoUnificationBag[M, A], A, List[(A, Option[U.Delta])])] = {
     type Δ = U.Delta
     //                     +---------------------------------------------- elems not touched by unification
     //                     |     +---------------------------------------- accumulation of the unified value
@@ -42,13 +42,7 @@ class AutoUnificationBag[M[_], A] private(private[util] val elems: List[A]) exte
 
       val unified = applyDeltas(unified0, None, Nil)
 
-      unified match {
-        case Nil => None
-        case (_, None) :: Nil => None // only one element was unified and its value has not changed
-        case _ =>
-          val unified1 = unified.map({ case (a, d) => (a, d.get) }) // more than one element were unified => all must have changed
-          Some((new AutoUnificationBag(aa::untouched), aa, unified1))
-      }
+      (new AutoUnificationBag[M, A](untouched), aa, unified)
     }
   }
 
@@ -88,6 +82,8 @@ class AutoUnificationBag[M[_], A] private(private[util] val elems: List[A]) exte
     case (None, d2) => d2
     case _ => d1
   }
+
+  override def toString: String = elems.toString()
 }
 
 object AutoUnificationBag {
