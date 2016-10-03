@@ -7,9 +7,11 @@ import proteinrefinery.lib.AdmissibleProteinModifications.SiteWithState
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.util.{AutoUnificationBag, Unification}
 
+import scalaz.{Equal, Monad, MonadPartialOrder, Show}
 import scalaz.Id.Id
 import scalaz.std.option._
-import scalaz.{Monad, MonadPartialOrder, Show}
+import scalaz.std.tuple._
+import scalaz.syntax.equal._
 
 sealed trait ProteinModifications {
 
@@ -115,6 +117,14 @@ object AdmissibleProteinModifications {
 
   def noModifications: AdmissibleProteinModifications =
     AdmissibleProteinModifications(AutoUnificationBag.empty[Option, SiteWithState])
+
+  implicit def equalInstance: Equal[AdmissibleProteinModifications] = new Equal[AdmissibleProteinModifications] {
+    implicit def setEqual[A: Equal]: Equal[Set[A]] = new Equal[Set[A]] {
+      def equal(s1: Set[A], s2: Set[A]): Boolean = s1.size == s2.size && s1.forall(a1 => s2.exists(a2 => a1 === a2))
+    }
+    def equal(a1: AdmissibleProteinModifications, a2: AdmissibleProteinModifications): Boolean =
+      a1.mods === a2.mods
+  }
 }
 
 object ProteinModifications {
@@ -155,9 +165,17 @@ object ProteinModifications {
 
       override def update(d: ProteinModifications, u: Update): Option[(ProteinModifications, Delta)] = {
         val res = d combine u.value
-        if(res == d) None else Some((res, ()))
+        if(res === d) None else Some((res, ()))
       }
 
       override def combineDeltas(d1: Delta, d2: Delta): Delta = ()
     }
+
+  implicit def equalInstance: Equal[ProteinModifications] = new Equal[ProteinModifications] {
+    def equal(a1: ProteinModifications, a2: ProteinModifications): Boolean = (a1, a2) match {
+      case (a1 @ AdmissibleProteinModifications(_), a2 @ AdmissibleProteinModifications(_)) => a1 === a2
+      case (InvalidProteinModifications, InvalidProteinModifications) => true
+      case _ => false
+    }
+  }
 }
