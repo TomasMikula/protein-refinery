@@ -45,11 +45,11 @@ case object InvalidProteinModifications extends ProteinModifications {
   def addModification(site: Site.Definite, state: SiteState): ProteinModifications = this
 }
 
-case class AdmissibleProteinModifications(mods: AutoUnificationBag[Option, SiteWithState]) extends ProteinModifications {
+case class AdmissibleProteinModifications(mods: AutoUnificationBag[SiteWithState]) extends ProteinModifications {
   import AdmissibleProteinModifications._
 
   override def addModification(site: Site.Definite, state: SiteState): ProteinModifications =
-    ProteinModifications.fromOption(mods.add(SiteWithState(site, state)).map({ case (mods, _, _) => AdmissibleProteinModifications(mods) }))
+    ProteinModifications.fromOption(mods.add[Option](SiteWithState(site, state)).map({ case (mods, _, _) => AdmissibleProteinModifications(mods) }))
 
   def combine0(that: AdmissibleProteinModifications): ProteinModifications =
     ProteinModifications.fromOption((this.mods union that.mods).map(AdmissibleProteinModifications(_)))
@@ -130,7 +130,7 @@ object AdmissibleProteinModifications {
   }
 
   def noModifications: AdmissibleProteinModifications =
-    AdmissibleProteinModifications(AutoUnificationBag.empty[Option, SiteWithState])
+    AdmissibleProteinModifications(AutoUnificationBag.empty[SiteWithState])
 
   implicit def equalInstance: Equal[AdmissibleProteinModifications] = new Equal[AdmissibleProteinModifications] {
     implicit def setEqual[A: Equal]: Equal[Set[A]] = new Equal[Set[A]] {

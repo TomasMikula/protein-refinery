@@ -93,7 +93,7 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
     implicit val unif: Unification[Option, (SiteDesc, SiteAttr)] =
       Unification.tuple2[Option, SiteDesc, SiteAttr]
 
-    val bagOpt = mods1.addAll(bonds1)
+    val bagOpt = mods1.addAll[Option, List](bonds1)
 
     def siteStr(s: (SiteDesc, SiteAttr)): String = {
       val ((site, refs), (link, state)) = s
