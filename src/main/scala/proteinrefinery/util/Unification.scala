@@ -7,7 +7,8 @@ import scala.language.higherKinds
 import nutcracker.{Dom, Promise}
 
 import scalaz.\&/.{Both, That, This}
-import scalaz.{Equal, Monad, MonadPartialOrder, \&/}
+import scalaz.{Equal, Functor, Monad, MonadPartialOrder, \&/}
+import scalaz.Isomorphism.<=>
 import scalaz.syntax.equal._
 import scalaz.syntax.monad._
 
@@ -60,6 +61,21 @@ trait Unification[A] {
 object Unification {
   type Aux0[A, M[_]] = Unification[A] { type F[X] = M[X] }
   type Aux[A, U, Δ, M[_]] = Unification[A] { type Update = U; type Delta = Δ; type F[X] = M[X] }
+
+  def via[M[_], A, B](iso: A <=> B)(implicit UB: Unification.Aux0[B, M], M: Functor[M]): Unification.Aux[A, UB.Update, UB.Delta, M] =
+    new Unification[A] {
+      type Update = UB.Update
+      type Delta = UB.Delta
+      type F[X] = M[X]
+
+      def mustUnify(a1: A, a2: A): M[Option[(Option[Delta], A, Option[Delta])]] =
+        UB.mustUnify(iso.to(a1), iso.to(a2)).map(_.map({ case (d1, b, d2) => (d1, iso.from(b), d2) }))
+
+      def unify(a1: A, a2: A): M[(Option[Delta], A, Option[Delta])] =
+        UB.unify(iso.to(a1), iso.to(a2)).map({ case (d1, b, d2) => (d1, iso.from(b), d2) })
+
+      def dom: Dom.Aux[A, Update, Delta] = Dom.via(iso)(UB.dom)
+    }
 
   def tuple2[M[_], A, B](implicit UA: Unification.Aux0[A, M], UB: Unification.Aux0[B, M], M: Monad[M]): Unification.Aux[(A, B), UA.Update \&/ UB.Update, UA.Delta \&/ UB.Delta, M] =
     new Unification[(A, B)] {
@@ -139,8 +155,8 @@ object Unification {
   private def canUnifyPromise[A: Equal](p1: Promise[A], p2: Promise[A]): Option[(Option[Promise.Delta[A]], Promise[A], Option[Promise.Delta[A]])] =
     (p1, p2) match {
       case (Completed(a1), Completed(a2)) => if (a1 === a2) Some((None, p1, None)) else None
-      case (Conflict, _) => None
-      case (_, Conflict) => None
+      case (Conflict, _) => None // pretend failure to unify, instead of unifying with a failure (which is always possible)
+      case (_, Conflict) => None // pretend failure to unify, instead of unifying with a failure (which is always possible)
       case (Empty, Completed(a2)) => Some((Some(()), Completed(a2), None))
       case (Completed(a1), Empty) => Some((None, Completed(a1), Some(())))
       case (Empty, Empty) => Some((None, Empty, None))
