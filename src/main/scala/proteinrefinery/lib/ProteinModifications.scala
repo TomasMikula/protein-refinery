@@ -1,14 +1,12 @@
 package proteinrefinery.lib
 
-import nutcracker.Dom.Aux
 import nutcracker.Promise.Completed
 import nutcracker.{Dom, Join}
 import proteinrefinery.lib.AdmissibleProteinModifications.SiteWithState
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.util.{AutoUnificationBag, Unification}
 
-import scalaz.{Equal, Monad, MonadPartialOrder, Show}
-import scalaz.Id.Id
+import scalaz.{Equal, Show}
 import scalaz.std.option._
 import scalaz.std.tuple._
 import scalaz.syntax.equal._
@@ -57,7 +55,7 @@ case class AdmissibleProteinModifications(mods: AutoUnificationBag[SiteWithState
   def mentionedSites: Set[LocalSiteId] = {
     val buf = Set.newBuilder[LocalSiteId]
     mods.foreach({
-      case ((site, refs), state) =>
+      case (ISite(site, refs), state) =>
         site match {
           case Completed(s) => buf += LocalSiteId(s)
           case _ =>
@@ -80,50 +78,16 @@ case class AdmissibleProteinModifications(mods: AutoUnificationBag[SiteWithState
 
 object AdmissibleProteinModifications {
 
-  type SiteWithState = ((Site.Dom, Set[Site.Ref]), SiteState)
+  type SiteWithState = (ISite, SiteState)
   object SiteWithState {
     def apply(s: SiteLabel, st: SiteState): SiteWithState =
-      ((Site.fromLabel(s), Set()), st)
-
-    private implicit def setEqual[A: Equal]: Equal[Set[A]] = new Equal[Set[A]] {
-      def equal(s1: Set[A], s2: Set[A]): Boolean = s1.size == s2.size && s1.forall(a1 => s2.exists(a2 => a1 === a2))
-    }
+      (ISite(s), st)
 
     implicit val equalInstance: Equal[SiteWithState] =
-      scalaz.std.tuple.tuple2Equal[(Site.Dom, Set[Site.Ref]), SiteState]
+      scalaz.std.tuple.tuple2Equal[ISite, SiteState]
   }
 
-  private implicit def setUnificationByNonEmptyIntersection[A]: Unification.Aux0[Set[A], Id] = new Unification[Set[A]] {
-    type Update = Set[A] // what to add
-    type Delta = Set[A] // diff
-    type F[X] = Id[X]
-
-    def mustUnify(s1: Set[A], s2: Set[A]): Option[(Option[Delta], Set[A], Option[Delta])] =
-      if((s1 intersect s2).nonEmpty) Some((diff(s1, s2), s1 union s2, diff(s2, s1)))
-      else None
-
-    def unify(s1: Set[A], s2: Set[A]): (Option[Delta], Set[A], Option[Delta]) =
-      (diff(s1, s2), s1 union s2, diff(s2, s1))
-
-    def dom: Aux[Set[A], Update, Delta] = ???
-
-    @inline private def diff(s1: Set[A], s2: Set[A]): Option[Set[A]] = {
-      val d = s1 diff s2
-      if(d.nonEmpty) Some(d) else None
-    }
-  }
-  private implicit val idToOption: MonadPartialOrder[Option, Id] = new MonadPartialOrder[Option, Id] {
-    implicit val MG: Monad[Option] = implicitly
-    implicit val MF: Monad[Id] = implicitly
-
-    def promote[A](m2: Id[A]): Option[A] = Some(m2)
-  }
-  private implicit def setUnificationByNonEmptyIntersectionOpt[A]: Unification.Aux0[Set[A], Option] =
-    setUnificationByNonEmptyIntersection[A].promote[Option]
-  private implicit def siteDomUnification: Unification.Aux0[Site.Dom, Option] = Unification.obligatoryPromiseUnification[SiteLabel]
-
-  implicit def siteUnification: Unification.Aux0[(Site.Dom, Set[Site.Ref]), Option] = Unification.tuple2[Option, Site.Dom, Set[Site.Ref]]
-  implicit def siteWithStateUnification: Unification.Aux0[SiteWithState, Option] = Unification.tuple2[Option, (Site.Dom, Set[Site.Ref]), SiteState]
+  implicit def siteWithStateUnification: Unification.Aux0[SiteWithState, Option] = Unification.tuple2[Option, ISite, SiteState]
 
   def apply(mods: (SiteLabel, SiteState)*): Option[AdmissibleProteinModifications] = {
     val mods1 = mods.map({ case (s, st) => SiteWithState(s, st) })

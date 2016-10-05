@@ -68,15 +68,14 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
   def toString(bonds: Map[LocalSiteId, Either[Unbound.type, LinkId]]): String = {
     type LinkDesc = Either[Unbound.type, LinkId]
     type LinkDom  = Promise[LinkDesc]
-    type SiteDesc = (Site.Dom, Set[Site.Ref])
     type SiteAttr = (LinkDom, Promise[SiteState])
 
-    val bonds1: List[(SiteDesc, SiteAttr)] =
-      bonds.foldLeft[List[(SiteDesc, SiteAttr)]](Nil)((l, siteIdLink) => {
+    val bonds1: List[(ISite, SiteAttr)] =
+      bonds.foldLeft[List[(ISite, SiteAttr)]](Nil)((l, siteIdLink) => {
         val (siteId, link) = siteIdLink
-        val siteDesc: SiteDesc = siteId match {
-          case Left(label) => (Site.fromLabel(label), Set())
-          case Right(ref)  => (Site.unknown, Set(ref))
+        val siteDesc: ISite = siteId match {
+          case Left(label) => ISite(label)
+          case Right(ref)  => ISite(ref)
         }
         val linkDom = Promise.completed(link)
         (siteDesc, (linkDom, Promise.empty)) :: l
@@ -87,16 +86,15 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
       (siteDesc, (Promise.empty[LinkDesc], Promise.completed(state)))
     })
 
-    import AdmissibleProteinModifications.siteUnification
     implicit val siteAttrUnif: Unification.Aux0[SiteAttr, Option] =
       Unification.tuple2[Option, Promise[LinkDesc], Promise[SiteState]](Unification.optionalPromiseUnification[LinkDesc], Unification.optionalPromiseUnification[SiteState], Monad[Option])
-    implicit val unif: Unification.Aux0[(SiteDesc, SiteAttr), Option] =
-      Unification.tuple2[Option, SiteDesc, SiteAttr]
+    implicit val unif: Unification.Aux0[(ISite, SiteAttr), Option] =
+      Unification.tuple2[Option, ISite, SiteAttr]
 
     val bagOpt = mods1.addAll(bonds1)
 
-    def siteStr(s: (SiteDesc, SiteAttr)): String = {
-      val ((site, refs), (link, state)) = s
+    def siteStr(s: (ISite, SiteAttr)): String = {
+      val (ISite(site, refs), (link, state)) = s
       val siteDesc = site match {
         case Completed(label) => label.shows
         case Empty => refs.headOption match {

@@ -127,9 +127,8 @@ final case class AdmissibleRule(lhs: AdmissibleAgentsPattern, actions: List[Acti
         pat.agentIterator.exists(q => {
           if(q.protein =/= p) false
           else {
-            val addModsMap = addMods.mods.restrictToMap[(Site.Dom, Set[Site.Ref]), SiteState].mapValues(st => Promise.completed(st))
-            val qModsMap   =  q.mods.mods.restrictToMap[(Site.Dom, Set[Site.Ref]), SiteState].mapValues(st => Promise.completed(st))
-            import AdmissibleProteinModifications.siteUnification
+            val addModsMap = addMods.mods.restrictToMap[ISite, SiteState].mapValues(st => Promise.completed(st))
+            val qModsMap   =  q.mods.mods.restrictToMap[ISite, SiteState].mapValues(st => Promise.completed(st))
             val meet = addModsMap.intersect(qModsMap)((p1, p2) => Option(Promise.meet(p1, p2)))
             meet.fold(false)(_.entries.exists(_._2.nonEmpty))
           }
