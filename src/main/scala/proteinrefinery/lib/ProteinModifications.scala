@@ -101,7 +101,7 @@ object AdmissibleProteinModifications {
       if((s1 intersect s2).nonEmpty) Some((diff(s1, s2), s1 union s2, diff(s2, s1)))
       else None
 
-    def canUnify(s1: Set[A], s2: Set[A]): (Option[Delta], Set[A], Option[Delta]) =
+    def unify(s1: Set[A], s2: Set[A]): (Option[Delta], Set[A], Option[Delta]) =
       (diff(s1, s2), s1 union s2, diff(s2, s1))
 
     def dom: Aux[Set[A], Update, Delta] = ???

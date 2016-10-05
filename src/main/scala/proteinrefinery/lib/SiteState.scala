@@ -56,7 +56,7 @@ object SiteState {
       //+--------- not a failure
     }
 
-    def canUnify(s1: SiteState, s2: SiteState): Option[(Option[Delta], SiteState, Option[Delta])] = {
+    def unify(s1: SiteState, s2: SiteState): Option[(Option[Delta], SiteState, Option[Delta])] = {
       if(s1 == s2) Some((None, s1, None))
       else None
     }

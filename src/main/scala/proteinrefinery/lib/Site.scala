@@ -53,7 +53,7 @@ object Site {
         case _ => Some(None)
       }
 
-    def canUnify(s1: Site.Dom, s2: Site.Dom): Option[(Option[Delta], Site.Dom, Option[Delta])] =
+    def unify(s1: Site.Dom, s2: Site.Dom): Option[(Option[Delta], Site.Dom, Option[Delta])] =
       (s1, s2) match {
         case (Empty, Empty) => Some((None, Empty, None))
         case (Empty, Completed(_)) => Some((Some(()), s2, None))

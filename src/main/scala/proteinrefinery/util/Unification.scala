@@ -30,14 +30,14 @@ trait Unification[M[_], A] {
   //                           +----------------------------------- an effect to track inevitable failure (obligation to unify and
   //                                                                    impossibility to unify at the same time)
 
-  def canUnify(a1: A, a2: A): M[(Option[Delta], A, Option[Delta])]
-  //                          ^      ^          ^      ^
-  //                          |      |          |      |
-  //                          |      |          |      +--- diff that takes `a2` to the unified value
-  //                          |      |          +---------- the unified value
-  //                          |      +--------------------- diff that takes `a1` to the unified value
-  //                          +---------------------------- an effect to track inevitable failure (obligation to unify and
-  //                                                            impossibility to unify at the same time)
+  def unify(a1: A, a2: A): M[(Option[Delta], A, Option[Delta])]
+  //                       ^      ^          ^      ^
+  //                       |      |          |      |
+  //                       |      |          |      +--- diff that takes `a2` to the unified value
+  //                       |      |          +---------- the unified value
+  //                       |      +--------------------- diff that takes `a1` to the unified value
+  //                       +---------------------------- an effect to track inevitable failure (obligation to unify and
+  //                                                         impossibility to unify at the same time)
 
   def dom: Dom.Aux[A, Update, Delta]
 
@@ -48,8 +48,8 @@ trait Unification[M[_], A] {
     def mustUnify(a1: A, a2: A): N[Option[(Option[Delta], A, Option[Delta])]] =
       mn(Unification.this.mustUnify(a1, a2))
 
-    def canUnify(a1: A, a2: A): N[(Option[Delta], A, Option[Delta])] =
-      mn(Unification.this.canUnify(a1, a2))
+    def unify(a1: A, a2: A): N[(Option[Delta], A, Option[Delta])] =
+      mn(Unification.this.unify(a1, a2))
 
     def dom: Aux[A, Update, Delta] = Unification.this.dom
   }
@@ -66,13 +66,13 @@ object Unification {
       def mustUnify(ab1: (A, B), ab2: (A, B)): M[Option[(Option[Delta], (A, B), Option[Delta])]] =
         UA.mustUnify(ab1._1, ab2._1) >>= ({
           case Some((da1, a, da2)) =>
-            UB.canUnify(ab1._2, ab2._2).map(dbd => {
+            UB.unify(ab1._2, ab2._2).map(dbd => {
               val (db1, b, db2) = dbd
               Some((these(da1, db1), (a, b), these(da2, db2)))
             })
           case None =>
             UB.mustUnify(ab1._2, ab2._2) >>= ({
-              case Some((db1, b, db2)) => UA.canUnify(ab1._1, ab2._1).map(dad => {
+              case Some((db1, b, db2)) => UA.unify(ab1._1, ab2._1).map(dad => {
                 val (da1, a, da2) = dad
                 Some((these(da1, db1), (a, b), these(da2, db2)))
               })
@@ -81,8 +81,8 @@ object Unification {
             })
         })
 
-      def canUnify(ab1: (A, B), ab2: (A, B)): M[(Option[Delta], (A, B), Option[Delta])] =
-        M.apply2(UA.canUnify(ab1._1, ab2._1), UB.canUnify(ab1._2, ab2._2))((dad, dbd) => {
+      def unify(ab1: (A, B), ab2: (A, B)): M[(Option[Delta], (A, B), Option[Delta])] =
+        M.apply2(UA.unify(ab1._1, ab2._1), UB.unify(ab1._2, ab2._2))((dad, dbd) => {
           val (da1, a, da2) = dad
           val (db1, b, db2) = dbd
           (these(da1, db1), (a, b), these(da2, db2))
@@ -110,7 +110,7 @@ object Unification {
         case _ => Some(None)
       }
 
-    def canUnify(p1: Promise[A], p2: Promise[A]): Option[(Option[Delta], Promise[A], Option[Delta])] =
+    def unify(p1: Promise[A], p2: Promise[A]): Option[(Option[Delta], Promise[A], Option[Delta])] =
       canUnifyPromise(p1, p2)
 
     def dom: Dom.Aux[Promise[A], Update, Delta] = Promise.promiseDomain[A]
@@ -123,7 +123,7 @@ object Unification {
     def mustUnify(p1: Promise[A], p2: Promise[A]): Option[Option[(Option[Delta], Promise[A], Option[Delta])]] =
       Some(None)
 
-    def canUnify(p1: Promise[A], p2: Promise[A]): Option[(Option[Delta], Promise[A], Option[Delta])] =
+    def unify(p1: Promise[A], p2: Promise[A]): Option[(Option[Delta], Promise[A], Option[Delta])] =
       canUnifyPromise(p1, p2)
 
     def dom: Dom.Aux[Promise[A], Update, Delta] = Promise.promiseDomain[A]
