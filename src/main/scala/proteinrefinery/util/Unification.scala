@@ -11,16 +11,17 @@ import scalaz.{Equal, Monad, MonadPartialOrder, \&/}
 import scalaz.syntax.equal._
 import scalaz.syntax.monad._
 
-trait Unification[M[_], A] {
+trait Unification[A] {
   type Update
   type Delta
+  type F[_]
 
   // - unify(a, a) = Some(None, a, None)
   // - symmetry
   // - if update(a, u) = Some((b, δ)), then unify(a, b) =  Some(Some(δ), b, None)
   // - if unify(a, b) = None, unify(a, c) = None, unify(b, c) = Some(_, d, _), then
   //     unify(a, d) = None
-  def mustUnify(a1: A, a2: A): M[Option[(Option[Delta], A, Option[Delta])]]
+  def mustUnify(a1: A, a2: A): F[Option[(Option[Delta], A, Option[Delta])]]
   //                           ^    ^        ^          ^      ^
   //                           |    |        |          |      |
   //                           |    |        |          |      +--- diff that takes `a2` to the unified value
@@ -30,7 +31,7 @@ trait Unification[M[_], A] {
   //                           +----------------------------------- an effect to track inevitable failure (obligation to unify and
   //                                                                    impossibility to unify at the same time)
 
-  def unify(a1: A, a2: A): M[(Option[Delta], A, Option[Delta])]
+  def unify(a1: A, a2: A): F[(Option[Delta], A, Option[Delta])]
   //                       ^      ^          ^      ^
   //                       |      |          |      |
   //                       |      |          |      +--- diff that takes `a2` to the unified value
@@ -41,9 +42,10 @@ trait Unification[M[_], A] {
 
   def dom: Dom.Aux[A, Update, Delta]
 
-  def promote[N[_]](implicit mn: MonadPartialOrder[N, M]): Unification[N, A] = new Unification[N, A] {
+  def promote[N[_]](implicit mn: MonadPartialOrder[N, F]): Unification.Aux[A, Update, Delta, N] = new Unification[A] {
     type Update = Unification.this.Update
     type Delta = Unification.this.Delta
+    type F[X] = N[X]
 
     def mustUnify(a1: A, a2: A): N[Option[(Option[Delta], A, Option[Delta])]] =
       mn(Unification.this.mustUnify(a1, a2))
@@ -56,32 +58,35 @@ trait Unification[M[_], A] {
 }
 
 object Unification {
-  type Aux[M[_], A, U, Δ] = Unification[M, A] { type Update = U; type Delta = Δ }
+  type Aux0[A, M[_]] = Unification[A] { type F[X] = M[X] }
+  type Aux[A, U, Δ, M[_]] = Unification[A] { type Update = U; type Delta = Δ; type F[X] = M[X] }
 
-  def tuple2[M[_], A, B](implicit UA: Unification[M, A], UB: Unification[M, B], M: Monad[M]): Unification.Aux[M, (A, B), UA.Update \&/ UB.Update, UA.Delta \&/ UB.Delta] =
-    new Unification[M, (A, B)] {
+  def tuple2[M[_], A, B](implicit UA: Unification.Aux0[A, M], UB: Unification.Aux0[B, M], M: Monad[M]): Unification.Aux[(A, B), UA.Update \&/ UB.Update, UA.Delta \&/ UB.Delta, M] =
+    new Unification[(A, B)] {
       type Update = UA.Update \&/ UB.Update
       type Delta = UA.Delta \&/ UB.Delta
+      type F[X] = M[X]
 
-      def mustUnify(ab1: (A, B), ab2: (A, B)): M[Option[(Option[Delta], (A, B), Option[Delta])]] =
+      def mustUnify(ab1: (A, B), ab2: (A, B)): F[Option[(Option[Delta], (A, B), Option[Delta])]] = {
         UA.mustUnify(ab1._1, ab2._1) >>= ({
           case Some((da1, a, da2)) =>
             UB.unify(ab1._2, ab2._2).map(dbd => {
               val (db1, b, db2) = dbd
-              Some((these(da1, db1), (a, b), these(da2, db2)))
+              Option((these(da1, db1), (a, b), these(da2, db2)))
             })
           case None =>
             UB.mustUnify(ab1._2, ab2._2) >>= ({
               case Some((db1, b, db2)) => UA.unify(ab1._1, ab2._1).map(dad => {
                 val (da1, a, da2) = dad
-                Some((these(da1, db1), (a, b), these(da2, db2)))
+                Option((these(da1, db1), (a, b), these(da2, db2)))
               })
               case None =>
-                M.point(None)
+                M.point(Option.empty[(Option[Delta], (A, B), Option[Delta])])
             })
         })
+      }
 
-      def unify(ab1: (A, B), ab2: (A, B)): M[(Option[Delta], (A, B), Option[Delta])] =
+      def unify(ab1: (A, B), ab2: (A, B)): F[(Option[Delta], (A, B), Option[Delta])] =
         M.apply2(UA.unify(ab1._1, ab2._1), UB.unify(ab1._2, ab2._2))((dad, dbd) => {
           val (da1, a, da2) = dad
           val (db1, b, db2) = dbd
@@ -98,9 +103,10 @@ object Unification {
       }
     }
 
-  def obligatoryPromiseUnification[A: Equal]: Unification[Option, Promise[A]] = new Unification[Option, Promise[A]] {
+  def obligatoryPromiseUnification[A: Equal]: Unification.Aux0[Promise[A], Option] = new Unification[Promise[A]] {
     type Update = Promise.Update[A]
     type Delta = Promise.Delta[A]
+    type F[X] = Option[X]
 
     def mustUnify(p1: Promise[A], p2: Promise[A]): Option[Option[(Option[Delta], Promise[A], Option[Delta])]] =
       (p1, p2) match {
@@ -116,9 +122,10 @@ object Unification {
     def dom: Dom.Aux[Promise[A], Update, Delta] = Promise.promiseDomain[A]
   }
 
-  def optionalPromiseUnification[A: Equal]: Unification[Option, Promise[A]] = new Unification[Option, Promise[A]] {
+  def optionalPromiseUnification[A: Equal]: Unification.Aux0[Promise[A], Option] = new Unification[Promise[A]] {
     type Update = Promise.Update[A]
     type Delta = Promise.Delta[A]
+    type F[X] = Option[X]
 
     def mustUnify(p1: Promise[A], p2: Promise[A]): Option[Option[(Option[Delta], Promise[A], Option[Delta])]] =
       Some(None)

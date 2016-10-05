@@ -49,7 +49,7 @@ case class AdmissibleProteinModifications(mods: AutoUnificationBag[SiteWithState
   import AdmissibleProteinModifications._
 
   override def addModification(site: Site.Definite, state: SiteState): ProteinModifications =
-    ProteinModifications.fromOption(mods.add[Option](SiteWithState(site, state)).map({ case (mods, _, _) => AdmissibleProteinModifications(mods) }))
+    ProteinModifications.fromOption(mods.add(SiteWithState(site, state)).map({ case (mods, _, _) => AdmissibleProteinModifications(mods) }))
 
   def combine0(that: AdmissibleProteinModifications): ProteinModifications =
     ProteinModifications.fromOption((this.mods union that.mods).map(AdmissibleProteinModifications(_)))
@@ -93,9 +93,10 @@ object AdmissibleProteinModifications {
       scalaz.std.tuple.tuple2Equal[(Site.Dom, Set[Site.Ref]), SiteState]
   }
 
-  private implicit def setUnificationByNonEmptyIntersection[A]: Unification[Id, Set[A]] = new Unification[Id, Set[A]] {
+  private implicit def setUnificationByNonEmptyIntersection[A]: Unification.Aux0[Set[A], Id] = new Unification[Set[A]] {
     type Update = Set[A] // what to add
     type Delta = Set[A] // diff
+    type F[X] = Id[X]
 
     def mustUnify(s1: Set[A], s2: Set[A]): Option[(Option[Delta], Set[A], Option[Delta])] =
       if((s1 intersect s2).nonEmpty) Some((diff(s1, s2), s1 union s2, diff(s2, s1)))
@@ -117,16 +118,16 @@ object AdmissibleProteinModifications {
 
     def promote[A](m2: Id[A]): Option[A] = Some(m2)
   }
-  private implicit def setUnificationByNonEmptyIntersectionOpt[A]: Unification[Option, Set[A]] =
+  private implicit def setUnificationByNonEmptyIntersectionOpt[A]: Unification.Aux0[Set[A], Option] =
     setUnificationByNonEmptyIntersection[A].promote[Option]
-  private implicit def siteDomUnification: Unification[Option, Site.Dom] = Unification.obligatoryPromiseUnification
+  private implicit def siteDomUnification: Unification.Aux0[Site.Dom, Option] = Unification.obligatoryPromiseUnification[SiteLabel]
 
-  implicit def siteUnification: Unification[Option, (Site.Dom, Set[Site.Ref])] = Unification.tuple2[Option, Site.Dom, Set[Site.Ref]]
-  implicit def siteWithStateUnification: Unification[Option, SiteWithState] = Unification.tuple2[Option, (Site.Dom, Set[Site.Ref]), SiteState]
+  implicit def siteUnification: Unification.Aux0[(Site.Dom, Set[Site.Ref]), Option] = Unification.tuple2[Option, Site.Dom, Set[Site.Ref]]
+  implicit def siteWithStateUnification: Unification.Aux0[SiteWithState, Option] = Unification.tuple2[Option, (Site.Dom, Set[Site.Ref]), SiteState]
 
   def apply(mods: (SiteLabel, SiteState)*): Option[AdmissibleProteinModifications] = {
     val mods1 = mods.map({ case (s, st) => SiteWithState(s, st) })
-    AutoUnificationBag[Option, SiteWithState](mods1:_*).map(AdmissibleProteinModifications(_))
+    AutoUnificationBag(mods1:_*).map(AdmissibleProteinModifications(_))
   }
 
   def noModifications: AdmissibleProteinModifications =

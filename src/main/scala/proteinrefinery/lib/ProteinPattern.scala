@@ -88,12 +88,12 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
     })
 
     import AdmissibleProteinModifications.siteUnification
-    implicit val siteAttrUnif: Unification[Option, SiteAttr] =
-      Unification.tuple2(Unification.optionalPromiseUnification[LinkDesc], Unification.optionalPromiseUnification[SiteState], Monad[Option])
-    implicit val unif: Unification[Option, (SiteDesc, SiteAttr)] =
+    implicit val siteAttrUnif: Unification.Aux0[SiteAttr, Option] =
+      Unification.tuple2[Option, Promise[LinkDesc], Promise[SiteState]](Unification.optionalPromiseUnification[LinkDesc], Unification.optionalPromiseUnification[SiteState], Monad[Option])
+    implicit val unif: Unification.Aux0[(SiteDesc, SiteAttr), Option] =
       Unification.tuple2[Option, SiteDesc, SiteAttr]
 
-    val bagOpt = mods1.addAll[Option, List](bonds1)
+    val bagOpt = mods1.addAll(bonds1)
 
     def siteStr(s: (SiteDesc, SiteAttr)): String = {
       val ((site, refs), (link, state)) = s

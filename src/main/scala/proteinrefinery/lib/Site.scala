@@ -41,9 +41,10 @@ object Site {
     }
   }
 
-  implicit def unificationInstance: Unification[Option, Site.Dom] = new Unification[Option, Site.Dom] {
+  implicit def unificationInstance: Unification.Aux0[Site.Dom, Option] = new Unification[Site.Dom] {
     type Update = Site.Update
     type Delta = Site.Delta
+    type F[X] = Option[X]
 
     def mustUnify(s1: Site.Dom, s2: Site.Dom): Option[Option[(Option[Delta], Site.Dom, Option[Delta])]] =
       (s1, s2) match {

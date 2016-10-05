@@ -41,9 +41,10 @@ object SiteState {
       else Nil
   }
 
-  implicit def unificationInstance: Unification[Option, SiteState] = new Unification[Option, SiteState] {
+  implicit def unificationInstance: Unification.Aux0[SiteState, Option] = new Unification[SiteState] {
     type Update = Uninhabited
     type Delta = Uninhabited
+    type F[X] = Option[X]
 
     def mustUnify(s1: SiteState, s2: SiteState): Option[Option[(Option[Delta], SiteState, Option[Delta])]] = {
       // When we consider state within an agent, we never _have_ to unify two states within an agent,
