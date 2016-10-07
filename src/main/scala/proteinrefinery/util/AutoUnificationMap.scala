@@ -17,7 +17,7 @@ class AutoUnificationMap[K, V] private[util](val entries: List[(K, V)]) extends 
   def get[M[_]](k: K)(implicit U: Unification.Aux0[K, M], M: Monad[M]): M[List[V]] =
     entries.foldLeftM[M, List[V]](Nil)((vs, kv) => {
       val (k0, v) = kv
-      U.mustUnify(k0, k).map({
+      U.unifyIfNecessary(k0, k).map({
         case Some(_) => v :: vs
         case None => vs
       })
@@ -27,7 +27,7 @@ class AutoUnificationMap[K, V] private[util](val entries: List[(K, V)]) extends 
   def getEntries[M[_]](k: K)(implicit U: Unification.Aux0[K, M], M: Monad[M]): M[List[(K, V)]] =
     entries.foldLeftM[M, List[(K, V)]](Nil)((kvs, kv) => {
       val (k0, v) = kv
-      U.mustUnify(k0, k).map({
+      U.unifyIfNecessary(k0, k).map({
         case Some(_) => (k0, v) :: kvs
         case None => kvs
       })
@@ -47,7 +47,7 @@ class AutoUnificationMap[K, V] private[util](val entries: List[(K, V)]) extends 
     entries.foldLeftM[M, (K, Option[V])]((k, None))((acc, kv) => {
       val (k0, v0) = kv
       val (accK, accV) = acc
-      U.mustUnify(k0, accK).flatMap[(K, Option[V])]({
+      U.unifyIfNecessary(k0, accK).flatMap[(K, Option[V])]({
         case Some((_, k1, _)) => accV match {
           case Some(v) => f(v, v0).map(v1 => (k1, Some(v1)))
           case None => M.point((k1, Some(v0)))
@@ -99,7 +99,7 @@ class AutoUnificationMap[K, V] private[util](val entries: List[(K, V)]) extends 
     entries.foldLeftM[M, (K, V, List[(K, V)])]((k, v, Nil))((acc_untouched, kv) => {
       val (accK, accV, untouched) = acc_untouched
       val (k, v) = kv
-      U.mustUnify(accK, k).flatMap({
+      U.unifyIfNecessary(accK, k).flatMap({
         case Some((_, k1, _)) => f(accV, v).map((k1, _, untouched))
         case None => M.point((accK, accV, kv :: untouched))
       })

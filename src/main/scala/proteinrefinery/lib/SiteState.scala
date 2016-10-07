@@ -46,15 +46,11 @@ object SiteState {
     type Delta = Uninhabited
     type F[X] = Option[X]
 
-    def mustUnify(s1: SiteState, s2: SiteState): Option[Option[(Option[Delta], SiteState, Option[Delta])]] = {
+    def mustUnify(s1: SiteState, s2: SiteState): Boolean = {
       // When we consider state within an agent, we never _have_ to unify two states within an agent,
       // because they can refer to different sites. Since there is never an obligation to unify,
       // there can never be failure either.
-      Some(None)
-      //^    ^
-      //|    |
-      //|    +---- no obligation to unify
-      //+--------- not a failure
+      false
     }
 
     def unify(s1: SiteState, s2: SiteState): Option[(Option[Delta], SiteState, Option[Delta])] = {

@@ -76,9 +76,8 @@ object ISite {
         type Delta = Set[A] // diff
         type F[X] = Id[X]
 
-        def mustUnify(s1: Set[A], s2: Set[A]): Option[(Option[Delta], Set[A], Option[Delta])] =
-          if((s1 intersect s2).nonEmpty) Some((diff(s1, s2), s1 union s2, diff(s2, s1)))
-          else None
+        def mustUnify(s1: Set[A], s2: Set[A]): Boolean =
+          (s1 intersect s2).nonEmpty
 
         def unify(s1: Set[A], s2: Set[A]): (Option[Delta], Set[A], Option[Delta]) =
           (diff(s1, s2), s1 union s2, diff(s2, s1))

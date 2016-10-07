@@ -31,7 +31,7 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) extends An
     //                     v     v      v        v   v      v         v
     elems.foldLeftM[M, (List[A], A, Option[Δ], List[(A, Option[Δ], Option[Δ])])]((Nil, a, None, Nil))((acc, elem) => {
       val (untouched, a, da, unified) = acc
-      U.mustUnify(a, elem) map {
+      U.unifyIfNecessary(a, elem) map {
         case Some((da1, a, de)) => (untouched, a, combineDeltasO(da, da1)(U), (elem, de, da1) :: unified)
         case None => (elem::untouched, a, da, unified)
       }
