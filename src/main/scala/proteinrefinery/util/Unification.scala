@@ -6,7 +6,7 @@ import scala.language.higherKinds
 import nutcracker.{Dom, Promise}
 
 import scalaz.\&/.{Both, That, This}
-import scalaz.{Applicative, Equal, Functor, Monad, MonadPartialOrder, \&/}
+import scalaz.{Equal, Functor, Monad, MonadPartialOrder, \&/}
 import scalaz.Isomorphism.<=>
 import scalaz.syntax.equal._
 import scalaz.syntax.monad._
@@ -15,27 +15,6 @@ trait Unification[A] {
   type Update
   type Delta
   type F[_]
-
-  // Laws:
-  //  - mustUnify(a, b) = mustUnify(b, a)
-  //  - if update_(a, u) = a' and mustUnify(a, b), then mustUnify(a', b)
-  //  - if mustUnify(a, unify(b, c)), then mustUnify(a, b) or mustUnify(a, c)
-  // Additionally, for reflexive identification:
-  //  - mustUnify(a, a)
-  def mustUnify(a1: A, a2: A): Boolean
-
-
-  //                                                                    +----------------------------------- an effect to track inevitable failure (obligation to unify and
-  //                                                                    |                                        impossibility to unify at the same time)
-  //                                                                    |    +------------------------------ None means no obligation to unify, Some means obligation to unify
-  //                                                                    |    |        +--------------------- diff that takes `a1` to the unified value
-  //                                                                    |    |        |          +---------- the unified value
-  //                                                                    |    |        |          |      +--- diff that takes `a2` to the unified value
-  //                                                                    |    |        |          |      |
-  //                                                                    v    v        v          v      v
-  final def unifyIfNecessary(a1: A, a2: A)(implicit F: Applicative[F]): F[Option[(Option[Delta], A, Option[Delta])]] =
-    if(mustUnify(a1, a2)) unify(a1, a2).map(Some(_))
-    else F.point(None)
 
   def unify(a1: A, a2: A): F[(Option[Delta], A, Option[Delta])]
   //                       ^      ^          ^      ^
@@ -52,9 +31,6 @@ trait Unification[A] {
     type Update = Unification.this.Update
     type Delta = Unification.this.Delta
     type F[X] = N[X]
-
-    def mustUnify(a1: A, a2: A): Boolean =
-      Unification.this.mustUnify(a1, a2)
 
     def unify(a1: A, a2: A): N[(Option[Delta], A, Option[Delta])] =
       mn(Unification.this.unify(a1, a2))
@@ -73,9 +49,6 @@ object Unification {
       type Delta = UB.Delta
       type F[X] = M[X]
 
-      def mustUnify(a1: A, a2: A): Boolean =
-        UB.mustUnify(iso.to(a1), iso.to(a2))
-
       def unify(a1: A, a2: A): M[(Option[Delta], A, Option[Delta])] =
         UB.unify(iso.to(a1), iso.to(a2)).map({ case (d1, b, d2) => (d1, iso.from(b), d2) })
 
@@ -87,9 +60,6 @@ object Unification {
       type Update = UA.Update \&/ UB.Update
       type Delta = UA.Delta \&/ UB.Delta
       type F[X] = M[X]
-
-      def mustUnify(ab1: (A, B), ab2: (A, B)): Boolean =
-        UA.mustUnify(ab1._1, ab2._1) || UB.mustUnify(ab1._2, ab2._2)
 
       def unify(ab1: (A, B), ab2: (A, B)): F[(Option[Delta], (A, B), Option[Delta])] =
         M.apply2(UA.unify(ab1._1, ab2._1), UB.unify(ab1._2, ab2._2))((dad, dbd) => {
@@ -108,32 +78,10 @@ object Unification {
       }
     }
 
-  def obligatoryPromiseUnification[A: Equal]: Unification.Aux0[Promise[A], Option] = new Unification[Promise[A]] {
+  def promiseUnification[A: Equal]: Unification.Aux[Promise[A], Promise.Update[A], Promise.Delta[A], Option] = new Unification[Promise[A]] {
     type Update = Promise.Update[A]
     type Delta = Promise.Delta[A]
     type F[X] = Option[X]
-
-    def mustUnify(p1: Promise[A], p2: Promise[A]): Boolean =
-      (p1, p2) match {
-        case (Completed(a1), Completed(a2)) => a1 === a2
-        case (Conflict, _) => true
-        case (_, Conflict) => true
-        case _ => false
-      }
-
-    def unify(p1: Promise[A], p2: Promise[A]): Option[(Option[Delta], Promise[A], Option[Delta])] =
-      canUnifyPromise(p1, p2)
-
-    def dom: Dom.Aux[Promise[A], Update, Delta] = Promise.promiseDomain[A]
-  }
-
-  def optionalPromiseUnification[A: Equal]: Unification.Aux0[Promise[A], Option] = new Unification[Promise[A]] {
-    type Update = Promise.Update[A]
-    type Delta = Promise.Delta[A]
-    type F[X] = Option[X]
-
-    def mustUnify(p1: Promise[A], p2: Promise[A]): Boolean =
-      false
 
     def unify(p1: Promise[A], p2: Promise[A]): Option[(Option[Delta], Promise[A], Option[Delta])] =
       canUnifyPromise(p1, p2)

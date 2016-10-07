@@ -12,12 +12,12 @@ import scalaz.syntax.foldable._
 class AutoUnificationBag[A] private(private[util] val elems: List[A]) extends AnyVal {
   def size: Int = elems.size
 
-  def add[M[_]](a: A)(implicit U: Unification.Aux0[A, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[U.Delta])])] = {
+  def add[M[_]](a: A)(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[I.Delta])])] = {
     collect(a).map({ case (untouched, a, deltas) => (new AutoUnificationBag[A](a :: untouched.elems), a, deltas) })
   }
 
-  def collect[M[_]](a: A)(implicit U: Unification.Aux0[A, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[U.Delta])])] = {
-    type Δ = U.Delta
+  def collect[M[_]](a: A)(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[I.Delta])])] = {
+    type Δ = I.Delta
 
     //                     +---------------------------------------------- elems not touched by unification
     //                     |     +---------------------------------------- accumulation of the unified value
@@ -31,14 +31,14 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) extends An
     //                     v     v      v        v   v      v         v
     elems.foldLeftM[M, (List[A], A, Option[Δ], List[(A, Option[Δ], Option[Δ])])]((Nil, a, None, Nil))((acc, elem) => {
       val (untouched, a, da, unified) = acc
-      U.unifyIfNecessary(a, elem) map {
-        case Some((da1, a, de)) => (untouched, a, combineDeltasO(da, da1)(U), (elem, de, da1) :: unified)
+      I.unifyIfNecessary(a, elem) map {
+        case Some((da1, a, de)) => (untouched, a, combineDeltasO(da, da1)(I), (elem, de, da1) :: unified)
         case None => (elem::untouched, a, da, unified)
       }
     }) map { case (untouched, aa, da, unified0) =>
 
       @tailrec def applyDeltas(ads: List[(A, Option[Δ], Option[Δ])], d: Option[Δ], acc: List[(A, Option[Δ])]): List[(A, Option[Δ])] = ads match {
-        case (a, dh, dt) :: tail => applyDeltas(tail, combineDeltasO(dt, d)(U), (a, combineDeltasO(dh, d)(U)) :: acc)
+        case (a, dh, dt) :: tail => applyDeltas(tail, combineDeltasO(dt, d)(I), (a, combineDeltasO(dh, d)(I)) :: acc)
         case Nil => acc
       }
 
@@ -48,12 +48,12 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) extends An
     }
   }
 
-  def union[M[_]](that: AutoUnificationBag[A])(implicit U: Unification.Aux0[A, M], M: Monad[M]): M[AutoUnificationBag[A]] = {
+  def union[M[_]](that: AutoUnificationBag[A])(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[AutoUnificationBag[A]] = {
     val (bag, elems) = if (this.size >= that.size) (this, that.elems) else (that, this.elems)
     bag.addAll(elems)
   }
 
-  def addAll[F[_], M[_]](fa: F[A])(implicit U: Unification.Aux0[A, M], M: Monad[M], F: Foldable[F]): M[AutoUnificationBag[A]] =
+  def addAll[F[_], M[_]](fa: F[A])(implicit I: Identification.Aux0[A, M], M: Monad[M], F: Foldable[F]): M[AutoUnificationBag[A]] =
     fa.foldLeftM(this)((bag, elem) => bag.add(elem).map(_._1))
 
   def list: List[A] =
@@ -62,7 +62,7 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) extends An
   def foreach(f: A => Unit): Unit =
     elems.foreach(f)
 
-  def map[N[_], B](f: A => B)(implicit U: Unification.Aux0[B, N], N: Monad[N]): N[AutoUnificationBag[B]] =
+  def map[N[_], B](f: A => B)(implicit I: Identification.Aux0[B, N], N: Monad[N]): N[AutoUnificationBag[B]] =
     AutoUnificationBag.empty[B].addAll(elems.map(f))
 
   /** Like `map`, but assumes that `f` preserves the non-obligation to unify. In other words,
@@ -79,8 +79,8 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) extends An
   def restrictToMap[K, V](implicit ev: A === (K, V)): AutoUnificationMap[K, V] =
     new AutoUnificationMap[K, V](ev.subst[List](elems))
 
-  private def combineDeltasO[Δ](d1: Option[Δ], d2: Option[Δ])(implicit U: Unification[A]{ type Delta = Δ }): Option[Δ] = (d1, d2) match {
-    case (Some(d1), Some(d2)) => Some(U.dom.combineDeltas(d1, d2))
+  private def combineDeltasO[Δ](d1: Option[Δ], d2: Option[Δ])(implicit I: Identification[A]{ type Delta = Δ }): Option[Δ] = (d1, d2) match {
+    case (Some(d1), Some(d2)) => Some(I.unification.dom.combineDeltas(d1, d2))
     case (None, d2) => d2
     case _ => d1
   }
@@ -91,7 +91,7 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) extends An
 object AutoUnificationBag {
   def empty[A]: AutoUnificationBag[A] = new AutoUnificationBag(Nil)
 
-  def apply[M[_], A](as: A*)(implicit U: Unification.Aux0[A, M], M: Monad[M]): M[AutoUnificationBag[A]] =
+  def apply[M[_], A](as: A*)(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[AutoUnificationBag[A]] =
     empty[A].addAll(as)
 
   implicit def equalInstance[A: Equal]: Equal[AutoUnificationBag[A]] = new Equal[AutoUnificationBag[A]] {

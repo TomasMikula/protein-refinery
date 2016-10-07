@@ -25,9 +25,9 @@ class ProteinModificationsTests extends FunSuite {
     assert(!mods3.isAdmissible)
   }
 
-  test("site unification") {
+  test("site identification") {
     val s = Site.fromLabel(SiteLabel("a"))
-    Site.unificationInstance.unifyIfNecessary(s, s) match {
+    Site.identificationInstance.unifyIfNecessary(s, s) match {
       case None => assert(false, "unexpected unification failure")
       case Some(None) => assert(false, "unexpected non-unifiability")
       case Some(Some((d1, s2, d2))) =>
@@ -37,9 +37,9 @@ class ProteinModificationsTests extends FunSuite {
     }
   }
 
-  test("site with state unification") {
+  test("site with state identification") {
     val ss1 = SiteWithState(SiteLabel("a"), SiteState("x"))
-    AdmissibleProteinModifications.siteWithStateUnification.unifyIfNecessary(ss1, ss1) match {
+    AdmissibleProteinModifications.siteWithStateIdentification.unifyIfNecessary(ss1, ss1) match {
       case None => assert(false, "unexpected unification failure")
       case Some(None) => assert(false, "unexpected non-unifiability")
       case Some(Some((d1, ss2, d2))) =>

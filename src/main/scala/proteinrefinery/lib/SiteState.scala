@@ -3,7 +3,7 @@ package proteinrefinery.lib
 import nutcracker.{Dom, Promise}
 import nutcracker.Dom.Status
 import nutcracker.util.Uninhabited
-import proteinrefinery.util.{HomSet, Unification}
+import proteinrefinery.util.{HomSet, Identification, Unification}
 
 import scalaz.Equal
 import scalaz.syntax.equal._
@@ -41,17 +41,10 @@ object SiteState {
       else Nil
   }
 
-  implicit def unificationInstance: Unification.Aux0[SiteState, Option] = new Unification[SiteState] {
+  implicit def unificationInstance: Unification.Aux[SiteState, Uninhabited, Uninhabited, Option] = new Unification[SiteState] {
     type Update = Uninhabited
     type Delta = Uninhabited
     type F[X] = Option[X]
-
-    def mustUnify(s1: SiteState, s2: SiteState): Boolean = {
-      // When we consider state within an agent, we never _have_ to unify two states within an agent,
-      // because they can refer to different sites. Since there is never an obligation to unify,
-      // there can never be failure either.
-      false
-    }
 
     def unify(s1: SiteState, s2: SiteState): Option[(Option[Delta], SiteState, Option[Delta])] = {
       if(s1 == s2) Some((None, s1, None))
@@ -59,5 +52,20 @@ object SiteState {
     }
 
     val dom: Dom.Aux[SiteState, Update, Delta] = SiteState.domInstance
+  }
+
+  implicit def identificationInstance: Identification.Aux0[SiteState, Option] = new Identification[SiteState] {
+    type Update = Uninhabited
+    type Delta = Uninhabited
+    type F[X] = Option[X]
+
+    def necessarilySame(s1: SiteState, s2: SiteState): Boolean = {
+      // When we consider state within an agent, we never _have_ to unify two states within an agent,
+      // because they can refer to different sites. Since there is never an obligation to unify,
+      // there can never be failure either.
+      false
+    }
+
+    val unification: Unification.Aux[SiteState, Update, Delta, F] = SiteState.unificationInstance
   }
 }

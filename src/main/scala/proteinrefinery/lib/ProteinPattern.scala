@@ -6,8 +6,7 @@ import nutcracker.{Antichain, Dom, Promise}
 import nutcracker.syntax.dom._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteLabel._
-import proteinrefinery.util.Unification
-
+import proteinrefinery.util.{Identification, Unification}
 
 import scalaz.{Monad, Show}
 import scalaz.std.either._
@@ -87,9 +86,11 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
     })
 
     implicit val siteAttrUnif: Unification.Aux0[SiteAttr, Option] =
-      Unification.tuple2[Option, Promise[LinkDesc], Promise[SiteState]](Unification.optionalPromiseUnification[LinkDesc], Unification.optionalPromiseUnification[SiteState], Monad[Option])
+      Unification.tuple2[Option, Promise[LinkDesc], Promise[SiteState]](Unification.promiseUnification[LinkDesc], Unification.promiseUnification[SiteState], Monad[Option])
     implicit val unif: Unification.Aux0[(ISite, SiteAttr), Option] =
       Unification.tuple2[Option, ISite, SiteAttr]
+    implicit val ident: Identification.Aux0[(ISite, SiteAttr), Option] =
+      Identification.by[(ISite, SiteAttr), ISite](_._1)
 
     val bagOpt = mods1.addAll(bonds1)
 

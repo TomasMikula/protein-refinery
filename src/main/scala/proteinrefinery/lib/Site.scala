@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import nutcracker.{Dom, Promise}
 import nutcracker.Promise.{Complete, Completed, Conflict, Empty}
-import proteinrefinery.util.{HomSet, Unification}
+import proteinrefinery.util.{HomSet, Identification, Unification}
 import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
 
 import scalaz.Id.Id
@@ -46,7 +46,10 @@ object Site {
   }
 
   implicit def unificationInstance: Unification.Aux0[Site.Dom, Option] =
-    Unification.obligatoryPromiseUnification[SiteLabel]
+    Unification.promiseUnification[SiteLabel]
+
+  implicit def identificationInstance: Identification.Aux0[Site.Dom, Option] =
+    Identification.promiseIdentification[SiteLabel]
 }
 
 /** Site together with a bag of site references. */
@@ -66,27 +69,33 @@ object ISite {
     }
   }
 
-  implicit def unificationInstance: Unification.Aux0[ISite, Option] = {
+  implicit def identificationInstance: Identification.Aux0[ISite, Option] = {
 
-    implicit def rawUnificationInstance: Unification.Aux0[(Site.Dom, Set[Site.Ref]), Option] = {
-      implicit def siteUnification: Unification.Aux0[Site.Dom, Option] = Site.unificationInstance
+    implicit def rawIdentificationInstance: Identification.Aux0[(Site.Dom, Set[Site.Ref]), Option] = {
+      implicit def siteIdentification: Identification.Aux0[Site.Dom, Option] = Site.identificationInstance
 
-      def setUnificationByNonEmptyIntersection[A]: Unification.Aux0[Set[A], Id] = new Unification[Set[A]] {
+      def setIdentificationByNonEmptyIntersection[A]: Identification.Aux0[Set[A], Id] = new Identification[Set[A]] {
         type Update = Set[A] // what to add
         type Delta = Set[A] // diff
         type F[X] = Id[X]
 
-        def mustUnify(s1: Set[A], s2: Set[A]): Boolean =
+        def necessarilySame(s1: Set[A], s2: Set[A]): Boolean =
           (s1 intersect s2).nonEmpty
 
-        def unify(s1: Set[A], s2: Set[A]): (Option[Delta], Set[A], Option[Delta]) =
-          (diff(s1, s2), s1 union s2, diff(s2, s1))
+        def unification: Unification.Aux[Set[A], Set[A], Set[A], Id] = new Unification[Set[A]] {
+          type Update = Set[A] // what to add
+          type Delta = Set[A] // diff
+          type F[X] = Id[X]
 
-        def dom: Dom.Aux[Set[A], Update, Delta] = ???
+          def unify(s1: Set[A], s2: Set[A]): (Option[Delta], Set[A], Option[Delta]) =
+            (diff(s1, s2), s1 union s2, diff(s2, s1))
 
-        @inline private def diff(s1: Set[A], s2: Set[A]): Option[Set[A]] = {
-          val d = s1 diff s2
-          if(d.nonEmpty) Some(d) else None
+          def dom: Dom.Aux[Set[A], Update, Delta] = ???
+
+          @inline private def diff(s1: Set[A], s2: Set[A]): Option[Set[A]] = {
+            val d = s1 diff s2
+            if (d.nonEmpty) Some(d) else None
+          }
         }
       }
 
@@ -97,14 +106,17 @@ object ISite {
         def promote[A](m2: Id[A]): Option[A] = Some(m2)
       }
 
-      implicit def setUnificationByNonEmptyIntersectionOpt[A]: Unification.Aux0[Set[A], Option] =
-        setUnificationByNonEmptyIntersection[A].promote[Option]
+      implicit def setIdentificationByNonEmptyIntersectionOpt[A]: Identification.Aux0[Set[A], Option] =
+        setIdentificationByNonEmptyIntersection[A].promote[Option]
 
-      Unification.tuple2[Option, Site.Dom, Set[Site.Ref]]
+      Identification.tuple2[Option, Site.Dom, Set[Site.Ref]]
     }
 
-    Unification.via[Option, ISite, (Site.Dom, Set[Site.Ref])](pairIso)
+    Identification.via[Option, ISite, (Site.Dom, Set[Site.Ref])](pairIso)
   }
+
+  implicit def unificationInstance: Unification.Aux0[ISite, Option] =
+    identificationInstance.unification
 
   // Not really an isomorphism, since ISite does not allow both components to be bottom at the same time.
   // Anyway, it still is a monomorphism, which is sufficient to get a correct Unification instance via.
