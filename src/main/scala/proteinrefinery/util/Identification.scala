@@ -19,8 +19,6 @@ trait Identification[A] {
   //  - necessarilySame(a, b) = necessarilySame(b, a)
   //  - if update_(a, u) = a' and necessarilySame(a, b), then necessarilySame(a', b)
   //  - if necessarilySame(a, unify(b, c)), then necessarilySame(a, b) or necessarilySame(a, c)
-  // Additionally, for reflexive identification:
-  //  - necessarilySame(a, a)
   def necessarilySame(a1: A, a2: A): Boolean
 
   def unification: Unification.Aux[A, Update, Delta, F]
