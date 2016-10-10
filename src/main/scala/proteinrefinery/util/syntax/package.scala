@@ -1,8 +1,34 @@
 package proteinrefinery.util
 
+import scala.annotation.tailrec
 import scala.collection.mutable.{Map => MMap}
 
 package object syntax {
+
+  implicit class ListOps[A](l: List[A]) {
+    def split[B, C](f: A => Either[B, C]): (List[B], List[C]) = {
+      val builderB = List.newBuilder[B]
+      val builderC = List.newBuilder[C]
+      l.foreach(f(_) match {
+        case Left(b) => builderB += b
+        case Right(c) => builderC += c
+      })
+      (builderB.result(), builderC.result())
+    }
+
+    def removeFirst(p: A => Boolean): Option[(A, List[A])] = {
+      val i = l.indexWhere(p)
+      if(i < 0) None
+      else {
+        @tailrec
+        def go(n: Int, rev: List[A], tail: List[A]): (A, List[A]) =
+          if(n == 0) (tail.head, rev reverse_::: tail.tail)
+          else go(n-1, tail.head :: rev, tail.tail)
+
+        Some(go(i, Nil, l))
+      }
+    }
+  }
 
   implicit class IteratorOps[A](it: Iterator[A]) {
     def toMultiMap[K, V](implicit ev: A =:= (K, V)): Map[K, List[V]] = {
