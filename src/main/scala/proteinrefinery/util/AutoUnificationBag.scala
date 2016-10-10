@@ -2,6 +2,8 @@ package proteinrefinery.util
 
 import scala.annotation.tailrec
 import scala.language.higherKinds
+
+import proteinrefinery.util.syntax._
 import scalaz.Leibniz.===
 import scalaz.{Equal, Foldable, Monad, Monoid}
 import scalaz.std.list._
@@ -9,7 +11,8 @@ import scalaz.syntax.applicative._
 import scalaz.syntax.equal._
 import scalaz.syntax.foldable._
 
-class AutoUnificationBag[A] private(private[util] val elems: List[A]) extends AnyVal {
+class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends AnyVal
+{
   def size: Int = elems.size
 
   def add[M[_]](a: A)(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[I.Delta])])] = {
@@ -55,6 +58,36 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) extends An
 
   def addAll[F[_], M[_]](fa: F[A])(implicit I: Identification.Aux0[A, M], M: Monad[M], F: Foldable[F]): M[AutoUnificationBag[A]] =
     fa.foldLeftM(this)((bag, elem) => bag.add(elem).map(_._1))
+
+  def addAll1[F[_], M[_]](fa: F[A])(implicit
+    I: Identification.Aux0[A, M],
+    M: Monad[M],           //     +------------ newly added elements
+    F: Foldable[F],        //     |        +--- modified elements
+    A: Equal[A]            //     v        v
+  ): M[(AutoUnificationBag[A], List[A], List[(A, Option[I.Delta])])] = {
+    case class Node(value: A, children: List[(Node, Option[I.Delta])]) {
+      def flatten: (A, List[(A, Option[I.Delta])]) = (value, children.flatMap({ case (node, delta) =>
+        node.flatten._2.map({ case (a, d) => (a, combineDeltasO(d, delta)(I)) })
+      }))
+    }
+    fa.foldLeftM[M, (AutoUnificationBag[A], List[Node])]((this, Nil))((acc, elem) => {
+      val (bag, roots) = acc
+      bag.add(elem).map({ case (bag, addedElem, deltas) =>
+        deltas.foldLeft[(List[Node], List[(Node, Option[I.Delta])])]((roots, Nil))({ case ((roots, children), (elem, delta)) =>
+          roots.removeFirst(_.value === elem) match {
+            case Some((node, roots)) => (roots, (node, delta) :: children)
+            case None => (roots, (Node(elem, Nil), delta) :: children)
+          }
+        }) match { case (roots, children) => (bag, Node(addedElem, children) :: roots) }
+      })
+    }).map({ case (bag, roots) =>
+      val (newElems, modifiedElems) = roots.map(_.flatten).split({
+        case (a, Nil) => Left(a)
+        case (_, deltas) => Right(deltas)
+      })
+      (bag, newElems, modifiedElems.flatten)
+    })
+  }
 
   def list: List[A] =
     elems
