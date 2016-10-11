@@ -64,7 +64,7 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
     M: Monad[M],           //     +------------ newly added elements
     F: Foldable[F],        //     |        +--- modified elements
     A: Equal[A]            //     v        v
-  ): M[(AutoUnificationBag[A], List[A], List[(A, Option[I.Delta])])] = {
+  ): M[(AutoUnificationBag[A], List[A], List[(A, I.Delta)])] = {
     case class Node(value: A, children: List[(Node, Option[I.Delta])]) {
       def flatten: (A, List[(A, Option[I.Delta])]) = (value, children.flatMap({ case (node, delta) =>
         node.flatten._2.map({ case (a, d) => (a, combineDeltasO(d, delta)(I)) })
@@ -83,9 +83,21 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
     }).map({ case (bag, roots) =>
       val (newElems, modifiedElems) = roots.map(_.flatten).split({
         case (a, Nil) => Left(a)
-        case (_, deltas) => Right(deltas)
+        case (_, d::ds) => Right((d, ds))
       })
-      (bag, newElems, modifiedElems.flatten)
+      (bag, newElems, modifiedElems.flatMap(dds => {
+        val (d, ds) = dds
+        ds match {
+          case Nil =>
+            val (a, dOpt) = d
+            dOpt match {
+              case Some(δ) => List((a, δ))
+              case None => List() // only one element unified with element from fa, but unchanged, thus don't report
+            }
+          case ds =>
+            (d::ds).map(ad => (ad._1, ad._2.get)) // if there are multiple elements, no delta can be None
+        }
+      }))
     })
   }
 
