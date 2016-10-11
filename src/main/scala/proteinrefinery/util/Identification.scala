@@ -6,6 +6,7 @@ import nutcracker.Promise
 import nutcracker.Promise.{Completed, Conflict}
 
 import scalaz.{Applicative, Equal, Functor, Monad, MonadPartialOrder, \&/}
+import scalaz.Id.Id
 import scalaz.Isomorphism.<=>
 import scalaz.syntax.equal._
 import scalaz.syntax.functor._
@@ -88,10 +89,10 @@ object Identification {
         Unification.tuple2[M, A, B](IA.unification, IB.unification, M)
     }
 
-  def promiseIdentification[A: Equal]: Identification.Aux0[Promise[A], Option] = new Identification[Promise[A]] {
+  def promiseIdentification[A: Equal]: Identification.Aux0[Promise[A], Id] = new Identification[Promise[A]] {
     type Update = Promise.Update[A]
     type Delta = Promise.Delta[A]
-    type F[X] = Option[X]
+    type F[X] = Id[X]
 
     def necessarilySame(p1: Promise[A], p2: Promise[A]): Boolean =
       (p1, p2) match {
@@ -101,7 +102,7 @@ object Identification {
         case _ => false
       }
 
-    def unification: Unification.Aux[Promise[A], Update, Delta, Option] =
+    def unification: Unification.Aux[Promise[A], Update, Delta, Id] =
       Unification.promiseUnification[A]
   }
 }

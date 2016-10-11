@@ -8,7 +8,6 @@ import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
 import scalaz.Id.Id
 import scalaz.Isomorphism.<=>
 import scalaz.{Equal, Monad, MonadPartialOrder, Show}
-import scalaz.std.option._
 import scalaz.syntax.equal._
 
 object Site {
@@ -45,10 +44,10 @@ object Site {
     }
   }
 
-  implicit def unificationInstance: Unification.Aux0[Site.Dom, Option] =
+  implicit def unificationInstance: Unification.Aux0[Site.Dom, Id] =
     Unification.promiseUnification[SiteLabel]
 
-  implicit def identificationInstance: Identification.Aux0[Site.Dom, Option] =
+  implicit def identificationInstance: Identification.Aux0[Site.Dom, Id] =
     Identification.promiseIdentification[SiteLabel]
 }
 
@@ -69,12 +68,12 @@ object ISite {
     }
   }
 
-  implicit def identificationInstance: Identification.Aux0[ISite, Option] = {
+  implicit def identificationInstance: Identification.Aux0[ISite, Id] = {
 
-    implicit def rawIdentificationInstance: Identification.Aux0[(Site.Dom, Set[Site.Ref]), Option] = {
-      implicit def siteIdentification: Identification.Aux0[Site.Dom, Option] = Site.identificationInstance
+    implicit def rawIdentificationInstance: Identification.Aux0[(Site.Dom, Set[Site.Ref]), Id] = {
+      implicit def siteIdentification: Identification.Aux0[Site.Dom, Id] = Site.identificationInstance
 
-      def setIdentificationByNonEmptyIntersection[A]: Identification.Aux0[Set[A], Id] = new Identification[Set[A]] {
+      implicit def setIdentificationByNonEmptyIntersection[A]: Identification.Aux0[Set[A], Id] = new Identification[Set[A]] {
         type Update = Set[A] // what to add
         type Delta = Set[A] // diff
         type F[X] = Id[X]
@@ -99,24 +98,22 @@ object ISite {
         }
       }
 
-      implicit val idToOption: MonadPartialOrder[Option, Id] = new MonadPartialOrder[Option, Id] {
-        override implicit val MG: Monad[Option] = implicitly
-        override implicit val MF: Monad[Id] = implicitly
-
-        def promote[A](m2: Id[A]): Option[A] = Some(m2)
-      }
-
-      implicit def setIdentificationByNonEmptyIntersectionOpt[A]: Identification.Aux0[Set[A], Option] =
-        setIdentificationByNonEmptyIntersection[A].promote[Option]
-
-      Identification.tuple2[Option, Site.Dom, Set[Site.Ref]]
+      Identification.tuple2[Id, Site.Dom, Set[Site.Ref]]
     }
 
-    Identification.via[Option, ISite, (Site.Dom, Set[Site.Ref])](pairIso)
+    Identification.via[Id, ISite, (Site.Dom, Set[Site.Ref])](pairIso)
   }
 
-  implicit def unificationInstance: Unification.Aux0[ISite, Option] =
+  implicit def unificationInstance: Unification.Aux0[ISite, Id] =
     identificationInstance.unification
+
+  implicit def unificationOptionInstance: Unification.Aux0[ISite, Option] =
+    unificationInstance.promote[Option](new MonadPartialOrder[Option, Id] {
+      override implicit val MG: Monad[Option] = implicitly
+      override implicit val MF: Monad[Id] = implicitly
+
+      def promote[A](m2: Id[A]): Option[A] = Some(m2)
+    })
 
   // Not really an isomorphism, since ISite does not allow both components to be bottom at the same time.
   // Anyway, it still is a monomorphism, which is sufficient to get a correct Unification instance via.

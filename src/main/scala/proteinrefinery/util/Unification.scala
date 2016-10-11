@@ -7,6 +7,7 @@ import nutcracker.{Dom, Promise}
 
 import scalaz.\&/.{Both, That, This}
 import scalaz.{Equal, Functor, Monad, MonadPartialOrder, \&/}
+import scalaz.Id.Id
 import scalaz.Isomorphism.<=>
 import scalaz.syntax.equal._
 import scalaz.syntax.monad._
@@ -78,24 +79,22 @@ object Unification {
       }
     }
 
-  def promiseUnification[A: Equal]: Unification.Aux[Promise[A], Promise.Update[A], Promise.Delta[A], Option] = new Unification[Promise[A]] {
+  def promiseUnification[A: Equal]: Unification.Aux[Promise[A], Promise.Update[A], Promise.Delta[A], Id] = new Unification[Promise[A]] {
     type Update = Promise.Update[A]
     type Delta = Promise.Delta[A]
-    type F[X] = Option[X]
+    type F[X] = Id[X]
 
-    def unify(p1: Promise[A], p2: Promise[A]): Option[(Option[Delta], Promise[A], Option[Delta])] =
-      canUnifyPromise(p1, p2)
+    def unify(p1: Promise[A], p2: Promise[A]): (Option[Delta], Promise[A], Option[Delta]) =
+      (p1, p2) match {
+        case (Completed(a1), Completed(a2)) => if (a1 === a2) (None, p1, None) else (Some(()), Conflict, Some(()))
+        case (Conflict, Conflict) => (None, Conflict, None)
+        case (Conflict, _) => (None, Conflict, Some(()))
+        case (_, Conflict) => (Some(()), Conflict, None)
+        case (Empty, Completed(a2)) => (Some(()), Completed(a2), None)
+        case (Completed(a1), Empty) => (None, Completed(a1), Some(()))
+        case (Empty, Empty) => (None, Empty, None)
+      }
 
     def dom: Dom.Aux[Promise[A], Update, Delta] = Promise.promiseDomain[A]
   }
-
-  private def canUnifyPromise[A: Equal](p1: Promise[A], p2: Promise[A]): Option[(Option[Promise.Delta[A]], Promise[A], Option[Promise.Delta[A]])] =
-    (p1, p2) match {
-      case (Completed(a1), Completed(a2)) => if (a1 === a2) Some((None, p1, None)) else None
-      case (Conflict, _) => None // pretend failure to unify, instead of unifying with a failure (which is always possible)
-      case (_, Conflict) => None // pretend failure to unify, instead of unifying with a failure (which is always possible)
-      case (Empty, Completed(a2)) => Some((Some(()), Completed(a2), None))
-      case (Completed(a1), Empty) => Some((None, Completed(a1), Some(())))
-      case (Empty, Empty) => Some((None, Empty, None))
-    }
 }

@@ -9,9 +9,9 @@ import proteinrefinery.lib.SiteLabel._
 import proteinrefinery.util.{Identification, Unification}
 
 import scalaz.{Monad, Show}
+import scalaz.Id._
 import scalaz.std.either._
 import scalaz.std.list._
-import scalaz.std.option._
 import scalaz.syntax.show._
 
 sealed trait ProteinPattern {
@@ -85,14 +85,17 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
       (siteDesc, (Promise.empty[LinkDesc], Promise.completed(state)))
     })
 
-    implicit val siteAttrUnif: Unification.Aux0[SiteAttr, Option] =
-      Unification.tuple2[Option, Promise[LinkDesc], Promise[SiteState]](Unification.promiseUnification[LinkDesc], Unification.promiseUnification[SiteState], Monad[Option])
-    implicit val unif: Unification.Aux0[(ISite, SiteAttr), Option] =
-      Unification.tuple2[Option, ISite, SiteAttr]
-    implicit val ident: Identification.Aux0[(ISite, SiteAttr), Option] =
+    implicit val siteAttrUnif: Unification.Aux0[SiteAttr, Id] =
+      Unification.tuple2[Id, Promise[LinkDesc], Promise[SiteState]](
+        Unification.promiseUnification[LinkDesc],
+        Unification.promiseUnification[SiteState],
+        Monad[Id])
+    implicit val unif: Unification.Aux0[(ISite, SiteAttr), Id] =
+      Unification.tuple2[Id, ISite, SiteAttr]
+    implicit val ident: Identification.Aux0[(ISite, SiteAttr), Id] =
       Identification.by[(ISite, SiteAttr), ISite](_._1)
 
-    val bagOpt = mods1.addAll(bonds1)
+    val bag = mods1.addAll(bonds1)
 
     def siteStr(s: (ISite, SiteAttr)): String = {
       val (ISite(site, refs), (link, state)) = s
@@ -120,10 +123,7 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
       siteDesc + stateS + linkS
     }
 
-    val str = bagOpt match {
-      case Some(bag) => bag.list.map(siteStr).mkString(",")
-      case None => "⊥"
-    }
+    val str = bag.list.map(siteStr).mkString(",")
 
     s"${protein.name.name}($str)"
   }
