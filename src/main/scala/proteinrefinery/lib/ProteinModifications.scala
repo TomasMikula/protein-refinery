@@ -4,7 +4,7 @@ import nutcracker.Promise.Completed
 import nutcracker.{Dom, Join}
 import proteinrefinery.lib.AdmissibleProteinModifications.SiteWithState
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
-import proteinrefinery.util.{AutoUnificationBag, Identification}
+import proteinrefinery.util.{AutoUnificationBag, Identification, Unification}
 
 import scalaz.{Equal, Show}
 import scalaz.std.option._
@@ -87,7 +87,11 @@ object AdmissibleProteinModifications {
       scalaz.std.tuple.tuple2Equal[ISite, SiteState]
   }
 
-  implicit def siteWithStateIdentification: Identification.Aux0[SiteWithState, Option] = Identification.tuple2[Option, ISite, SiteState]
+  implicit def siteWithStateUnification: Unification.Aux0[SiteWithState, Option] =
+    Unification.tuple2[Option, ISite, SiteState]
+
+  implicit def siteWithStateIdentification: Identification.Aux0[SiteWithState, Option] =
+    Identification.by[SiteWithState, ISite](_._1)
 
   def apply(mods: (SiteLabel, SiteState)*): Option[AdmissibleProteinModifications] = {
     val mods1 = mods.map({ case (s, st) => SiteWithState(s, st) })
