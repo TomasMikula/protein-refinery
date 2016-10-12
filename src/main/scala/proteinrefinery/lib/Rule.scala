@@ -5,6 +5,7 @@ import nutcracker.Dom.Status
 import nutcracker.syntax.dom._
 import nutcracker.util.{ContF, FreeK, InjectK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
+import proteinrefinery.lib.SiteState.SiteState
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds

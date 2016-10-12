@@ -1,5 +1,6 @@
 package proteinrefinery.lib
 
+import nutcracker.Dom.Status
 import nutcracker.{Dom, Promise}
 import nutcracker.Promise.{Complete, Completed, Conflict, Empty}
 import proteinrefinery.util.{HomSet, Identification, Unification}
@@ -7,7 +8,7 @@ import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
 
 import scalaz.Id.Id
 import scalaz.Isomorphism.<=>
-import scalaz.{Equal, Monad, MonadPartialOrder, Show}
+import scalaz.{Equal, Show}
 import scalaz.syntax.equal._
 
 object Site {
@@ -81,7 +82,7 @@ object ISite {
         def necessarilySame(s1: Set[A], s2: Set[A]): Boolean =
           (s1 intersect s2).nonEmpty
 
-        def unification: Unification.Aux[Set[A], Set[A], Set[A], Id] = new Unification[Set[A]] {
+        val unification: Unification.Aux[Set[A], Set[A], Set[A], Id] = new Unification[Set[A]] {
           type Update = Set[A] // what to add
           type Delta = Set[A] // diff
           type F[X] = Id[X]
@@ -89,7 +90,20 @@ object ISite {
           def unify(s1: Set[A], s2: Set[A]): (Option[Delta], Set[A], Option[Delta]) =
             (diff(s1, s2), s1 union s2, diff(s2, s1))
 
-          def dom: Dom.Aux[Set[A], Update, Delta] = ???
+          val dom: Dom.Aux[Set[A], Update, Delta] = new Dom[Set[A]] {
+            type Update = Set[A] // what to add
+            type Delta = Set[A] // diff
+
+            def update(d: Set[A], u: Update): Option[(Set[A], Delta)] = {
+              val res = d union u
+              if(res.size == d.size) None
+              else Some((res, res diff d))
+            }
+
+            def combineDeltas(d1: Delta, d2: Delta): Delta = d1 union d2
+
+            def assess(d: Set[A]): Status[Update] = Dom.Refined
+          }
 
           @inline private def diff(s1: Set[A], s2: Set[A]): Option[Set[A]] = {
             val d = s1 diff s2
@@ -103,17 +117,6 @@ object ISite {
 
     Identification.via[Id, ISite, (Site.Dom, Set[Site.Ref])](pairIso)
   }
-
-  implicit def unificationInstance: Unification.Aux0[ISite, Id] =
-    identificationInstance.unification
-
-  implicit def unificationOptionInstance: Unification.Aux0[ISite, Option] =
-    unificationInstance.promote[Option](new MonadPartialOrder[Option, Id] {
-      override implicit val MG: Monad[Option] = implicitly
-      override implicit val MF: Monad[Id] = implicitly
-
-      def promote[A](m2: Id[A]): Option[A] = Some(m2)
-    })
 
   // Not really an isomorphism, since ISite does not allow both components to be bottom at the same time.
   // Anyway, it still is a monomorphism, which is sufficient to get a correct Unification instance via.

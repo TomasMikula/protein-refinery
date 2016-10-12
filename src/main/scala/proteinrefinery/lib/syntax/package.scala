@@ -1,8 +1,8 @@
 package proteinrefinery.lib
 
 import scala.language.implicitConversions
-
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
+import proteinrefinery.lib.SiteState.SiteState
 
 package object syntax {
 

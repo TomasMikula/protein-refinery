@@ -2,12 +2,14 @@ package proteinrefinery.lib
 
 import nutcracker.Promise.Completed
 import nutcracker.{Dom, Join}
+import nutcracker.syntax.dom._
 import proteinrefinery.lib.AdmissibleProteinModifications.SiteWithState
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
+import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{AutoUnificationBag, Identification, Unification}
 
 import scalaz.{Equal, Show}
-import scalaz.std.option._
+import scalaz.Id._
 import scalaz.std.tuple._
 import scalaz.syntax.equal._
 
@@ -43,14 +45,20 @@ case object InvalidProteinModifications extends ProteinModifications {
   def addModification(site: Site.Definite, state: SiteState): ProteinModifications = this
 }
 
-case class AdmissibleProteinModifications(mods: AutoUnificationBag[SiteWithState]) extends ProteinModifications {
+case class AdmissibleProteinModifications private(mods: AutoUnificationBag[SiteWithState]) extends ProteinModifications {
   import AdmissibleProteinModifications._
 
-  override def addModification(site: Site.Definite, state: SiteState): ProteinModifications =
-    ProteinModifications.fromOption(mods.add(SiteWithState(site, state)).map({ case (mods, _, _) => AdmissibleProteinModifications(mods) }))
+  override def addModification(site: Site.Definite, state: SiteState): ProteinModifications = {
+    val (mods, addedElem, _) = this.mods.add(SiteWithState(site, state))
+    if(addedElem.isFailed) InvalidProteinModifications
+    else AdmissibleProteinModifications(mods)
+  }
 
-  def combine0(that: AdmissibleProteinModifications): ProteinModifications =
-    ProteinModifications.fromOption((this.mods union that.mods).map(AdmissibleProteinModifications(_)))
+  def combine0(that: AdmissibleProteinModifications): ProteinModifications = {
+    val mods = this.mods union that.mods
+    if(mods.list.exists(_.isFailed)) InvalidProteinModifications
+    else AdmissibleProteinModifications(mods)
+  }
 
   def mentionedSites: Set[LocalSiteId] = {
     val buf = Set.newBuilder[LocalSiteId]
@@ -87,15 +95,19 @@ object AdmissibleProteinModifications {
       scalaz.std.tuple.tuple2Equal[ISite, SiteState]
   }
 
-  implicit def siteWithStateUnification: Unification.Aux0[SiteWithState, Option] =
-    Unification.tuple2[Option, ISite, SiteState]
+  import SiteState.unificationInstance
 
-  implicit def siteWithStateIdentification: Identification.Aux0[SiteWithState, Option] =
-    Identification.by[SiteWithState, ISite](_._1)
+  implicit def siteWithStateUnification: Unification.Aux0[SiteWithState, Id] =
+    Unification.tuple2[Id, ISite, SiteState]
+
+  implicit def siteWithStateIdentification: Identification.Aux0[SiteWithState, Id] =
+    Identification.by[SiteWithState, ISite](_._1)(siteWithStateUnification, ISite.identificationInstance)
 
   def apply(mods: (SiteLabel, SiteState)*): Option[AdmissibleProteinModifications] = {
     val mods1 = mods.map({ case (s, st) => SiteWithState(s, st) })
-    AutoUnificationBag(mods1:_*).map(AdmissibleProteinModifications(_))
+    val bag = AutoUnificationBag(mods1:_*)
+    if(bag.list.exists(siteWithStateUnification.dom.isFailed)) None
+    else Some(AdmissibleProteinModifications(bag))
   }
 
   def noModifications: AdmissibleProteinModifications =

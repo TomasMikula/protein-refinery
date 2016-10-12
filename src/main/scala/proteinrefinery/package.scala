@@ -8,7 +8,7 @@ import nutcracker.util.CoproductK._
 import nutcracker.util.KList._
 import proteinrefinery.util.{TrackLang, Tracker}
 
-package object proteinrefinery {
+package object proteinrefinery extends ImplicitConversions {
   type DeferL[K[_], A] = DeferLang[Cost, K, A]
   type DeferS[K] = DeferStore[Cost, K]
 

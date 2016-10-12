@@ -5,7 +5,6 @@ import proteinrefinery.lib.AdmissibleProteinModifications.SiteWithState
 import proteinrefinery.lib.AdmissibleProteinModifications.SiteWithState._
 
 import scalaz.Equal
-import scalaz.std.option._
 
 class ProteinModificationsTests extends FunSuite {
 
@@ -39,9 +38,8 @@ class ProteinModificationsTests extends FunSuite {
   test("site-with-state identification") {
     val ss1 = SiteWithState(SiteLabel("a"), SiteState("x"))
     AdmissibleProteinModifications.siteWithStateIdentification.unifyIfNecessary(ss1, ss1) match {
-      case None => assert(false, "unexpected unification failure")
-      case Some(None) => assert(false, "unexpected non-unifiability")
-      case Some(Some((d1, ss2, d2))) =>
+      case None => assert(false, "unexpected non-obligation to unify")
+      case Some((d1, ss2, d2)) =>
         assertEqual(ss2, ss1)
         assert(d1 === None)
         assert(d2 === None)

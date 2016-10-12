@@ -6,6 +6,7 @@ import nutcracker.{Antichain, Dom, Promise}
 import nutcracker.syntax.dom._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteLabel._
+import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{Identification, Unification}
 
 import scalaz.{Monad, Show}
@@ -67,7 +68,7 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
   def toString(bonds: Map[LocalSiteId, Either[Unbound.type, LinkId]]): String = {
     type LinkDesc = Either[Unbound.type, LinkId]
     type LinkDom  = Promise[LinkDesc]
-    type SiteAttr = (LinkDom, Promise[SiteState])
+    type SiteAttr = (LinkDom, SiteState)
 
     val bonds1: List[(ISite, SiteAttr)] =
       bonds.foldLeft[List[(ISite, SiteAttr)]](Nil)((l, siteIdLink) => {
@@ -82,18 +83,18 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
 
     val mods1 = mods.mods.inject(x => {
       val (siteDesc, state) = x
-      (siteDesc, (Promise.empty[LinkDesc], Promise.completed(state)))
+      (siteDesc, (Promise.empty[LinkDesc], state))
     })
 
     implicit val siteAttrUnif: Unification.Aux0[SiteAttr, Id] =
-      Unification.tuple2[Id, Promise[LinkDesc], Promise[SiteState]](
+      Unification.tuple2[Id, Promise[LinkDesc], SiteState](
         Unification.promiseUnification[LinkDesc],
-        Unification.promiseUnification[SiteState],
+        SiteState.unificationInstance,
         Monad[Id])
     implicit val unif: Unification.Aux0[(ISite, SiteAttr), Id] =
       Unification.tuple2[Id, ISite, SiteAttr]
     implicit val ident: Identification.Aux0[(ISite, SiteAttr), Id] =
-      Identification.by[(ISite, SiteAttr), ISite](_._1)
+      Identification.by[(ISite, SiteAttr), ISite](_._1)(unif, ISite.identificationInstance)
 
     val bag = mods1.addAll(bonds1)
 
@@ -109,7 +110,7 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
       }
       val stateS = state match {
         case Empty => ""
-        case Completed(st) => st.label
+        case Completed(label) => label.value
         case Conflict => "⊥"
       }
       val linkS = link match {
