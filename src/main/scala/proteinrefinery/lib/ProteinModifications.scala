@@ -3,14 +3,11 @@ package proteinrefinery.lib
 import nutcracker.Promise.Completed
 import nutcracker.{Dom, Join}
 import nutcracker.syntax.dom._
-import proteinrefinery.lib.AdmissibleProteinModifications.SiteWithState
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
-import proteinrefinery.util.{AutoUnificationBag, Identification, Unification}
+import proteinrefinery.util.AutoUnificationBag
 
 import scalaz.{Equal, Show}
-import scalaz.Id._
-import scalaz.std.tuple._
 import scalaz.syntax.equal._
 
 sealed trait ProteinModifications {
@@ -63,7 +60,7 @@ case class AdmissibleProteinModifications private(mods: AutoUnificationBag[SiteW
   def mentionedSites: Set[LocalSiteId] = {
     val buf = Set.newBuilder[LocalSiteId]
     mods.foreach({
-      case (ISite(site, refs), state) =>
+      case SiteWithState(ISite(site, refs), state) =>
         site match {
           case Completed(s) => buf += LocalSiteId(s)
           case _ =>
@@ -86,27 +83,10 @@ case class AdmissibleProteinModifications private(mods: AutoUnificationBag[SiteW
 
 object AdmissibleProteinModifications {
 
-  type SiteWithState = (ISite, SiteState)
-  object SiteWithState {
-    def apply(s: SiteLabel, st: SiteState): SiteWithState =
-      (ISite(s), st)
-
-    implicit val equalInstance: Equal[SiteWithState] =
-      scalaz.std.tuple.tuple2Equal[ISite, SiteState]
-  }
-
-  import SiteState.unificationInstance
-
-  implicit def siteWithStateUnification: Unification.Aux0[SiteWithState, Id] =
-    Unification.tuple2[Id, ISite, SiteState]
-
-  implicit def siteWithStateIdentification: Identification.Aux0[SiteWithState, Id] =
-    Identification.by[SiteWithState, ISite](_._1)(siteWithStateUnification, ISite.identificationInstance)
-
   def apply(mods: (SiteLabel, SiteState)*): Option[AdmissibleProteinModifications] = {
     val mods1 = mods.map({ case (s, st) => SiteWithState(s, st) })
     val bag = AutoUnificationBag(mods1:_*)
-    if(bag.list.exists(siteWithStateUnification.dom.isFailed)) None
+    if(bag.list.exists(SiteWithState.unificationInstance.dom.isFailed)) None
     else Some(AdmissibleProteinModifications(bag))
   }
 

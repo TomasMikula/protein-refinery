@@ -6,6 +6,7 @@ import nutcracker.util.ContF
 import proteinrefinery.DSL
 import proteinrefinery.util.syntax._
 import proteinrefinery.util.OnceTrigger
+
 import scalaz.syntax.equal._
 
 sealed trait PositiveInfluenceOnState {
@@ -46,7 +47,7 @@ object PositiveInfluenceOnState {
   }
 
   private def searchByPhosphorylation(agent: Protein, target: AdmissibleProteinPattern): ContF[DSL, Ref] = {
-    val conts = target.mods.mods.list.iterator.mapFilter({ case (site, state) =>
+    val conts = target.mods.mods.list.iterator.mapFilter({ case SiteWithState(site, state) =>
       if (state === SiteState("p")) // XXX hardcoded phosphorylated state as "p"
         site.content match {
           case Completed(label) => Some(label)

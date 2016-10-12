@@ -81,10 +81,7 @@ case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinMod
         (siteDesc, (linkDom, Promise.empty)) :: l
       })
 
-    val mods1 = mods.mods.inject(x => {
-      val (siteDesc, state) = x
-      (siteDesc, (Promise.empty[LinkDesc], state))
-    })
+    val mods1 = mods.mods.inject(x => (x.site, (Promise.empty[LinkDesc], x.state)))
 
     implicit val siteAttrUnif: Unification.Aux0[SiteAttr, Id] =
       Unification.tuple2[Id, Promise[LinkDesc], SiteState](

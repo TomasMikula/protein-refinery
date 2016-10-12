@@ -117,12 +117,19 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
   def inject[B](f: A => B): AutoUnificationBag[B] =
     new AutoUnificationBag(elems.map(f))
 
-  /** For when `A =:= (K, V)`, this bag can be transformed to a map. This method assumes that
-    * the unification on `K` (as later used with the map) doesn't have to unify `k1` with `k2` if the
-    * unification on `(K, V)` doesn't have to unify `(k1, v1)` with `(k2, v2)` for any `v1`, `v2`.
+  /** When `A =:= (K, V)`, this bag can be viewed as a map. This method assumes that
+    * the identification on `K` (as later used with the map) doesn't have to unify `k1` with `k2` if the
+    * identification on `(K, V)` doesn't have to unify `(k1, v1)` with `(k2, v2)` for any `v1`, `v2`.
     */
-  def restrictToMap[K, V](implicit ev: A === (K, V)): AutoUnificationMap[K, V] =
+  def asMap[K, V](implicit ev: A === (K, V)): AutoUnificationMap[K, V] =
     new AutoUnificationMap[K, V](ev.subst[List](elems))
+
+  /** This method assumes that the identification on `K` (as later used with the map)
+    * doesn't have to unify `f(a1)` with `f(a2)` if the identification on `A` doesn't
+    * have to unify `a1` with `a2`.
+    */
+  def toMap[K, V](f: A => (K, V)): AutoUnificationMap[K, V] =
+    new AutoUnificationMap[K, V](elems.map(f))
 
   private def combineDeltasO[Δ](d1: Option[Δ], d2: Option[Δ])(implicit I: Identification[A]{ type Delta = Δ }): Option[Δ] = (d1, d2) match {
     case (Some(d1), Some(d2)) => Some(I.unification.dom.combineDeltas(d1, d2))
