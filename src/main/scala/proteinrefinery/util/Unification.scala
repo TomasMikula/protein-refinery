@@ -38,6 +38,9 @@ trait Unification[A] {
 
     def dom: Dom.Aux[A, Update, Delta] = Unification.this.dom
   }
+
+  def translate[B](iso: A <=> B)(implicit F: Functor[F]): Unification.Aux[B, Update, Delta, F] =
+    Unification.via[F, B, A](iso.flip)(this, F)
 }
 
 object Unification {

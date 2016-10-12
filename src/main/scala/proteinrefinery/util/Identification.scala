@@ -46,6 +46,12 @@ trait Identification[A] {
     def unification: Unification.Aux[A, Update, Delta, N] =
       Identification.this.unification.promote[N]
   }
+
+  def translate[B](iso: A <=> B)(implicit F: Functor[F]): Identification.Aux[B, Update, Delta, F] =
+    Identification.via[F, B, A](iso.flip)(this, F)
+
+  def zoomOut[B](f: B => A)(implicit UB: Unification[B]): Identification.Aux[B, UB.Update, UB.Delta, UB.F] =
+    Identification.by[B, A](f)(UB, this)
 }
 
 object Identification {
