@@ -95,20 +95,21 @@ object Identification {
         Unification.tuple2[M, A, B](IA.unification, IB.unification, M)
     }
 
-  def promiseIdentification[A: Equal]: Identification.Aux0[Promise[A], Id] = new Identification[Promise[A]] {
-    type Update = Promise.Update[A]
-    type Delta = Promise.Delta[A]
-    type F[X] = Id[X]
+  def promiseIdentification[A: Equal]: Identification.Aux[Promise[A], Promise.Update[A], Promise.Delta[A], Id] =
+    new Identification[Promise[A]] {
+      type Update = Promise.Update[A]
+      type Delta = Promise.Delta[A]
+      type F[X] = Id[X]
 
-    def necessarilySame(p1: Promise[A], p2: Promise[A]): Boolean =
-      (p1, p2) match {
-        case (Completed(a1), Completed(a2)) => a1 === a2
-        case (Conflict, _) => true
-        case (_, Conflict) => true
-        case _ => false
-      }
+      def necessarilySame(p1: Promise[A], p2: Promise[A]): Boolean =
+        (p1, p2) match {
+          case (Completed(a1), Completed(a2)) => a1 === a2
+          case (Conflict, _) => true
+          case (_, Conflict) => true
+          case _ => false
+        }
 
-    def unification: Unification.Aux[Promise[A], Update, Delta, Id] =
-      Unification.promiseUnification[A]
-  }
+      def unification: Unification.Aux[Promise[A], Update, Delta, Id] =
+        Unification.promiseUnification[A]
+    }
 }

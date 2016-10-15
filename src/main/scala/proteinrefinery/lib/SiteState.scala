@@ -19,6 +19,8 @@ object StateLabel {
 
 object SiteState {
   type SiteState = Promise[StateLabel]
+  type Update = Promise.Update[StateLabel]
+  type Delta = Promise.Delta[StateLabel]
 
   def apply(label: String): SiteState = Promise.completed(StateLabel(label))
 
@@ -33,6 +35,6 @@ object SiteState {
       else Nil
   }
 
-  implicit def unificationInstance: Unification.Aux0[SiteState, Id] =
+  implicit def unificationInstance: Unification.Aux[SiteState, Update, Delta, Id] =
     Unification.promiseUnification[StateLabel]
 }

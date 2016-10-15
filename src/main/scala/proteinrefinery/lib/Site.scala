@@ -8,7 +8,7 @@ import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
 
 import scalaz.Id.Id
 import scalaz.Isomorphism.<=>
-import scalaz.{Equal, Show}
+import scalaz.{Equal, Show, \&/}
 import scalaz.syntax.equal._
 
 object Site {
@@ -45,10 +45,10 @@ object Site {
     }
   }
 
-  implicit def unificationInstance: Unification.Aux0[Site.Dom, Id] =
+  implicit def unificationInstance: Unification.Aux[Site.Dom, Update, Delta, Id] =
     Unification.promiseUnification[SiteLabel]
 
-  implicit def identificationInstance: Identification.Aux0[Site.Dom, Id] =
+  implicit def identificationInstance: Identification.Aux[Site.Dom, Update, Delta, Id] =
     Identification.promiseIdentification[SiteLabel]
 }
 
@@ -56,6 +56,9 @@ object Site {
 case class ISite private(content: Site.Dom, refs: Set[Site.Ref])
 
 object ISite {
+  type Update = Site.Update \&/ Set[Site.Ref]
+  type Delta  = Site.Delta  \&/ Set[Site.Ref]
+
   def apply(site: Site.Definite, refs: Site.Ref*): ISite = new ISite(Site.wrap(site), Set(refs:_*))
   def apply(ref: Site.Ref, refs: Site.Ref*): ISite = ISite(Site.unknown, Set(refs:_*) + ref)
 
@@ -69,12 +72,12 @@ object ISite {
     }
   }
 
-  implicit def identificationInstance: Identification.Aux0[ISite, Id] = {
+  implicit def identificationInstance: Identification.Aux[ISite, Update, Delta, Id] = {
 
-    implicit def rawIdentificationInstance: Identification.Aux0[(Site.Dom, Set[Site.Ref]), Id] = {
-      implicit def siteIdentification: Identification.Aux0[Site.Dom, Id] = Site.identificationInstance
+    implicit def rawIdentificationInstance: Identification.Aux[(Site.Dom, Set[Site.Ref]), Update, Delta, Id] = {
+      implicit def siteIdentification = Site.identificationInstance
 
-      implicit def setIdentificationByNonEmptyIntersection[A]: Identification.Aux0[Set[A], Id] = new Identification[Set[A]] {
+      implicit def setIdentificationByNonEmptyIntersection[A]: Identification.Aux[Set[A], Set[A], Set[A], Id] = new Identification[Set[A]] {
         type Update = Set[A] // what to add
         type Delta = Set[A] // diff
         type F[X] = Id[X]

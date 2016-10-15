@@ -3,7 +3,7 @@ package proteinrefinery.lib
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{Identification, Unification}
 
-import scalaz.Equal
+import scalaz.{Equal, \&/}
 import scalaz.Id._
 import scalaz.Isomorphism._
 import scalaz.syntax.equal._
@@ -12,6 +12,9 @@ case class SiteWithState(site: ISite, state: SiteState) {
   def tuple: (ISite, SiteState) = (site, state)
 }
 object SiteWithState {
+  type Update = ISite.Update \&/ SiteState.Update
+  type Delta = ISite.Delta \&/ SiteState.Delta
+
   def apply(s: SiteLabel, st: SiteState): SiteWithState =
     SiteWithState(ISite(s), st)
 
