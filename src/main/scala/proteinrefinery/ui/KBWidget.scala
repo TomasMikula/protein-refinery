@@ -10,7 +10,7 @@ import nutcracker.util.KMap
 import org.reactfx.collection.LiveArrayList
 import org.reactfx.value.{Val, Var}
 import org.reactfx.{EventSource, EventStream, EventStreams}
-import proteinrefinery.lib.{InvalidProteinModifications, Protein, ProteinModifications, AdmissibleProteinPattern, AdmissibleRule, SiteLabel, SiteState}
+import proteinrefinery.lib.{Protein, ProteinModifications, AdmissibleProteinPattern, AdmissibleRule, SiteLabel, SiteState}
 import proteinrefinery.ui.FactType.{FactKinase, FactPhosTarget, FactRule}
 import proteinrefinery.ui.util.syntax._
 
@@ -142,12 +142,11 @@ class KinaseActivityInput extends InputForm[AdmissibleProteinPattern] {
         val (site, state) = (siteField.getText, stateField.getText)
         m =
           if (site.nonEmpty && state.nonEmpty) m.addModification(SiteLabel(site), SiteState(state))
-          else if (site.isEmpty && state.isEmpty) m
-          else InvalidProteinModifications
+          else m
       }
       mods.setValue(m)
     })
-    (p |@| mods)((p, m) => m.toOption.map(AdmissibleProteinPattern(p, _)).getOrElse(null))
+    (p |@| mods)((p, m) => m.ifAdmissible.map(AdmissibleProteinPattern(p, _)).getOrElse(null))
   }
 
   addSiteRow()

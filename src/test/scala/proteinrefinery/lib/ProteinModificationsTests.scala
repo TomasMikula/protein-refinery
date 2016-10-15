@@ -79,27 +79,23 @@ class ProteinModificationsTests extends FunSuite {
       SiteLabel("c") -> SiteState("z"))
 
     (mods1 refines mods0) match {
-      case Some(refinement :: refinements) => ()
-      case Some(Nil) => assert(false)
-      case None => assert(false)
+      case refinement :: refinements => ()
+      case Nil => assert(false)
     }
 
     (mods2 refines mods0) match {
-      case Some(refinement :: refinements) => ()
-      case Some(Nil) => assert(false)
-      case None => assert(false)
+      case refinement :: refinements => ()
+      case Nil => assert(false)
     }
 
     (mods2 refines mods1) match {
-      case Some(Nil) => ()
-      case Some(x::xs) => assert(false)
-      case None => assert(false)
+      case Nil => ()
+      case x::xs => assert(false)
     }
 
     (mods1 refines mods2) match {
-      case Some(Nil) => ()
-      case Some(x::xs) => assert(false)
-      case None => assert(false)
+      case Nil => ()
+      case x::xs => assert(false)
     }
   }
 

@@ -26,10 +26,9 @@ object ProteinPattern {
   type Update = ProteinModifications.Update
   type Delta = ProteinModifications.Delta
 
-  def apply(p: Protein, mods: ProteinModifications): ProteinPattern = mods match {
-    case am @ AdmissibleProteinModifications(_) => AdmissibleProteinPattern(p, am)
-    case InvalidProteinModifications => InvalidProteinPattern
-  }
+  def apply(p: Protein, mods: ProteinModifications): ProteinPattern =
+    if(mods.isAdmissible) AdmissibleProteinPattern(p, mods)
+    else InvalidProteinPattern
 
   implicit def domInstance: Dom.Aux[ProteinPattern, Update, Delta] =
     new Dom[ProteinPattern] {
@@ -54,12 +53,14 @@ object ProteinPattern {
 
 case object InvalidProteinPattern extends ProteinPattern
 
-case class AdmissibleProteinPattern(protein: Protein, mods: AdmissibleProteinModifications) extends ProteinPattern {
+case class AdmissibleProteinPattern private(protein: Protein, mods: ProteinModifications) extends ProteinPattern {
+  assert(mods.isAdmissible)
+
   def isCompatibleWith(that: AdmissibleProteinPattern): Boolean =
     (this.protein == that.protein) && (this.mods combine that.mods).isAdmissible
 
   def addModification(site: SiteLabel, state: SiteState): Option[AdmissibleProteinPattern] =
-    mods.addModification(site, state).toOption.map(AdmissibleProteinPattern(protein, _))
+    mods.addModification(site, state).ifAdmissible.map(AdmissibleProteinPattern(protein, _))
 
   def mentionedSites: Set[LocalSiteId] = mods.mentionedSites
 

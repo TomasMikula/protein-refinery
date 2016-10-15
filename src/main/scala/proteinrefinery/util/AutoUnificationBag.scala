@@ -148,7 +148,7 @@ object AutoUnificationBag {
 
   implicit def equalInstance[A: Equal]: Equal[AutoUnificationBag[A]] = new Equal[AutoUnificationBag[A]] {
     def equal(bag1: AutoUnificationBag[A], bag2: AutoUnificationBag[A]): Boolean =
-      (bag1.size == bag2.size) && (bag1.elems.forall(a1 => bag2.elems.exists(a2 => a1 === a2)))
+      (bag1.size == bag2.size) && (bag1.elems.forall(a1 => bag2.elems.exists(a2 => a1 === a2))) // XXX O(n^2)
   }
 
   implicit def foldableInstance: Foldable[AutoUnificationBag] = new Foldable[AutoUnificationBag] {
