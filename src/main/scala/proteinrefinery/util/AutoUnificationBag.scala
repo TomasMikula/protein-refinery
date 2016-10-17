@@ -72,13 +72,12 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
     type Δ = I.Delta
 
     fa.foldLeftM[M, (AutoUnificationBag[A], Delta[A, Δ])]((this, Delta.empty))((acc, elem) => {
-      val (bag, roots) = acc
+      val (bag, delta) = acc
       bag.add(elem).map({ case (bag, addedElem, deltas) =>
-        (bag, roots.append(addedElem, deltas))
+        (bag, delta.append(addedElem, deltas))
       })
-    }).map({ case (bag, roots) =>
-      val (addedElems, updatedElems) = roots.flatten(I.dom)
-      (bag, addedElems, updatedElems)
+    }).map({ case (bag, delta) =>
+      (bag, delta.newElements(I.dom), delta.updatedElements(I.dom))
     })
   }
 
@@ -126,6 +125,9 @@ object AutoUnificationBag {
   class Delta[A, Δ] private(roots: List[Delta.Node[A, Δ]]) {
     import Delta._
 
+    private val flat: Need1[Dom[A] { type Delta = Δ }, (List[A], List[(A, Δ)])] =
+      Need1(dom => flatten(dom))
+
     def append(addedElem: A, updatedElems: List[(A, Option[Δ])])(implicit A: Equal[A]): Delta[A, Δ] =
       updatedElems.foldLeft[(List[Node[A, Δ]], List[(Node[A, Δ], Option[Δ])])]((roots, Nil))({ case ((roots, addedElemChildren), (updatedElem, delta)) =>
         roots.removeFirst(_.value === updatedElem) match {
@@ -134,7 +136,13 @@ object AutoUnificationBag {
         }
       }) match { case (roots, addedElemChildren) => new Delta(Node(addedElem, addedElemChildren) :: roots) }
 
-    def flatten[U](implicit dom: Dom.Aux[A, U, Δ]): (List[A], List[(A, Δ)]) = {
+    def newElements[U](implicit dom: Dom.Aux[A, U, Δ]): List[A] =
+      flat()._1
+
+    def updatedElements[U](implicit dom: Dom.Aux[A, U, Δ]): List[(A, Δ)] =
+      flat()._2
+
+    private def flatten[U](implicit dom: Dom.Aux[A, U, Δ]): (List[A], List[(A, Δ)]) = {
       val (newElems, modifiedElems) = roots.map(_.flatten).split({
         case (a, Nil) => Left(a)
         case (_, d::ds) => Right((d, ds))
