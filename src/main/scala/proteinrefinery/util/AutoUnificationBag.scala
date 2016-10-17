@@ -122,7 +122,7 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
 
 object AutoUnificationBag {
 
-  class Delta[A, Δ] private(roots: List[Delta.Node[A, Δ]]) {
+  class Delta[A, Δ] private(private val roots: List[Delta.Node[A, Δ]]) {
     import Delta._
 
     private val flat: Need1[Dom[A] { type Delta = Δ }, (List[A], List[(A, Δ)])] =
@@ -136,11 +136,19 @@ object AutoUnificationBag {
         }
       }) match { case (roots, addedElemChildren) => new Delta(Node(addedElem, addedElemChildren) :: roots) }
 
+    def append[U](that: Delta[A, Δ])(implicit dom: Dom.Aux[A, U, Δ], A: Equal[A]): Delta[A, Δ] =
+      that.roots.foldLeft(this)(_ append _)
+
     def newElements[U](implicit dom: Dom.Aux[A, U, Δ]): List[A] =
       flat()._1
 
     def updatedElements[U](implicit dom: Dom.Aux[A, U, Δ]): List[(A, Δ)] =
       flat()._2
+
+    private def append[U](node: Node[A, Δ])(implicit dom: Dom.Aux[A, U, Δ], A: Equal[A]): Delta[A, Δ] = {
+      val (elem, updatedElems) = node.flatten
+      append(elem, updatedElems)
+    }
 
     private def flatten[U](implicit dom: Dom.Aux[A, U, Δ]): (List[A], List[(A, Δ)]) = {
       val (newElems, modifiedElems) = roots.map(_.flatten).split({
