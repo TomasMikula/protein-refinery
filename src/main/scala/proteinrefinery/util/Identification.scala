@@ -1,8 +1,7 @@
 package proteinrefinery.util
 
 import scala.language.higherKinds
-
-import nutcracker.Promise
+import nutcracker.{Dom, Promise}
 import nutcracker.Promise.{Completed, Conflict}
 
 import scalaz.{Applicative, Equal, Functor, Monad, MonadPartialOrder, \&/}
@@ -23,6 +22,8 @@ trait Identification[A] {
   def necessarilySame(a1: A, a2: A): Boolean
 
   def unification: Unification.Aux[A, Update, Delta, F]
+
+  def dom: Dom.Aux[A, Update, Delta] = unification.dom
 
   //                                                                    +----------------------------------- an effect to track inevitable failure (obligation to unify and
   //                                                                    |                                        impossibility to unify at the same time)

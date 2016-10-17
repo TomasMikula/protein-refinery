@@ -1,9 +1,11 @@
 package proteinrefinery.util
 
+import nutcracker.Dom
+
 import scala.annotation.tailrec
 import scala.language.higherKinds
-
 import proteinrefinery.util.syntax._
+
 import scalaz.Leibniz.===
 import scalaz.{Equal, Foldable, Monad, Monoid}
 import scalaz.std.list._
@@ -13,6 +15,8 @@ import scalaz.syntax.foldable._
 
 class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends AnyVal
 {
+  import AutoUnificationBag._
+
   def size: Int = elems.size
 
   def add[M[_]](a: A)(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[I.Delta])])] = {
@@ -65,39 +69,16 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
     F: Foldable[F],        //     |        +--- modified elements
     A: Equal[A]            //     v        v
   ): M[(AutoUnificationBag[A], List[A], List[(A, I.Delta)])] = {
-    case class Node(value: A, children: List[(Node, Option[I.Delta])]) {
-      def flatten: (A, List[(A, Option[I.Delta])]) = (value, children.flatMap({ case (node, delta) =>
-        node.flatten._2.map({ case (a, d) => (a, combineDeltasO(d, delta)(I)) })
-      }))
-    }
-    fa.foldLeftM[M, (AutoUnificationBag[A], List[Node])]((this, Nil))((acc, elem) => {
+    type Δ = I.Delta
+
+    fa.foldLeftM[M, (AutoUnificationBag[A], Delta[A, Δ])]((this, Delta.empty))((acc, elem) => {
       val (bag, roots) = acc
       bag.add(elem).map({ case (bag, addedElem, deltas) =>
-        deltas.foldLeft[(List[Node], List[(Node, Option[I.Delta])])]((roots, Nil))({ case ((roots, children), (elem, delta)) =>
-          roots.removeFirst(_.value === elem) match {
-            case Some((node, roots)) => (roots, (node, delta) :: children)
-            case None => (roots, (Node(elem, Nil), delta) :: children)
-          }
-        }) match { case (roots, children) => (bag, Node(addedElem, children) :: roots) }
+        (bag, roots.append(addedElem, deltas))
       })
     }).map({ case (bag, roots) =>
-      val (newElems, modifiedElems) = roots.map(_.flatten).split({
-        case (a, Nil) => Left(a)
-        case (_, d::ds) => Right((d, ds))
-      })
-      (bag, newElems, modifiedElems.flatMap(dds => {
-        val (d, ds) = dds
-        ds match {
-          case Nil =>
-            val (a, dOpt) = d
-            dOpt match {
-              case Some(δ) => List((a, δ))
-              case None => List() // only one element unified with element from fa, but unchanged, thus don't report
-            }
-          case ds =>
-            (d::ds).map(ad => (ad._1, ad._2.get)) // if there are multiple elements, no delta can be None
-        }
-      }))
+      val (addedElems, updatedElems) = roots.flatten(I.dom)
+      (bag, addedElems, updatedElems)
     })
   }
 
@@ -141,6 +122,57 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
 }
 
 object AutoUnificationBag {
+
+  class Delta[A, Δ] private(roots: List[Delta.Node[A, Δ]]) {
+    import Delta._
+
+    def append(addedElem: A, updatedElems: List[(A, Option[Δ])])(implicit A: Equal[A]): Delta[A, Δ] =
+      updatedElems.foldLeft[(List[Node[A, Δ]], List[(Node[A, Δ], Option[Δ])])]((roots, Nil))({ case ((roots, addedElemChildren), (updatedElem, delta)) =>
+        roots.removeFirst(_.value === updatedElem) match {
+          case Some((node, roots)) => (roots, (node, delta) :: addedElemChildren)
+          case None => (roots, (Node[A, Δ](updatedElem, Nil), delta) :: addedElemChildren)
+        }
+      }) match { case (roots, addedElemChildren) => new Delta(Node(addedElem, addedElemChildren) :: roots) }
+
+    def flatten[U](implicit dom: Dom.Aux[A, U, Δ]): (List[A], List[(A, Δ)]) = {
+      val (newElems, modifiedElems) = roots.map(_.flatten).split({
+        case (a, Nil) => Left(a)
+        case (_, d::ds) => Right((d, ds))
+      })
+      (newElems, modifiedElems.flatMap(dds => {
+        val (d, ds) = dds
+        ds match {
+          case Nil =>
+            val (a, dOpt) = d
+            dOpt match {
+              case Some(δ) => List((a, δ))
+              case None => List() // only one element unified with element from fa, but unchanged, thus don't report
+            }
+          case ds =>
+            (d::ds).map(ad => (ad._1, ad._2.get)) // if there are multiple elements, no delta can be None
+        }
+      }))
+    }
+  }
+
+  object Delta {
+
+    private[Delta] case class Node[A, Δ](value: A, children: List[(Node[A, Δ], Option[Δ])]) {
+      def flatten[U](implicit dom: Dom.Aux[A, U, Δ]): (A, List[(A, Option[Δ])]) = (value, children.flatMap({ case (node, delta) =>
+        node.flatten._2.map({ case (a, d) => (a, combineDeltasOpt(d, delta)) })
+      }))
+    }
+
+    def empty[A, Δ] = new Delta[A, Δ](Nil)
+
+    private def combineDeltasOpt[A, U, Δ](d1: Option[Δ], d2: Option[Δ])(implicit dom: Dom.Aux[A, U, Δ]): Option[Δ] = (d1, d2) match {
+      case (Some(d1), Some(d2)) => Some(dom.combineDeltas(d1, d2))
+      case (None, d2) => d2
+      case _ => d1
+    }
+
+  }
+
   def empty[A]: AutoUnificationBag[A] = new AutoUnificationBag(Nil)
 
   def apply[M[_], A](as: A*)(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[AutoUnificationBag[A]] =
