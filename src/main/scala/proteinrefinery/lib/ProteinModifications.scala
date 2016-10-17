@@ -28,6 +28,11 @@ final case class ProteinModifications private(mods: AutoUnificationBag[SiteWithS
     ProteinModifications(mods)
   }
 
+  def refineBy(that: ProteinModifications): (ProteinModifications, ProteinModifications.Delta) = {
+    val (mods, delta) = this.mods.addAll1(that.mods)
+    (ProteinModifications(mods), delta)
+  }
+
   def refines(that: ProteinModifications): List[List[ProteinModifications.Update]] = {
     val combined = (this combine that)
     if(combined =/= this) Nil
@@ -52,7 +57,7 @@ final case class ProteinModifications private(mods: AutoUnificationBag[SiteWithS
 
 object ProteinModifications {
   type Update = Join[ProteinModifications]
-  type Delta = Unit
+  type Delta = AutoUnificationBag.Delta[SiteWithState, SiteWithState.Delta]
 
   def apply(mods: (SiteLabel, SiteState)*): ProteinModifications = {
     val mods1 = mods.map({ case (s, st) => SiteWithState(s, st) })
@@ -88,11 +93,12 @@ object ProteinModifications {
         else Dom.Failed
 
       override def update(d: ProteinModifications, u: Update): Option[(ProteinModifications, Delta)] = {
-        val res = d combine u.value
-        if(res === d) None else Some((res, ()))
+        val (mods, delta) = d refineBy u.value
+        if(delta.isEmpty) None
+        else Some((mods, delta))
       }
 
-      override def combineDeltas(d1: Delta, d2: Delta): Delta = ()
+      override def combineDeltas(d1: Delta, d2: Delta): Delta = d1 append d2
     }
 
   implicit def equalInstance: Equal[ProteinModifications] = new Equal[ProteinModifications] {

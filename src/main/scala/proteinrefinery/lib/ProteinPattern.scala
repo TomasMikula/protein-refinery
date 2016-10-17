@@ -84,14 +84,14 @@ case class AdmissibleProteinPattern private(protein: Protein, mods: ProteinModif
 
     val mods1 = mods.mods.inject(x => (x.site, (Promise.empty[LinkDesc], x.state)))
 
-    implicit val siteAttrUnif: Unification.Aux0[SiteAttr, Id] =
+    implicit val siteAttrUnif =
       Unification.tuple2[Id, Promise[LinkDesc], SiteState](
         Unification.promiseUnification[LinkDesc],
         SiteState.unificationInstance,
         Monad[Id])
-    implicit val unif: Unification.Aux0[(ISite, SiteAttr), Id] =
+    implicit val unif =
       Unification.tuple2[Id, ISite, SiteAttr]
-    implicit val ident: Identification.Aux0[(ISite, SiteAttr), Id] =
+    implicit val ident =
       Identification.by[(ISite, SiteAttr), ISite](_._1)(unif, ISite.identificationInstance)
 
     val bag = mods1.addAll(bonds1)

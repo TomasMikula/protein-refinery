@@ -1,5 +1,6 @@
 package proteinrefinery.lib
 
+import nutcracker.Dom
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{Identification, Unification}
 
@@ -23,14 +24,17 @@ object SiteWithState {
       (a1.site === a2.site) && (a1.state === a2.state)
   }
 
-  implicit def unificationInstance: Unification.Aux0[SiteWithState, Id] = {
+  implicit def unificationInstance: Unification.Aux[SiteWithState, Update, Delta, Id] = {
     implicit def stateUnif = SiteState.unificationInstance
 
     Unification.tuple2[Id, ISite, SiteState].translate(pairIso.flip)
   }
 
-  implicit def identificationInstance: Identification.Aux0[SiteWithState, Id] =
+  implicit def identificationInstance: Identification.Aux[SiteWithState, Update, Delta, Id] =
     ISite.identificationInstance.zoomOut[SiteWithState](_.site)(unificationInstance)
+
+  implicit def domInstance: Dom.Aux[SiteWithState, Update, Delta] =
+    unificationInstance.dom
 
   private val pairIso: SiteWithState <=> (ISite, SiteState) = new (SiteWithState <=> (ISite, SiteState)) {
     val to: (SiteWithState) => (ISite, SiteState) = _.tuple

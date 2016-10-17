@@ -19,11 +19,11 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
 
   def size: Int = elems.size
 
-  def add[M[_]](a: A)(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[I.Delta])])] = {
+  def add[U, Δ, M[_]](a: A)(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[I.Delta])])] = {
     collect(a).map({ case (untouched, a, deltas) => (new AutoUnificationBag[A](a :: untouched.elems), a, deltas) })
   }
 
-  def collect[M[_]](a: A)(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[I.Delta])])] = {
+  def collect[U, Δ, M[_]](a: A)(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[I.Delta])])] = {
     type Δ = I.Delta
 
     //                     +---------------------------------------------- elems not touched by unification
@@ -55,20 +55,20 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
     }
   }
 
-  def union[M[_]](that: AutoUnificationBag[A])(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[AutoUnificationBag[A]] = {
+  def union[U, Δ, M[_]](that: AutoUnificationBag[A])(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M]): M[AutoUnificationBag[A]] = {
     val (bag, elems) = if (this.size >= that.size) (this, that.elems) else (that, this.elems)
     bag.addAll(elems)
   }
 
-  def addAll[F[_], M[_]](fa: F[A])(implicit I: Identification.Aux0[A, M], M: Monad[M], F: Foldable[F]): M[AutoUnificationBag[A]] =
+  def addAll[F[_], U, Δ, M[_]](fa: F[A])(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M], F: Foldable[F]): M[AutoUnificationBag[A]] =
     fa.foldLeftM(this)((bag, elem) => bag.add(elem).map(_._1))
 
-  def addAll1[F[_], M[_]](fa: F[A])(implicit
-    I: Identification.Aux0[A, M],
-    M: Monad[M],           //     +------------ newly added elements
-    F: Foldable[F],        //     |        +--- modified elements
-    A: Equal[A]            //     v        v
-  ): M[(AutoUnificationBag[A], List[A], List[(A, I.Delta)])] = {
+  def addAll1[F[_], U, Δ, M[_]](fa: F[A])(implicit
+    I: Identification.Aux[A, U, Δ, M],
+    M: Monad[M],
+    F: Foldable[F],
+    A: Equal[A]
+  ): M[(AutoUnificationBag[A], Delta[A, I.Delta])] = {
     type Δ = I.Delta
 
     fa.foldLeftM[M, (AutoUnificationBag[A], Delta[A, Δ])]((this, Delta.empty))((acc, elem) => {
@@ -76,8 +76,6 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
       bag.add(elem).map({ case (bag, addedElem, deltas) =>
         (bag, delta.append(addedElem, deltas))
       })
-    }).map({ case (bag, delta) =>
-      (bag, delta.newElements(I.dom), delta.updatedElements(I.dom))
     })
   }
 
@@ -87,7 +85,7 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
   def foreach(f: A => Unit): Unit =
     elems.foreach(f)
 
-  def map[N[_], B](f: A => B)(implicit I: Identification.Aux0[B, N], N: Monad[N]): N[AutoUnificationBag[B]] =
+  def map[N[_], U, Δ, B](f: A => B)(implicit I: Identification.Aux[B, U, Δ, N], N: Monad[N]): N[AutoUnificationBag[B]] =
     AutoUnificationBag.empty[B].addAll(elems.map(f))
 
   /** Like `map`, but assumes that `f` preserves the non-obligation to unify. In other words,
@@ -127,6 +125,9 @@ object AutoUnificationBag {
 
     private val flat: Need1[Dom[A] { type Delta = Δ }, (List[A], List[(A, Δ)])] =
       Need1(dom => flatten(dom))
+
+    def isEmpty[U](implicit dom: Dom.Aux[A, U, Δ]): Boolean =
+      newElements.isEmpty && updatedElements.isEmpty
 
     def append(addedElem: A, updatedElems: List[(A, Option[Δ])])(implicit A: Equal[A]): Delta[A, Δ] =
       updatedElems.foldLeft[(List[Node[A, Δ]], List[(Node[A, Δ], Option[Δ])])]((roots, Nil))({ case ((roots, addedElemChildren), (updatedElem, delta)) =>
@@ -191,7 +192,7 @@ object AutoUnificationBag {
 
   def empty[A]: AutoUnificationBag[A] = new AutoUnificationBag(Nil)
 
-  def apply[M[_], A](as: A*)(implicit I: Identification.Aux0[A, M], M: Monad[M]): M[AutoUnificationBag[A]] =
+  def apply[M[_], U, Δ, A](as: A*)(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M]): M[AutoUnificationBag[A]] =
     empty[A].addAll(as)
 
   implicit def equalInstance[A: Equal]: Equal[AutoUnificationBag[A]] = new Equal[AutoUnificationBag[A]] {
