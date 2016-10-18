@@ -80,4 +80,18 @@ object Unification {
 
     def dom: Dom.Aux[Promise[A], Update, Delta] = Promise.promiseDomain[A]
   }
+
+  trait Syntax {
+    import scala.language.implicitConversions
+    import Syntax._
+
+    implicit def unificationOps[A](a: A)(implicit u: Unification[A]): UnificationOps[A, u.Update, u.Delta] =
+      new UnificationOps[A, u.Update, u.Delta](a)(u)
+  }
+
+  object Syntax extends Syntax {
+    class UnificationOps[A, U, Δ](a: A)(implicit u: Unification.Aux[A, U, Δ]) {
+      def unify(b: A): (Option[Δ], A, Option[Δ]) = u.unify(a, b)
+    }
+  }
 }
