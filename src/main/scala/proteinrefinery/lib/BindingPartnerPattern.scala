@@ -23,5 +23,5 @@ case class BindingPartnerPattern(p: ProteinPattern, s: LocalSiteId) {
 
 object BindingPartnerPattern {
   def apply(p: Protein, s: LocalSiteId): BindingPartnerPattern =
-    BindingPartnerPattern(AdmissibleProteinPattern(p), s)
+    BindingPartnerPattern(ProteinPattern(p), s)
 }

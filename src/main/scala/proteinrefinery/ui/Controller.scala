@@ -7,7 +7,7 @@ import nutcracker.util.CoproductK.:++:
 import nutcracker.util.{FreeK, InjectK}
 import nutcracker.{Antichain, DRef, Diff, Dom, IncSet, PropagationLang}
 import org.reactfx.EventStreams
-import proteinrefinery.lib.{Assoc, Binding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, AdmissibleProteinPattern, SiteLabel}
+import proteinrefinery.lib.{Assoc, Binding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, ProteinPattern, SiteLabel}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.UIUpdateLang._
@@ -57,7 +57,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
     Nuggets.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
   }
 
-  private def addFactKinase(pp: AdmissibleProteinPattern): Prg[Unit] = {
+  private def addFactKinase(pp: ProteinPattern): Prg[Unit] = {
     Nuggets.addKinaseActivityF[DSL](pp) >> newFactF(FactKinase, pp)
   }
 

@@ -11,7 +11,7 @@ import scalaz.syntax.equal._
 
 sealed trait PositiveInfluenceOnState {
   def agent: Protein
-  def target: AdmissibleProteinPattern
+  def target: ProteinPattern
 }
 
 object PositiveInfluenceOnState {
@@ -20,22 +20,22 @@ object PositiveInfluenceOnState {
 
   // Constructors
 
-  final case class ByRule(influenceOnEnablingRule: PositiveInfluenceOnRule, target: AdmissibleProteinPattern) extends PositiveInfluenceOnState {
+  final case class ByRule(influenceOnEnablingRule: PositiveInfluenceOnRule, target: ProteinPattern) extends PositiveInfluenceOnState {
     def agent = influenceOnEnablingRule.agent
   }
 
-  final case class ByPhosphorylation(infl: PositiveInfluenceOnPhosphorylation, target: AdmissibleProteinPattern) extends PositiveInfluenceOnState {
+  final case class ByPhosphorylation(infl: PositiveInfluenceOnPhosphorylation, target: ProteinPattern) extends PositiveInfluenceOnState {
     def agent: Protein = infl.agent
   }
-  def byPhosphorylation(infl: PositiveInfluenceOnPhosphorylation, target: AdmissibleProteinPattern): PositiveInfluenceOnState = ByPhosphorylation(infl, target)
+  def byPhosphorylation(infl: PositiveInfluenceOnPhosphorylation, target: ProteinPattern): PositiveInfluenceOnState = ByPhosphorylation(infl, target)
 
 
   // Search
 
-  def searchC(agent: Protein, target: AdmissibleProteinPattern): ContF[DSL, Ref] =
+  def searchC(agent: Protein, target: ProteinPattern): ContF[DSL, Ref] =
     ContF.sequence(searchByRule(agent, target), searchByPhosphorylation(agent, target))
 
-  private def searchByRule(agent: Protein, target: AdmissibleProteinPattern): ContF[DSL, Ref] = {
+  private def searchByRule(agent: Protein, target: ProteinPattern): ContF[DSL, Ref] = {
     val ap = AdmissibleAgentsPattern.empty.addAgent(target)._1
     for {
       rRef <- Nuggets.rulesC[DSL](r => if(r enables ap) OnceTrigger.Fire(()) else OnceTrigger.Sleep())
@@ -46,7 +46,7 @@ object PositiveInfluenceOnState {
     } yield res
   }
 
-  private def searchByPhosphorylation(agent: Protein, target: AdmissibleProteinPattern): ContF[DSL, Ref] = {
+  private def searchByPhosphorylation(agent: Protein, target: ProteinPattern): ContF[DSL, Ref] = {
     val conts = target.mods.mods.list.iterator.mapFilter({ case SiteWithState(site, state) =>
       if (state === SiteState("p")) // XXX hardcoded phosphorylated state as "p"
         site.content match {

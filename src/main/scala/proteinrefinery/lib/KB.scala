@@ -12,7 +12,7 @@ object KB {
   private object Tables {
     object Rules extends TableId[AdmissibleRule]
     object PhosphoSites extends TableId[(Protein, Protein, SiteLabel)]
-    object Kinases extends TableId[AdmissibleProteinPattern]
+    object Kinases extends TableId[ProteinPattern]
   }
 
   def apply[K](
@@ -29,13 +29,13 @@ object KB {
     DBLang.insertF(Tables.Rules, r)
   def addPhosphoTargetF[F[_[_], _]](kinase: Protein, substrate: Protein, site: SiteLabel)(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
     DBLang.insertF(Tables.PhosphoSites, (kinase, substrate, site))
-  def addKinaseActivityF[F[_[_], _]](activeState: AdmissibleProteinPattern)(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
+  def addKinaseActivityF[F[_[_], _]](activeState: ProteinPattern)(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
     DBLang.insertF(Tables.Kinases, activeState)
   def rulesF[F[_[_], _]](f: AdmissibleRule => Lst[FreeK[F, Unit]])(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
     DBLang.queryF(Tables.Rules)(f)
   def phosphoTargetsF[F[_[_], _]](f: (Protein, Protein, SiteLabel) => FreeK[F, Unit])(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
     DBLang.queryF(Tables.PhosphoSites)({ case (k, s, ss) => Lst.singleton(f(k, s, ss)) })
-  def kinaseActivityF[F[_[_], _]](p: Protein)(f: AdmissibleProteinPattern => FreeK[F, Unit])(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
+  def kinaseActivityF[F[_[_], _]](p: Protein)(f: ProteinPattern => FreeK[F, Unit])(implicit inj: InjectK[DBLang, F]): FreeK[F, Unit] =
     DBLang.queryF(Tables.Kinases)(pp => {
       if(pp.protein == p) Lst.singleton(f(pp))
       else Lst.empty
@@ -46,7 +46,7 @@ object KB {
     ContF(f => rulesF[F](f andThen Lst.singleton))
   def phosphoTargetsC[F[_[_], _]](implicit inj: InjectK[DBLang, F]): ContF[F, (Protein, Protein, SiteLabel)] =
     ContF(f => phosphoTargetsF[F]((k, s, ss) => f((k, s, ss))))
-  def kinaseActivityC[F[_[_], _]](kinase: Protein)(implicit inj: InjectK[DBLang, F]): ContF[F, AdmissibleProteinPattern] =
+  def kinaseActivityC[F[_[_], _]](kinase: Protein)(implicit inj: InjectK[DBLang, F]): ContF[F, ProteinPattern] =
     ContF(f => kinaseActivityF[F](kinase)(f))
 
   // derived queries

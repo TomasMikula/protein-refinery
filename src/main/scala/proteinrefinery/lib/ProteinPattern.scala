@@ -13,52 +13,15 @@ import scalaz.std.either._
 import scalaz.std.list._
 import scalaz.syntax.show._
 
-sealed trait ProteinPattern {
-  def isCompatibleWith(that: ProteinPattern): Boolean = (this, that) match {
-    case (a @ AdmissibleProteinPattern(_, _), b @ AdmissibleProteinPattern(_, _)) => a isCompatibleWith b
-    case _ => false
-  }
-}
+case class ProteinPattern(protein: Protein, mods: ProteinModifications) {
 
-object ProteinPattern {
-  type Update = ProteinModifications.Update
-  type Delta = ProteinModifications.Delta
+  def isAdmissible = mods.isAdmissible
 
-  def apply(p: Protein, mods: ProteinModifications): ProteinPattern =
-    if(mods.isAdmissible) AdmissibleProteinPattern(p, mods)
-    else InvalidProteinPattern
+  def isCompatibleWith(that: ProteinPattern): Boolean =
+    (this.protein == that.protein) && this.isAdmissible && that.isAdmissible && (this.mods combine that.mods).isAdmissible
 
-  implicit def domInstance: Dom.Aux[ProteinPattern, Update, Delta] =
-    new Dom[ProteinPattern] {
-      type Update = ProteinPattern.Update
-      type Delta = ProteinPattern.Delta
-
-      def update(d: ProteinPattern, u: Update): Option[(ProteinPattern, Delta)] = d match {
-        case AdmissibleProteinPattern(p, mods) =>
-          Dom[ProteinModifications].update(mods, u).map({ case (mods, delta) => (ProteinPattern(p, mods), delta) })
-        case InvalidProteinPattern =>
-          None
-      }
-
-      def combineDeltas(d1: Delta, d2: Delta): Delta = Dom[ProteinModifications].combineDeltas(d1, d2)
-
-      def assess(d: ProteinPattern): Dom.Status[Update] = d match {
-        case AdmissibleProteinPattern(p, mods) => (mods: ProteinModifications).assess
-        case InvalidProteinPattern => Dom.Failed
-      }
-    }
-}
-
-case object InvalidProteinPattern extends ProteinPattern
-
-case class AdmissibleProteinPattern private(protein: Protein, mods: ProteinModifications) extends ProteinPattern {
-  assert(mods.isAdmissible)
-
-  def isCompatibleWith(that: AdmissibleProteinPattern): Boolean =
-    (this.protein == that.protein) && (this.mods combine that.mods).isAdmissible
-
-  def addModification(site: SiteLabel, state: SiteState): Option[AdmissibleProteinPattern] =
-    mods.addModification(site, state).ifAdmissible.map(AdmissibleProteinPattern(protein, _))
+  def addModification(site: SiteLabel, state: SiteState): ProteinPattern =
+    ProteinPattern(protein, mods.addModification(site, state))
 
   def mentionedSites: Set[LocalSiteId] = mods.mentionedSites
 
@@ -125,12 +88,31 @@ case class AdmissibleProteinPattern private(protein: Protein, mods: ProteinModif
   }
 }
 
-object AdmissibleProteinPattern {
-  type Ref = Antichain.Ref[AdmissibleProteinPattern]
+object ProteinPattern {
+  type Update = ProteinModifications.Update
+  type Delta = ProteinModifications.Delta
 
-  def apply(p: Protein): AdmissibleProteinPattern = AdmissibleProteinPattern(p, ProteinModifications.noModifications)
+  type Ref = Antichain.Ref[ProteinPattern]
 
-  implicit def showInstance: Show[AdmissibleProteinPattern] = new Show[AdmissibleProteinPattern] {
-    override def shows(pp: AdmissibleProteinPattern) = pp.toString
+  def apply(p: Protein): ProteinPattern =
+    ProteinPattern(p, ProteinModifications.noModifications)
+
+  implicit def domInstance: Dom.Aux[ProteinPattern, Update, Delta] =
+    new Dom[ProteinPattern] {
+      type Update = ProteinPattern.Update
+      type Delta = ProteinPattern.Delta
+
+      def update(d: ProteinPattern, u: Update): Option[(ProteinPattern, Delta)] = {
+        val ProteinPattern(p, mods) = d
+        Dom[ProteinModifications].update(mods, u).map({ case (mods, delta) => (ProteinPattern(p, mods), delta) })
+      }
+
+      def combineDeltas(d1: Delta, d2: Delta): Delta = Dom[ProteinModifications].combineDeltas(d1, d2)
+
+      def assess(d: ProteinPattern): Dom.Status[Update] = d.mods.assess
+    }
+
+  implicit def showInstance: Show[ProteinPattern] = new Show[ProteinPattern] {
+    override def shows(pp: ProteinPattern) = pp.toString
   }
 }

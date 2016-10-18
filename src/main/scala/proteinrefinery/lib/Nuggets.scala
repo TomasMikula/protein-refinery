@@ -17,7 +17,7 @@ object Nuggets {
   private object DomTypes {
     implicit object Rules extends AntichainDomType[AdmissibleRule]
     implicit object PhosphoSites extends AntichainDomType[PhosphoTarget]
-    implicit object Kinases extends AntichainDomType[AdmissibleProteinPattern]
+    implicit object Kinases extends AntichainDomType[ProteinPattern]
   }
 
   import DomTypes._
@@ -39,7 +39,7 @@ object Nuggets {
     cellF(Antichain(r)).inject[F] >>= { trackF(_) }
   def addPhosphoTargetF[F[_[_], _]](kinase: Protein, substrate: Protein, site: SiteLabel)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     cellF(Antichain(PhosphoTarget(kinase, substrate, site))).inject[F] >>= { trackF(_) }
-  def addKinaseActivityF[F[_[_], _]](activeState: AdmissibleProteinPattern)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
+  def addKinaseActivityF[F[_[_], _]](activeState: ProteinPattern)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     cellF(Antichain(activeState)).inject[F] >>= { trackF(_) }
 
   // basic programs for querying nuggets
@@ -47,7 +47,7 @@ object Nuggets {
     thresholdQuery(DomTypes.Rules)(r => f(r.value))
   def phosphoTargetsF[F[_[_], _]](f: PhosphoTarget => OnceTrigger[PhosphoTarget.Ref => FreeK[F, Unit]])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     thresholdQuery(DomTypes.PhosphoSites)(pt => f(pt.value))
-  def kinaseActivityF[F[_[_], _]](p: Protein)(f: AdmissibleProteinPattern.Ref => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
+  def kinaseActivityF[F[_[_], _]](p: Protein)(f: ProteinPattern.Ref => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     thresholdQuery(DomTypes.Kinases)(pp =>
       if(pp.value.protein == p) OnceTrigger.Fire(f)
       else OnceTrigger.Discard()
@@ -58,7 +58,7 @@ object Nuggets {
     ContF(f => rulesF[F](p andThen (_.map(_ => f))))
   def phosphoTargetsC[F[_[_], _]](p: PhosphoTarget => OnceTrigger[Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, PhosphoTarget.Ref] =
     ContF(f => phosphoTargetsF[F](p andThen (_.map(_ => f))))
-  def kinaseActivityC[F[_[_], _]](kinase: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, AdmissibleProteinPattern.Ref] =
+  def kinaseActivityC[F[_[_], _]](kinase: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, ProteinPattern.Ref] =
     ContF(f => kinaseActivityF[F](kinase)(f))
 
   // derived queries

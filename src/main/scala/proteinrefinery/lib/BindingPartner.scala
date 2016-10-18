@@ -1,8 +1,8 @@
 package proteinrefinery.lib
 
-case class BindingPartner(p: AdmissibleProteinPattern, s: SiteLabel)
+case class BindingPartner(p: ProteinPattern, s: SiteLabel)
 
 object BindingPartner {
   def apply(p: Protein, mods: ProteinModifications, s: SiteLabel): BindingPartner =
-    BindingPartner(AdmissibleProteinPattern(p, mods), s)
+    BindingPartner(ProteinPattern(p, mods), s)
 }
