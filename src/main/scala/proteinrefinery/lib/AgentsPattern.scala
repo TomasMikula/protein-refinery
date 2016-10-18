@@ -3,7 +3,8 @@ package proteinrefinery.lib
 import nutcracker.Dom
 import nutcracker.syntax.dom._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
-import proteinrefinery.util.mapUnion
+import proteinrefinery.util.{Unification, mapUnion}
+import proteinrefinery.util.Unification.Syntax._
 import proteinrefinery.util.syntax._
 
 import scalaz.Id.Id
@@ -14,6 +15,8 @@ case class AgentsPattern(
   bonds: Vector[Option[(AgentIndex, LocalSiteId, AgentIndex, LocalSiteId)]],
   unbound: List[(AgentIndex, LocalSiteId)]
 ) {
+  import AgentsPattern._
+
   lazy val isAdmissible: Boolean = {
     agents forall (_ forall (_.isAdmissible))
     // TODO admissibility of bonds
@@ -39,7 +42,7 @@ case class AgentsPattern(
 
   def updateAgent(i: AgentIndex, u: ProteinPattern.Update): Option[(AgentsPattern, AgentsPattern.Delta)] =
     (this(i): ProteinPattern).update(u) match {
-      case Some((pp, δ)) => Some((copy(agents = agents.updated(i.value, Some(pp))), Map(i -> δ)))
+      case Some((pp, δ)) => Some((copy(agents = agents.updated(i.value, Some(pp))), Delta.update(i, δ)))
       case None => None
     }
 
@@ -101,7 +104,11 @@ case class AgentsPattern(
   }
 
   @inline private def hasAgent(i: Int): Boolean =
-    i >= 0 && i < agents.size && agents(i) != null
+    i >= 0 && i < agents.size && agents(i).isDefined
+
+  @inline private def getAgent(i: Int): Option[ProteinPattern] =
+    if(i >= 0 & i < agents.size) agents(i)
+    else None
 
   @inline private def hasBond(i: Int): Boolean =
     i >= 0 && i < bonds.size && bonds(i).isDefined
@@ -119,7 +126,20 @@ case class AgentsPattern(
 object AgentsPattern {
 
   type Update = (AgentIndex, ProteinPattern.Update)
-  type Delta = Map[AgentIndex, ProteinPattern.Delta]
+
+  case class Delta(newAgents: Map[AgentIndex, ProteinPattern], agentDeltas: Map[AgentIndex, ProteinPattern.Delta]) {
+    def ifNonEmpty: Option[Delta] =
+      if(newAgents.nonEmpty || agentDeltas.nonEmpty) Some(this)
+      else None
+  }
+
+  object Delta {
+    def update(i: AgentIndex, d: ProteinPattern.Delta): Delta =
+      Delta(Map(), Map(i -> d))
+
+    def newAgent(i: AgentIndex, a: ProteinPattern): Delta =
+      Delta(Map(i -> a), Map())
+  }
 
   val empty: AgentsPattern =
     AgentsPattern(Vector.empty, Vector.empty, Nil)
@@ -149,12 +169,62 @@ object AgentsPattern {
     def update(ap: AgentsPattern, u: Update): Option[(AgentsPattern, Delta)] =
       ap.updateAgent(u._1, u._2)
 
-    def combineDeltas(d1: Delta, d2: Delta): Delta =
-      mapUnion[AgentIndex, ProteinPattern.Delta, Id](d1, d2)((δ1, δ2) => Dom[ProteinPattern].combineDeltas(δ1, δ2))
+    def combineDeltas(d1: Delta, d2: Delta): Delta = {
+      val newAgents = d1.newAgents ++ d2.newAgents
+      val deltas = mapUnion[AgentIndex, ProteinPattern.Delta, Id](d1.agentDeltas, d2.agentDeltas)((δ1, δ2) => {
+        Dom[ProteinPattern].combineDeltas(δ1, δ2)
+      })
+      Delta(newAgents, deltas)
+    }
 
     def assess(ap: AgentsPattern): Dom.Status[Update] =
       if(ap.isAdmissible) Dom.Refined
       else Dom.Failed
+  }
+
+  implicit def unificationInstance: Unification.Aux[AgentsPattern, Update, Delta] = new Unification[AgentsPattern] {
+    type Update = AgentsPattern.Update
+    type Delta = AgentsPattern.Delta
+
+    def unify(ap1: AgentsPattern, ap2: AgentsPattern): (Option[Delta], AgentsPattern, Option[Delta]) = {
+      val agents = Vector.newBuilder[Option[ProteinPattern]]
+      val newAgs1 = Map.newBuilder[AgentIndex, ProteinPattern]
+      val newAgs2 = Map.newBuilder[AgentIndex, ProteinPattern]
+      val deltas1 = Map.newBuilder[AgentIndex, ProteinPattern.Delta]
+      val deltas2 = Map.newBuilder[AgentIndex, ProteinPattern.Delta]
+
+      val n = math.max(ap1.agents.size, ap2.agents.size)
+      for(i <- 0 until n) {
+        val a1 = ap1.getAgent(i)
+        val a2 = ap2.getAgent(i)
+
+        (a1, a2) match {
+          case (None, None) =>
+            agents += None
+          case (Some(a1), None) =>
+            agents += Some(a1)
+            newAgs2 += ((AgentIndex(i), a1))
+          case (None, Some(a2)) =>
+            agents += Some(a2)
+            newAgs1 += ((AgentIndex(i), a2))
+          case (Some(a1), Some(a2)) =>
+            val (d1, pp, d2) = a1 unify a2
+            agents += Some(pp)
+            d1.foreach(d => deltas1 += ((AgentIndex(i), d)))
+            d2.foreach(d => deltas2 += ((AgentIndex(i), d)))
+        }
+      }
+
+      val bonds = ap1.bonds ++ ap2.bonds
+      val unbound = ap1.unbound ++ ap2.unbound
+
+      val delta1 = Delta(newAgs1.result(), deltas1.result())
+      val delta2 = Delta(newAgs2.result(), deltas2.result())
+
+      (delta1.ifNonEmpty, AgentsPattern(agents.result(), bonds, unbound), delta2.ifNonEmpty)
+    }
+
+    def dom: Dom.Aux[AgentsPattern, Update, Delta] = domInstance
   }
 }
 
