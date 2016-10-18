@@ -2,9 +2,14 @@ package proteinrefinery.lib
 
 import algebra.Eq
 
-import scalaz.{Equal, Show}
+import scalaz.{Equal, Semigroup, Show}
 
 sealed trait Protein {
+  def isValid: Boolean = this match {
+    case ProteinLabel(_) => true
+    case Protein.Conflict => false
+  }
+
   final override def toString = this match {
     case ProteinLabel(label) => label.name
     case Protein.Conflict => "⊥"
@@ -14,10 +19,26 @@ sealed trait Protein {
 case class ProteinLabel(name: Symbol) extends Protein
 
 object Protein {
+  type Delta = Unit
+
   case object Conflict extends Protein
 
   def apply(name: String): Protein = Protein(Symbol(name))
   def apply(sym: Symbol): Protein = ProteinLabel(sym)
+
+  def unify(p1: Protein, p2: Protein): (Option[Delta], Protein, Option[Delta]) =
+    (p1, p2) match {
+      case (ProteinLabel(l1), ProteinLabel(l2)) =>
+        if(l1.name == l2.name) (None, p1, None)
+        else (Some(()), Conflict, Some(()))
+      case (ProteinLabel(_), Conflict) => (Some(()), Conflict, None)
+      case (Conflict, ProteinLabel(_)) => (None, Conflict, Some(()))
+      case (Conflict, Conflict) => (None, Conflict, None)
+    }
+
+  val deltaSemigroup: Semigroup[Delta] = new Semigroup[Delta] {
+    def append(f1: Delta, f2: => Delta): Delta = ()
+  }
 
   implicit def eqInstance: Eq[Protein] = new Eq[Protein] {
     def eqv(x: Protein, y: Protein): Boolean = (x, y) match {
