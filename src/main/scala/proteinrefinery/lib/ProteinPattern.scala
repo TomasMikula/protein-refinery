@@ -8,7 +8,7 @@ import proteinrefinery.lib.SiteLabel._
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{Identification, Unification}
 
-import scalaz.Show
+import scalaz.{Semigroup, Show, \&/}
 import scalaz.std.either._
 import scalaz.std.list._
 import scalaz.syntax.show._
@@ -90,7 +90,7 @@ case class ProteinPattern(protein: Protein, mods: ProteinModifications) {
 
 object ProteinPattern {
   type Update = ProteinModifications.Update
-  type Delta = ProteinModifications.Delta
+  type Delta = Protein.Delta \&/ ProteinModifications.Delta
 
   type Ref = Antichain.Ref[ProteinPattern]
 
@@ -104,13 +104,38 @@ object ProteinPattern {
 
       def update(d: ProteinPattern, u: Update): Option[(ProteinPattern, Delta)] = {
         val ProteinPattern(p, mods) = d
-        Dom[ProteinModifications].update(mods, u).map({ case (mods, delta) => (ProteinPattern(p, mods), delta) })
+        Dom[ProteinModifications].update(mods, u).map({ case (mods, delta) => (ProteinPattern(p, mods), \&/.That(delta)) })
       }
 
-      def combineDeltas(d1: Delta, d2: Delta): Delta = Dom[ProteinModifications].combineDeltas(d1, d2)
+      override def deltaSemigroup: Semigroup[Delta] =
+        \&/.TheseSemigroup(Protein.deltaSemigroup, ProteinModifications.domInstance.deltaSemigroup)
+
+      def combineDeltas(d1: Delta, d2: Delta): Delta = deltaSemigroup.append(d1, d2)
 
       def assess(d: ProteinPattern): Dom.Status[Update] = d.mods.assess
     }
+
+  implicit def unificationInstance: Unification.Aux[ProteinPattern, Update, Delta] = new Unification[ProteinPattern] {
+    type Update = ProteinPattern.Update
+    type Delta = ProteinPattern.Delta
+
+    def unify(pp1: ProteinPattern, pp2: ProteinPattern): (Option[Delta], ProteinPattern, Option[Delta]) = {
+      import Unification.Syntax._
+      val (pd1, p, pd2) = Protein.unify(pp1.protein, pp2.protein)
+      val (d1, mods, d2) = pp1.mods unify pp2.mods
+      (theseOpt(pd1, d1), ProteinPattern(p, mods), theseOpt(pd2, d2))
+    }
+
+    def dom: Dom.Aux[ProteinPattern, Update, Delta] = domInstance
+
+    private def theseOpt[A, B](a: Option[A], b: Option[B]): Option[A \&/ B] =
+      (a, b) match {
+        case (Some(a), Some(b)) => Some(\&/.Both(a, b))
+        case (Some(a), None) => Some(\&/.This(a))
+        case (None, Some(b)) => Some(\&/.That(b))
+        case (None, None) => None
+      }
+  }
 
   implicit def showInstance: Show[ProteinPattern] = new Show[ProteinPattern] {
     override def shows(pp: ProteinPattern) = pp.toString
