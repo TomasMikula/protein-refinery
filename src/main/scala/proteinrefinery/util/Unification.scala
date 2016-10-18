@@ -2,75 +2,56 @@ package proteinrefinery.util
 
 import nutcracker.Promise.{Completed, Conflict, Empty}
 
-import scala.language.higherKinds
 import nutcracker.{Dom, Promise}
 
 import scalaz.\&/.{Both, That, This}
-import scalaz.{Equal, Functor, Monad, MonadPartialOrder, \&/}
-import scalaz.Id.Id
+import scalaz.{Equal, \&/}
 import scalaz.Isomorphism.<=>
 import scalaz.syntax.equal._
-import scalaz.syntax.monad._
 
 trait Unification[A] {
   type Update
   type Delta
-  type F[_]
 
-  def unify(a1: A, a2: A): F[(Option[Delta], A, Option[Delta])]
-  //                       ^      ^          ^      ^
-  //                       |      |          |      |
-  //                       |      |          |      +--- diff that takes `a2` to the unified value
-  //                       |      |          +---------- the unified value
-  //                       |      +--------------------- diff that takes `a1` to the unified value
-  //                       +---------------------------- an effect to track inevitable failure (obligation to unify and
-  //                                                         impossibility to unify at the same time)
+  def unify(a1: A, a2: A): (Option[Delta], A, Option[Delta])
+  //                            ^          ^      ^
+  //                            |          |      |
+  //                            |          |      +--- diff that takes `a2` to the unified value
+  //                            |          +---------- the unified value
+  //                            +--------------------- diff that takes `a1` to the unified value
 
   def dom: Dom.Aux[A, Update, Delta]
 
-  def promote[N[_]](implicit mn: MonadPartialOrder[N, F]): Unification.Aux[A, Update, Delta, N] = new Unification[A] {
-    type Update = Unification.this.Update
-    type Delta = Unification.this.Delta
-    type F[X] = N[X]
-
-    def unify(a1: A, a2: A): N[(Option[Delta], A, Option[Delta])] =
-      mn(Unification.this.unify(a1, a2))
-
-    def dom: Dom.Aux[A, Update, Delta] = Unification.this.dom
-  }
-
-  def translate[B](iso: A <=> B)(implicit F: Functor[F]): Unification.Aux[B, Update, Delta, F] =
-    Unification.via[F, B, A](iso.flip)(this, F)
+  def translate[B](iso: A <=> B): Unification.Aux[B, Update, Delta] =
+    Unification.via[B, A](iso.flip)(this)
 }
 
 object Unification {
-  type Aux0[A, M[_]] = Unification[A] { type F[X] = M[X] }
-  type Aux[A, U, Δ, M[_]] = Unification[A] { type Update = U; type Delta = Δ; type F[X] = M[X] }
+  type Aux[A, U, Δ] = Unification[A] { type Update = U; type Delta = Δ }
 
-  def via[M[_], A, B](iso: A <=> B)(implicit UB: Unification.Aux0[B, M], M: Functor[M]): Unification.Aux[A, UB.Update, UB.Delta, M] =
+  def via[A, B](iso: A <=> B)(implicit UB: Unification[B]): Unification.Aux[A, UB.Update, UB.Delta] =
     new Unification[A] {
       type Update = UB.Update
       type Delta = UB.Delta
-      type F[X] = M[X]
 
-      def unify(a1: A, a2: A): M[(Option[Delta], A, Option[Delta])] =
-        UB.unify(iso.to(a1), iso.to(a2)).map({ case (d1, b, d2) => (d1, iso.from(b), d2) })
+      def unify(a1: A, a2: A): (Option[Delta], A, Option[Delta]) = {
+        val (d1, b, d2) = UB.unify(iso.to(a1), iso.to(a2))
+        (d1, iso.from(b), d2)
+      }
 
       def dom: Dom.Aux[A, Update, Delta] = Dom.via(iso)(UB.dom)
     }
 
-  def tuple2[M[_], A, B](implicit UA: Unification.Aux0[A, M], UB: Unification.Aux0[B, M], M: Monad[M]): Unification.Aux[(A, B), UA.Update \&/ UB.Update, UA.Delta \&/ UB.Delta, M] =
+  def tuple2[A, B](implicit UA: Unification[A], UB: Unification[B]): Unification.Aux[(A, B), UA.Update \&/ UB.Update, UA.Delta \&/ UB.Delta] =
     new Unification[(A, B)] {
       type Update = UA.Update \&/ UB.Update
       type Delta = UA.Delta \&/ UB.Delta
-      type F[X] = M[X]
 
-      def unify(ab1: (A, B), ab2: (A, B)): F[(Option[Delta], (A, B), Option[Delta])] =
-        M.apply2(UA.unify(ab1._1, ab2._1), UB.unify(ab1._2, ab2._2))((dad, dbd) => {
-          val (da1, a, da2) = dad
-          val (db1, b, db2) = dbd
-          (these(da1, db1), (a, b), these(da2, db2))
-        })
+      def unify(ab1: (A, B), ab2: (A, B)): (Option[Delta], (A, B), Option[Delta]) = {
+        val (da1, a, da2) = UA.unify(ab1._1, ab2._1)
+        val (db1, b, db2) = UB.unify(ab1._2, ab2._2)
+        (these(da1, db1), (a, b), these(da2, db2))
+      }
 
       def dom: Dom.Aux[(A, B), Update, Delta] = Dom.tuple2(UA.dom, UB.dom)
 
@@ -82,10 +63,9 @@ object Unification {
       }
     }
 
-  def promiseUnification[A: Equal]: Unification.Aux[Promise[A], Promise.Update[A], Promise.Delta[A], Id] = new Unification[Promise[A]] {
+  def promiseUnification[A: Equal]: Unification.Aux[Promise[A], Promise.Update[A], Promise.Delta[A]] = new Unification[Promise[A]] {
     type Update = Promise.Update[A]
     type Delta = Promise.Delta[A]
-    type F[X] = Id[X]
 
     def unify(p1: Promise[A], p2: Promise[A]): (Option[Delta], Promise[A], Option[Delta]) =
       (p1, p2) match {

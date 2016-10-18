@@ -8,7 +8,6 @@ import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{AutoUnificationBag, Unification}
 
 import scalaz.{Equal, Show}
-import scalaz.Id.Id
 import scalaz.syntax.equal._
 
 final case class ProteinModifications private(mods: AutoUnificationBag[SiteWithState]) {
@@ -106,11 +105,10 @@ object ProteinModifications {
       a1.mods === a2.mods
   }
 
-  implicit def unificationInstance: Unification.Aux[ProteinModifications, Update, Delta, Id] =
+  implicit def unificationInstance: Unification.Aux[ProteinModifications, Update, Delta] =
     new Unification[ProteinModifications] {
       type Update = ProteinModifications.Update
       type Delta = ProteinModifications.Delta
-      type F[X] = Id[X]
 
       def unify(m1: ProteinModifications, m2: ProteinModifications): (Option[Delta], ProteinModifications, Option[Delta]) = {
         val (d1, mods, d2) = (m1.mods union1 m2.mods)

@@ -6,7 +6,6 @@ import nutcracker.Promise.{Complete, Completed, Conflict, Empty}
 import proteinrefinery.util.{HomSet, Identification, Unification}
 import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
 
-import scalaz.Id.Id
 import scalaz.Isomorphism.<=>
 import scalaz.{Equal, Show, \&/}
 import scalaz.syntax.equal._
@@ -45,10 +44,10 @@ object Site {
     }
   }
 
-  implicit def unificationInstance: Unification.Aux[Site.Dom, Update, Delta, Id] =
+  implicit def unificationInstance: Unification.Aux[Site.Dom, Update, Delta] =
     Unification.promiseUnification[SiteLabel]
 
-  implicit def identificationInstance: Identification.Aux[Site.Dom, Update, Delta, Id] =
+  implicit def identificationInstance: Identification.Aux[Site.Dom, Update, Delta] =
     Identification.promiseIdentification[SiteLabel]
 }
 
@@ -72,23 +71,21 @@ object ISite {
     }
   }
 
-  implicit def identificationInstance: Identification.Aux[ISite, Update, Delta, Id] = {
+  implicit def identificationInstance: Identification.Aux[ISite, Update, Delta] = {
 
-    implicit def rawIdentificationInstance: Identification.Aux[(Site.Dom, Set[Site.Ref]), Update, Delta, Id] = {
+    implicit def rawIdentificationInstance: Identification.Aux[(Site.Dom, Set[Site.Ref]), Update, Delta] = {
       implicit def siteIdentification = Site.identificationInstance
 
-      implicit def setIdentificationByNonEmptyIntersection[A]: Identification.Aux[Set[A], Set[A], Set[A], Id] = new Identification[Set[A]] {
+      implicit def setIdentificationByNonEmptyIntersection[A]: Identification.Aux[Set[A], Set[A], Set[A]] = new Identification[Set[A]] {
         type Update = Set[A] // what to add
         type Delta = Set[A] // diff
-        type F[X] = Id[X]
 
         def necessarilySame(s1: Set[A], s2: Set[A]): Boolean =
           (s1 intersect s2).nonEmpty
 
-        val unification: Unification.Aux[Set[A], Set[A], Set[A], Id] = new Unification[Set[A]] {
+        val unification: Unification.Aux[Set[A], Set[A], Set[A]] = new Unification[Set[A]] {
           type Update = Set[A] // what to add
           type Delta = Set[A] // diff
-          type F[X] = Id[X]
 
           def unify(s1: Set[A], s2: Set[A]): (Option[Delta], Set[A], Option[Delta]) =
             (diff(s1, s2), s1 union s2, diff(s2, s1))
@@ -115,10 +112,10 @@ object ISite {
         }
       }
 
-      Identification.tuple2[Id, Site.Dom, Set[Site.Ref]]
+      Identification.tuple2[Site.Dom, Set[Site.Ref]]
     }
 
-    Identification.via[Id, ISite, (Site.Dom, Set[Site.Ref])](pairIso)
+    Identification.via[ISite, (Site.Dom, Set[Site.Ref])](pairIso)
   }
 
   // Not really an isomorphism, since ISite does not allow both components to be bottom at the same time.

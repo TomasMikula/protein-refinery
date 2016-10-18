@@ -9,7 +9,6 @@ import proteinrefinery.lib.SiteState.SiteState
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds
-import scalaz.Id._
 import scalaz.Show
 import scalaz.syntax.equal._
 
@@ -130,7 +129,7 @@ final case class AdmissibleRule(lhs: AdmissibleAgentsPattern, actions: List[Acti
           else {
             val addModsMap = addMods.mods.toMap[ISite, SiteState](_.tuple).mapValues(st => Promise.completed(st))
             val qModsMap   =  q.mods.mods.toMap[ISite, SiteState](_.tuple).mapValues(st => Promise.completed(st))
-            val meet = addModsMap.intersect[Id](qModsMap)((p1, p2) => Promise.meet(p1, p2))
+            val meet = addModsMap.intersect(qModsMap)((p1, p2) => Promise.meet(p1, p2))
             meet.entries.exists(_._2.nonEmpty)
           }
         })

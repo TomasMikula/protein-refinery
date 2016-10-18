@@ -5,7 +5,6 @@ import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{Identification, Unification}
 
 import scalaz.{Equal, \&/}
-import scalaz.Id._
 import scalaz.Isomorphism._
 import scalaz.syntax.equal._
 
@@ -24,13 +23,13 @@ object SiteWithState {
       (a1.site === a2.site) && (a1.state === a2.state)
   }
 
-  implicit def unificationInstance: Unification.Aux[SiteWithState, Update, Delta, Id] = {
+  implicit def unificationInstance: Unification.Aux[SiteWithState, Update, Delta] = {
     implicit def stateUnif = SiteState.unificationInstance
 
-    Unification.tuple2[Id, ISite, SiteState].translate(pairIso.flip)
+    Unification.tuple2[ISite, SiteState].translate(pairIso.flip)
   }
 
-  implicit def identificationInstance: Identification.Aux[SiteWithState, Update, Delta, Id] =
+  implicit def identificationInstance: Identification.Aux[SiteWithState, Update, Delta] =
     ISite.identificationInstance.zoomOut[SiteWithState](_.site)(unificationInstance)
 
   implicit def domInstance: Dom.Aux[SiteWithState, Update, Delta] =

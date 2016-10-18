@@ -1,17 +1,15 @@
 package proteinrefinery.util
 
 import nutcracker.Dom
+import proteinrefinery.util.syntax._
 
 import scala.annotation.tailrec
 import scala.language.higherKinds
-import proteinrefinery.util.syntax._
-
 import scalaz.Leibniz.===
-import scalaz.{Equal, Foldable, Monad, Monoid}
 import scalaz.std.list._
-import scalaz.syntax.applicative._
 import scalaz.syntax.equal._
 import scalaz.syntax.foldable._
+import scalaz.{Equal, Foldable, Monoid}
 
 class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends AnyVal
 {
@@ -19,30 +17,31 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
 
   def size: Int = elems.size
 
-  def add[U, Δ, M[_]](a: A)(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[I.Delta])])] = {
-    collect(a).map({ case (untouched, a, deltas) => (new AutoUnificationBag[A](a :: untouched.elems), a, deltas) })
+  def add[U, Δ](a: A)(implicit I: Identification.Aux[A, U, Δ]): (AutoUnificationBag[A], A, List[(A, Option[I.Delta])]) = {
+    val (untouched, a1, deltas) = collect(a)
+    (new AutoUnificationBag[A](a1 :: untouched.elems), a1, deltas)
   }
 
-  def collect[U, Δ, M[_]](a: A)(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M]): M[(AutoUnificationBag[A], A, List[(A, Option[I.Delta])])] = {
+  def collect[U, Δ](a: A)(implicit I: Identification.Aux[A, U, Δ]): (AutoUnificationBag[A], A, List[(A, Option[I.Delta])]) = {
     type Δ = I.Delta
 
-    //                     +---------------------------------------------- elems not touched by unification
-    //                     |     +---------------------------------------- accumulation of the unified value
-    //                     |     |      +--------------------------------- diff that takes `a` to the unified value
-    //                     |     |      |        +------------------------ elems that were unified
-    //                     |     |      |        |   +-------------------- the original element
-    //                     |     |      |        |   |      +------------- delta to obtain the (current) unified value
-    //                     |     |      |        |   |      |         +--- additional delta to combine (after) with deltas in the rest (tail)
-    //                     |     |      |        |   |      |         |        of the list to obtain the final unified value
-    //                     |     |      |        |   |      |         |
-    //                     v     v      v        v   v      v         v
-    elems.foldLeftM[M, (List[A], A, Option[Δ], List[(A, Option[Δ], Option[Δ])])]((Nil, a, None, Nil))((acc, elem) => {
+    //                 +---------------------------------------------- elems not touched by unification
+    //                 |     +---------------------------------------- accumulation of the unified value
+    //                 |     |      +--------------------------------- diff that takes `a` to the unified value
+    //                 |     |      |        +------------------------ elems that were unified
+    //                 |     |      |        |   +-------------------- the original element
+    //                 |     |      |        |   |      +------------- delta to obtain the (current) unified value
+    //                 |     |      |        |   |      |         +--- additional delta to combine (after) with deltas in the rest (tail)
+    //                 |     |      |        |   |      |         |        of the list to obtain the final unified value
+    //                 |     |      |        |   |      |         |
+    //                 v     v      v        v   v      v         v
+    elems.foldLeft[(List[A], A, Option[Δ], List[(A, Option[Δ], Option[Δ])])]((Nil, a, None, Nil))((acc, elem) => {
       val (untouched, a, da, unified) = acc
-      I.unifyIfNecessary(a, elem) map {
+      I.unifyIfNecessary(a, elem) match {
         case Some((da1, a, de)) => (untouched, a, combineDeltasO(da, da1)(I), (elem, de, da1) :: unified)
         case None => (elem::untouched, a, da, unified)
       }
-    }) map { case (untouched, aa, da, unified0) =>
+    }) match { case (untouched, aa, da, unified0) =>
 
       @tailrec def applyDeltas(ads: List[(A, Option[Δ], Option[Δ])], d: Option[Δ], acc: List[(A, Option[Δ])]): List[(A, Option[Δ])] = ads match {
         case (a, dh, dt) :: tail => applyDeltas(tail, combineDeltasO(dt, d)(I), (a, combineDeltasO(dh, d)(I)) :: acc)
@@ -55,41 +54,37 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
     }
   }
 
-  def union[U, Δ, M[_]](that: AutoUnificationBag[A])(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M]): M[AutoUnificationBag[A]] = {
+  def union[U, Δ](that: AutoUnificationBag[A])(implicit I: Identification.Aux[A, U, Δ]): AutoUnificationBag[A] = {
     val (bag, elems) = if (this.size >= that.size) (this, that.elems) else (that, this.elems)
     bag.addAll(elems)
   }
 
-  def union1[U, Δ, M[_]](that: AutoUnificationBag[A])(implicit
-    I: Identification.Aux[A, U, Δ, M],
-    M: Monad[M],
+  def union1[U, Δ](that: AutoUnificationBag[A])(implicit
+    I: Identification.Aux[A, U, Δ],
     A: Equal[A]
-  ): M[(Delta[A, I.Delta], AutoUnificationBag[A], Delta[A, I.Delta])] = {
+  ): (Delta[A, I.Delta], AutoUnificationBag[A], Delta[A, I.Delta]) = {
     // XXX doing addAll1 twice. Could possibly be optimized
-    val this1 = this addAll1 that.elems
-    val that1 = that addAll1 this.elems
-    M.apply2(this1, that1){ case ((thisBag, thisDelta), (thatBag, thatDelta)) =>
-      assert(thisBag === thatBag)
-      (thisDelta, thisBag, thatDelta)
-    }
+    val (thisBag, thisDelta) = this addAll1 that.elems
+    val (thatBag, thatDelta) = that addAll1 this.elems
+    assert(thisBag === thatBag)
+    (thisDelta, thisBag, thatDelta)
   }
 
-  def addAll[F[_], U, Δ, M[_]](fa: F[A])(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M], F: Foldable[F]): M[AutoUnificationBag[A]] =
-    fa.foldLeftM(this)((bag, elem) => bag.add(elem).map(_._1))
+  def addAll[F[_], U, Δ](fa: F[A])(implicit I: Identification.Aux[A, U, Δ], F: Foldable[F]): AutoUnificationBag[A] =
+    fa.foldLeft(this)((bag, elem) => bag.add(elem)._1)
 
-  def addAll1[F[_], U, Δ, M[_]](fa: F[A])(implicit
-    I: Identification.Aux[A, U, Δ, M],
-    M: Monad[M],
+  def addAll1[F[_], U, Δ](fa: F[A])(implicit
+    I: Identification.Aux[A, U, Δ],
     F: Foldable[F],
     A: Equal[A]
-  ): M[(AutoUnificationBag[A], Delta[A, I.Delta])] = {
+  ): (AutoUnificationBag[A], Delta[A, I.Delta]) = {
     type Δ = I.Delta
 
-    fa.foldLeftM[M, (AutoUnificationBag[A], Delta[A, Δ])]((this, Delta.empty))((acc, elem) => {
+    fa.foldLeft[(AutoUnificationBag[A], Delta[A, Δ])]((this, Delta.empty))((acc, elem) => {
       val (bag, delta) = acc
-      bag.add(elem).map({ case (bag, addedElem, deltas) =>
+      bag.add(elem) match { case (bag, addedElem, deltas) =>
         (bag, delta.append(addedElem, deltas))
-      })
+      }
     })
   }
 
@@ -99,7 +94,7 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
   def foreach(f: A => Unit): Unit =
     elems.foreach(f)
 
-  def map[N[_], U, Δ, B](f: A => B)(implicit I: Identification.Aux[B, U, Δ, N], N: Monad[N]): N[AutoUnificationBag[B]] =
+  def map[U, Δ, B](f: A => B)(implicit I: Identification.Aux[B, U, Δ]): AutoUnificationBag[B] =
     AutoUnificationBag.empty[B].addAll(elems.map(f))
 
   /** Like `map`, but assumes that `f` preserves the non-obligation to unify. In other words,
@@ -210,7 +205,7 @@ object AutoUnificationBag {
 
   def empty[A]: AutoUnificationBag[A] = new AutoUnificationBag(Nil)
 
-  def apply[M[_], U, Δ, A](as: A*)(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M]): M[AutoUnificationBag[A]] =
+  def apply[U, Δ, A](as: A*)(implicit I: Identification.Aux[A, U, Δ]): AutoUnificationBag[A] =
     empty[A].addAll(as)
 
   implicit def equalInstance[A: Equal]: Equal[AutoUnificationBag[A]] = new Equal[AutoUnificationBag[A]] {

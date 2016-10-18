@@ -1,6 +1,5 @@
 package proteinrefinery.lib
 
-import nutcracker.Dom.Status
 import nutcracker.Promise.{Completed, Conflict, Empty}
 import nutcracker.{Antichain, Dom, Promise}
 import nutcracker.syntax.dom._
@@ -9,8 +8,7 @@ import proteinrefinery.lib.SiteLabel._
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{Identification, Unification}
 
-import scalaz.{Monad, Show}
-import scalaz.Id._
+import scalaz.Show
 import scalaz.std.either._
 import scalaz.std.list._
 import scalaz.syntax.show._
@@ -44,7 +42,7 @@ object ProteinPattern {
 
       def combineDeltas(d1: Delta, d2: Delta): Delta = Dom[ProteinModifications].combineDeltas(d1, d2)
 
-      def assess(d: ProteinPattern): Status[Update] = d match {
+      def assess(d: ProteinPattern): Dom.Status[Update] = d match {
         case AdmissibleProteinPattern(p, mods) => (mods: ProteinModifications).assess
         case InvalidProteinPattern => Dom.Failed
       }
@@ -85,12 +83,11 @@ case class AdmissibleProteinPattern private(protein: Protein, mods: ProteinModif
     val mods1 = mods.mods.inject(x => (x.site, (Promise.empty[LinkDesc], x.state)))
 
     implicit val siteAttrUnif =
-      Unification.tuple2[Id, Promise[LinkDesc], SiteState](
+      Unification.tuple2[Promise[LinkDesc], SiteState](
         Unification.promiseUnification[LinkDesc],
-        SiteState.unificationInstance,
-        Monad[Id])
+        SiteState.unificationInstance)
     implicit val unif =
-      Unification.tuple2[Id, ISite, SiteAttr]
+      Unification.tuple2[ISite, SiteAttr]
     implicit val ident =
       Identification.by[(ISite, SiteAttr), ISite](_._1)(unif, ISite.identificationInstance)
 

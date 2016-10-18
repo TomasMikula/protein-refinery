@@ -6,7 +6,7 @@ import proteinrefinery.util.{Identification, Unification}
 trait ImplicitConversions extends ImplicitConversions0
 
 trait ImplicitConversions0 {
-  implicit def identificationToUnification[A](implicit I: Identification[A]): Unification.Aux[A, I.Update, I.Delta, I.F] = I.unification
+  implicit def identificationToUnification[A](implicit I: Identification[A]): Unification.Aux[A, I.Update, I.Delta] = I.unification
   implicit def identificationToDom[A](implicit I: Identification[A]): Dom.Aux[A, I.Update, I.Delta] = I.unification.dom
 }
 

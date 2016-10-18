@@ -4,7 +4,6 @@ import nutcracker.Promise
 import proteinrefinery.util.{HomSet, Unification}
 
 import scalaz.Equal
-import scalaz.Id._
 import scalaz.syntax.equal._
 
 case class StateLabel(value: String) extends AnyVal {
@@ -35,6 +34,6 @@ object SiteState {
       else Nil
   }
 
-  implicit def unificationInstance: Unification.Aux[SiteState, Update, Delta, Id] =
+  implicit def unificationInstance: Unification.Aux[SiteState, Update, Delta] =
     Unification.promiseUnification[StateLabel]
 }
