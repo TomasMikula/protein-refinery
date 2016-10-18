@@ -84,7 +84,7 @@ case class ProteinPattern(protein: Protein, mods: ProteinModifications) {
 
     val str = bag.list.map(siteStr).mkString(",")
 
-    s"${protein.name.name}($str)"
+    s"${protein}($str)"
   }
 }
 
