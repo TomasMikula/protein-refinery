@@ -81,7 +81,6 @@ case class AgentsPattern(
   def getUnbound: List[(ProteinPattern, LocalSiteId)] =
     unbound map { case (i, s) => (apply(i), s) }
 
-  def unify(that: AgentsPattern): Option[AgentsPattern] = ???
   def partition(that: AgentsPattern): (Option[AgentsPattern], Option[AgentsPattern], Option[AgentsPattern]) = ???
 
   override def toString: String = {

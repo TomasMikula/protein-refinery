@@ -1,11 +1,13 @@
 package proteinrefinery.lib
 
 import nutcracker.{Antichain, Dom, Promise, PropagationLang, Trigger}
-import nutcracker.Dom.Status
+import nutcracker.Dom.{Aux, Status}
 import nutcracker.syntax.dom._
 import nutcracker.util.{ContF, FreeK, InjectK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
+import proteinrefinery.util.Unification
+import proteinrefinery.util.Unification.Syntax._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds
@@ -137,6 +139,21 @@ object Rule {
 
     def assess(r: Rule): Status[Update] =
       Dom[AgentsPattern].assess(r.lhs)
+  }
+
+  implicit def unificationInstance: Unification.Aux[Rule, Update, Delta] = new Unification[Rule] {
+    type Update = Rule.Update
+    type Delta = Rule.Delta
+
+    def unify(r1: Rule, r2: Rule): (Option[Delta], Rule, Option[Delta]) = {
+      val Rule(lhs1, actions1) = r1
+      val Rule(lhs2, actions2) = r2
+      val (d1, lhs, d2) = lhs1 unify lhs2
+      val actions = (r1.actions ++ r2.actions).distinct // XXX change to actions should be part of Delta
+      (d1, Rule(lhs, actions), d2)
+    }
+
+    def dom: Aux[Rule, Update, Delta] = domInstance
   }
 
   def linksAgentToC[F[_[_], _]](ref: Ref)(p: Protein)(implicit inj: InjectK[PropagationLang, F]): ContF[F, Binding.Ref] =
