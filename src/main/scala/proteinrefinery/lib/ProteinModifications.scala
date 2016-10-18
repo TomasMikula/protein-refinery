@@ -5,9 +5,10 @@ import nutcracker.{Dom, Join}
 import nutcracker.syntax.dom._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
-import proteinrefinery.util.AutoUnificationBag
+import proteinrefinery.util.{AutoUnificationBag, Unification}
 
 import scalaz.{Equal, Show}
+import scalaz.Id.Id
 import scalaz.syntax.equal._
 
 final case class ProteinModifications private(mods: AutoUnificationBag[SiteWithState]) {
@@ -94,8 +95,7 @@ object ProteinModifications {
 
       override def update(d: ProteinModifications, u: Update): Option[(ProteinModifications, Delta)] = {
         val (mods, delta) = d refineBy u.value
-        if(delta.isEmpty) None
-        else Some((mods, delta))
+        delta.ifNonEmpty.map((mods, _))
       }
 
       override def combineDeltas(d1: Delta, d2: Delta): Delta = d1 append d2
@@ -105,4 +105,18 @@ object ProteinModifications {
     def equal(a1: ProteinModifications, a2: ProteinModifications): Boolean =
       a1.mods === a2.mods
   }
+
+  implicit def unificationInstance: Unification.Aux[ProteinModifications, Update, Delta, Id] =
+    new Unification[ProteinModifications] {
+      type Update = ProteinModifications.Update
+      type Delta = ProteinModifications.Delta
+      type F[X] = Id[X]
+
+      def unify(m1: ProteinModifications, m2: ProteinModifications): (Option[Delta], ProteinModifications, Option[Delta]) = {
+        val (d1, mods, d2) = (m1.mods union1 m2.mods)
+        (d1.ifNonEmpty, ProteinModifications(mods), d2.ifNonEmpty)
+      }
+
+      def dom: Dom.Aux[ProteinModifications, Update, Delta] = domInstance
+    }
 }

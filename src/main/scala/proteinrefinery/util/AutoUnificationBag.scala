@@ -60,6 +60,20 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
     bag.addAll(elems)
   }
 
+  def union1[U, Δ, M[_]](that: AutoUnificationBag[A])(implicit
+    I: Identification.Aux[A, U, Δ, M],
+    M: Monad[M],
+    A: Equal[A]
+  ): M[(Delta[A, I.Delta], AutoUnificationBag[A], Delta[A, I.Delta])] = {
+    // XXX doing addAll1 twice. Could possibly be optimized
+    val this1 = this addAll1 that.elems
+    val that1 = that addAll1 this.elems
+    M.apply2(this1, that1){ case ((thisBag, thisDelta), (thatBag, thatDelta)) =>
+      assert(thisBag === thatBag)
+      (thisDelta, thisBag, thatDelta)
+    }
+  }
+
   def addAll[F[_], U, Δ, M[_]](fa: F[A])(implicit I: Identification.Aux[A, U, Δ, M], M: Monad[M], F: Foldable[F]): M[AutoUnificationBag[A]] =
     fa.foldLeftM(this)((bag, elem) => bag.add(elem).map(_._1))
 
@@ -128,6 +142,10 @@ object AutoUnificationBag {
 
     def isEmpty[U](implicit dom: Dom.Aux[A, U, Δ]): Boolean =
       newElements.isEmpty && updatedElements.isEmpty
+
+    def ifNonEmpty[U](implicit dom: Dom.Aux[A, U, Δ]): Option[Delta[A, Δ]] =
+      if(isEmpty) None
+      else Some(this)
 
     def append(addedElem: A, updatedElems: List[(A, Option[Δ])])(implicit A: Equal[A]): Delta[A, Δ] =
       updatedElems.foldLeft[(List[Node[A, Δ]], List[(Node[A, Δ], Option[Δ])])]((roots, Nil))({ case ((roots, addedElemChildren), (updatedElem, delta)) =>
