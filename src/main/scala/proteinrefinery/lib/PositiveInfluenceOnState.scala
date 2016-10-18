@@ -36,7 +36,7 @@ object PositiveInfluenceOnState {
     ContF.sequence(searchByRule(agent, target), searchByPhosphorylation(agent, target))
 
   private def searchByRule(agent: Protein, target: ProteinPattern): ContF[DSL, Ref] = {
-    val ap = AdmissibleAgentsPattern.empty.addAgent(target)._1
+    val ap = AgentsPattern.empty.addAgent(target)._1
     for {
       rRef <- Nuggets.rulesC[DSL](r => if(r enables ap) OnceTrigger.Fire(()) else OnceTrigger.Sleep())
       r <- rRef.asCont[DSL]

@@ -1,56 +1,29 @@
 package proteinrefinery.lib
 
 import nutcracker.Dom
-import nutcracker.Dom.Status
 import nutcracker.syntax.dom._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.util.mapUnion
 import proteinrefinery.util.syntax._
 
 import scalaz.Id.Id
-import scalaz.{Equal, State, StateT}
-import scalaz.std.option._
+import scalaz.{Equal, State}
 
-sealed trait AgentsPattern
-
-object AgentsPattern {
-
-  type Update = (AgentIndex, ProteinPattern.Update)
-  type Delta = Map[AgentIndex, ProteinPattern.Delta]
-
-  implicit def domInstance: Dom.Aux[AgentsPattern, Update, Delta] = new Dom[AgentsPattern] {
-    type Update = AgentsPattern.Update
-    type Delta = AgentsPattern.Delta
-
-    def update(p: AgentsPattern, u: Update): Option[(AgentsPattern, Delta)] = p match {
-      case aap @ AdmissibleAgentsPattern(_, _, _) => aap.updateAgent(u._1, u._2)
-      case InvalidAgentsPattern => None
-    }
-
-    def combineDeltas(d1: Delta, d2: Delta): Delta =
-      mapUnion[AgentIndex, ProteinPattern.Delta, Id](d1, d2)((δ1, δ2) => Dom[ProteinPattern].combineDeltas(δ1, δ2))
-
-    def assess(p: AgentsPattern): Status[Update] = p match {
-      case AdmissibleAgentsPattern(_, _, _) => Dom.Refined
-      case InvalidAgentsPattern => Dom.Failed
-    }
-  }
-
-}
-
-case object InvalidAgentsPattern extends AgentsPattern
-
-case class AdmissibleAgentsPattern(
+case class AgentsPattern(
   private val agents: Vector[Option[ProteinPattern]],
   bonds: Vector[Option[(AgentIndex, LocalSiteId, AgentIndex, LocalSiteId)]],
   unbound: List[(AgentIndex, LocalSiteId)]
-) extends AgentsPattern {
+) {
+  lazy val isAdmissible: Boolean = {
+    agents forall (_ forall (_.isAdmissible))
+    // TODO admissibility of bonds
+  }
 
   def apply(i: AgentIndex): ProteinPattern = agents(i.value).get
 
   def agentIterator: Iterator[ProteinPattern] = agents.iterator.mapFilter(identity)
 
-  def modify(a: Action): AdmissibleAgentsPattern = a match {
+  def modify(a: Action): AgentsPattern = a match {
     case Link(i, si, j, sj) => link0(i, si, j, sj)._1
     case Unlink(id) => unlink(id)
     case Modify(i, rmMods, addMods) =>
@@ -59,43 +32,41 @@ case class AdmissibleAgentsPattern(
       ???
   }
 
-  def addAgent(a: ProteinPattern): (AdmissibleAgentsPattern, AgentIndex) =
+  def addAgent(a: ProteinPattern): (AgentsPattern, AgentIndex) =
     (copy(agents = agents :+ Some(a)), AgentIndex(agents.size))
 
-  def removeAgent(i: AgentIndex): AdmissibleAgentsPattern = ???
+  def removeAgent(i: AgentIndex): AgentsPattern = ???
 
   def updateAgent(i: AgentIndex, u: ProteinPattern.Update): Option[(AgentsPattern, AgentsPattern.Delta)] =
     (this(i): ProteinPattern).update(u) match {
-      case Some((pp, δ)) =>
-        if(pp.isAdmissible) Some((copy(agents = agents.updated(i.value, Some(pp))), Map(i -> δ)))
-        else Some((InvalidAgentsPattern, Map(i -> δ)))
+      case Some((pp, δ)) => Some((copy(agents = agents.updated(i.value, Some(pp))), Map(i -> δ)))
       case None => None
     }
 
-  def requireUnbound(i: AgentIndex, s: SiteLabel): AdmissibleAgentsPattern =
+  def requireUnbound(i: AgentIndex, s: SiteLabel): AgentsPattern =
     requireUnbound0(i, LocalSiteId(s))
 
-  def requireUnbound0(i: AgentIndex, s: LocalSiteId): AdmissibleAgentsPattern = {
+  def requireUnbound0(i: AgentIndex, s: LocalSiteId): AgentsPattern = {
     require(hasAgent(i.value))
     require(isNotBound(i, s))
-    AdmissibleAgentsPattern(agents, bonds, (i, s) :: unbound)
+    AgentsPattern(agents, bonds, (i, s) :: unbound)
   }
 
-  def link(i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel): (AdmissibleAgentsPattern, LinkId) =
+  def link(i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel): (AgentsPattern, LinkId) =
     link0(i, LocalSiteId(si), j, LocalSiteId(sj))
 
-  def link0(i: AgentIndex, si: LocalSiteId, j: AgentIndex, sj: LocalSiteId): (AdmissibleAgentsPattern, LinkId) = {
+  def link0(i: AgentIndex, si: LocalSiteId, j: AgentIndex, sj: LocalSiteId): (AgentsPattern, LinkId) = {
     require(hasAgent(i.value))
     require(hasAgent(j.value))
     require(isUnbound(i, si))
     require(isUnbound(j, sj))
-    (AdmissibleAgentsPattern(agents, bonds :+ Some((i, si, j, sj)), unbound.filter(u => u != ((i, si)) && u != ((j, sj)))), LinkId(bonds.size))
+    (AgentsPattern(agents, bonds :+ Some((i, si, j, sj)), unbound.filter(u => u != ((i, si)) && u != ((j, sj)))), LinkId(bonds.size))
   }
 
-  def unlink(id: LinkId): AdmissibleAgentsPattern = {
+  def unlink(id: LinkId): AgentsPattern = {
     require(hasBond(id.value))
     val Some((i, si, j, sj)) = bonds(id.value)
-    AdmissibleAgentsPattern(agents, bonds.updated(id.value, None), (i, si) :: (j, sj) :: unbound)
+    AgentsPattern(agents, bonds.updated(id.value, None), (i, si) :: (j, sj) :: unbound)
   }
 
   def getBond(id: LinkId): Option[(ProteinPattern, LocalSiteId, ProteinPattern, LocalSiteId)] =
@@ -107,8 +78,8 @@ case class AdmissibleAgentsPattern(
   def getUnbound: List[(ProteinPattern, LocalSiteId)] =
     unbound map { case (i, s) => (apply(i), s) }
 
-  def unify(that: AdmissibleAgentsPattern): Option[AdmissibleAgentsPattern] = ???
-  def partition(that: AdmissibleAgentsPattern): (Option[AdmissibleAgentsPattern], Option[AdmissibleAgentsPattern], Option[AdmissibleAgentsPattern]) = ???
+  def unify(that: AgentsPattern): Option[AgentsPattern] = ???
+  def partition(that: AgentsPattern): (Option[AgentsPattern], Option[AgentsPattern], Option[AgentsPattern]) = ???
 
   override def toString: String = {
     val bondsByAgent = bonds.iterator.zipWithIndex.mapFilter({ case (l, i) => l.map((_, i)) }).flatMap[(AgentIndex, (LocalSiteId, Either[Unbound.type , LinkId]))]{
@@ -145,31 +116,46 @@ case class AdmissibleAgentsPattern(
     })
 }
 
-object AdmissibleAgentsPattern {
-  val empty: AdmissibleAgentsPattern =
-    AdmissibleAgentsPattern(Vector.empty, Vector.empty, Nil)
+object AgentsPattern {
 
-  def addAgent(a: ProteinPattern): State[AdmissibleAgentsPattern, AgentIndex] =
+  type Update = (AgentIndex, ProteinPattern.Update)
+  type Delta = Map[AgentIndex, ProteinPattern.Delta]
+
+  val empty: AgentsPattern =
+    AgentsPattern(Vector.empty, Vector.empty, Nil)
+
+  def addAgent(a: ProteinPattern): State[AgentsPattern, AgentIndex] =
     State(_.addAgent(a))
 
-  def addAgentOpt(pp: ProteinPattern): StateT[Option, AdmissibleAgentsPattern, AgentIndex] =
-    if(pp.isAdmissible) StateT(ap => Option(ap.addAgent(pp)))
-    else                StateT(_  => Option.empty[(AdmissibleAgentsPattern, AgentIndex)])
-
-  def removeAgent(i: AgentIndex): State[AdmissibleAgentsPattern, Unit] =
+  def removeAgent(i: AgentIndex): State[AgentsPattern, Unit] =
     State(s => (s.removeAgent(i), ()))
 
-  def requireUnbound0(i: AgentIndex, site: LocalSiteId): State[AdmissibleAgentsPattern, Unit] =
+  def requireUnbound0(i: AgentIndex, site: LocalSiteId): State[AgentsPattern, Unit] =
     State(s => (s.requireUnbound0(i, site), ()))
 
-  def requireUnbound(i: AgentIndex, site: SiteLabel): State[AdmissibleAgentsPattern, Unit] =
+  def requireUnbound(i: AgentIndex, site: SiteLabel): State[AgentsPattern, Unit] =
     State(s => (s.requireUnbound(i, site), ()))
 
-  def addLink(i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel): State[AdmissibleAgentsPattern, LinkId] =
+  def addLink(i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel): State[AgentsPattern, LinkId] =
     State(_.link(i, si, j, sj))
 
-  def removeLink(id: LinkId): State[AdmissibleAgentsPattern, Unit] =
+  def removeLink(id: LinkId): State[AgentsPattern, Unit] =
     State(s => (s.unlink(id), ()))
+
+  implicit def domInstance: Dom.Aux[AgentsPattern, Update, Delta] = new Dom[AgentsPattern] {
+    type Update = AgentsPattern.Update
+    type Delta = AgentsPattern.Delta
+
+    def update(ap: AgentsPattern, u: Update): Option[(AgentsPattern, Delta)] =
+      ap.updateAgent(u._1, u._2)
+
+    def combineDeltas(d1: Delta, d2: Delta): Delta =
+      mapUnion[AgentIndex, ProteinPattern.Delta, Id](d1, d2)((δ1, δ2) => Dom[ProteinPattern].combineDeltas(δ1, δ2))
+
+    def assess(ap: AgentsPattern): Dom.Status[Update] =
+      if(ap.isAdmissible) Dom.Refined
+      else Dom.Failed
+  }
 }
 
 final case class AgentIndex(value: Int) extends AnyVal

@@ -1,24 +1,23 @@
 package proteinrefinery.lib
 
-import proteinrefinery.lib.AdmissibleAgentsPattern._
+import proteinrefinery.lib.AgentsPattern._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 import scalaz.State
 import scalaz.std.either._
-import scalaz.std.option._
 import scalaz.syntax.equal._
 
 case class BindingPartnerPattern(p: ProteinPattern, s: LocalSiteId) {
   def overlaps(that: BindingPartnerPattern): Boolean = (this.s === that.s) && (this.p isCompatibleWith that.p)
 
-  def bind(that: BindingPartnerPattern): Option[Binding] = (for {
-    i <- addAgentOpt(this.p)
-    j <- addAgentOpt(that.p)
-    _ <- requireUnbound0(i, this.s).lift[Option]
-    _ <- requireUnbound0(j, that.s).lift[Option]
-    lhs <- State.get[AdmissibleAgentsPattern].lift[Option]
+  def bind(that: BindingPartnerPattern): Binding = (for {
+    i <- addAgent(this.p)
+    j <- addAgent(that.p)
+    _ <- requireUnbound0(i, this.s)
+    _ <- requireUnbound0(j, that.s)
+    lhs <- State.get[AgentsPattern]
     a = Link(i, this.s, j, that.s)
-  } yield Binding(AdmissibleRule(lhs, List(a)), i, j, this.s, that.s)).eval(AdmissibleAgentsPattern.empty)
+  } yield Binding(Rule(lhs, List(a)), i, j, this.s, that.s)).eval(AgentsPattern.empty)
 }
 
 object BindingPartnerPattern {

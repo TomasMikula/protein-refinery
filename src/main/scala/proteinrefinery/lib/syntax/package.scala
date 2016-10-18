@@ -24,7 +24,7 @@ package object syntax {
   }
 
   implicit class BindingPartnerPatternOps(bp: BindingPartnerPattern) {
-    def binds(that: BindingPartnerPattern): Option[Binding] = bp bind that
+    def binds(that: BindingPartnerPattern): Binding = bp bind that
   }
 
   implicit def symbolToProtein(sym: Symbol): Protein = Protein(sym)

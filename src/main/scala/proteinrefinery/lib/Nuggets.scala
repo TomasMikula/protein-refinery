@@ -15,7 +15,7 @@ import scala.language.higherKinds
 object Nuggets {
 
   private object DomTypes {
-    implicit object Rules extends AntichainDomType[AdmissibleRule]
+    implicit object Rules extends AntichainDomType[Rule]
     implicit object PhosphoSites extends AntichainDomType[PhosphoTarget]
     implicit object Kinases extends AntichainDomType[ProteinPattern]
   }
@@ -23,7 +23,7 @@ object Nuggets {
   import DomTypes._
 
   def addAll[F[_[_], _]](
-    rules: List[AdmissibleRule] = Nil,
+    rules: List[Rule] = Nil,
     phosphoSites: List[(Protein, Protein, SiteLabel)] = Nil
   )(implicit
     i: InjectK[PropagationLang, F],
@@ -35,7 +35,7 @@ object Nuggets {
   }
 
   // basic programs for adding nuggets
-  def addRuleF[F[_[_], _]](r: AdmissibleRule)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
+  def addRuleF[F[_[_], _]](r: Rule)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     cellF(Antichain(r)).inject[F] >>= { trackF(_) }
   def addPhosphoTargetF[F[_[_], _]](kinase: Protein, substrate: Protein, site: SiteLabel)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     cellF(Antichain(PhosphoTarget(kinase, substrate, site))).inject[F] >>= { trackF(_) }
@@ -43,7 +43,7 @@ object Nuggets {
     cellF(Antichain(activeState)).inject[F] >>= { trackF(_) }
 
   // basic programs for querying nuggets
-  def rulesF[F[_[_], _]](f: AdmissibleRule => OnceTrigger[AdmissibleRule.Ref => FreeK[F, Unit]])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
+  def rulesF[F[_[_], _]](f: Rule => OnceTrigger[Rule.Ref => FreeK[F, Unit]])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     thresholdQuery(DomTypes.Rules)(r => f(r.value))
   def phosphoTargetsF[F[_[_], _]](f: PhosphoTarget => OnceTrigger[PhosphoTarget.Ref => FreeK[F, Unit]])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
     thresholdQuery(DomTypes.PhosphoSites)(pt => f(pt.value))
@@ -54,7 +54,7 @@ object Nuggets {
     )
 
   // queries in CPS style
-  def rulesC[F[_[_], _]](p: AdmissibleRule => OnceTrigger[Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, AdmissibleRule.Ref] =
+  def rulesC[F[_[_], _]](p: Rule => OnceTrigger[Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Rule.Ref] =
     ContF(f => rulesF[F](p andThen (_.map(_ => f))))
   def phosphoTargetsC[F[_[_], _]](p: PhosphoTarget => OnceTrigger[Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, PhosphoTarget.Ref] =
     ContF(f => phosphoTargetsF[F](p andThen (_.map(_ => f))))
@@ -64,7 +64,7 @@ object Nuggets {
   // derived queries
 
   def bindingsOfF[F[_[_], _]](p: Protein)(f: Binding.Ref => FreeK[F, Unit])(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, Unit] =
-    rulesF[F](_ => OnceTrigger.Fire(ruleRef => AdmissibleRule.linksAgentToC(ruleRef)(p).apply(f)))
+    rulesF[F](_ => OnceTrigger.Fire(ruleRef => Rule.linksAgentToC(ruleRef)(p).apply(f)))
   def bindingsOfC[F[_[_], _]](p: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Binding.Ref] =
     ContF(f => bindingsOfF[F](p)(f))
   def bindingsOfS[F[_[_], _]](p: Protein)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, DSetRef[Antichain[Binding]]] =

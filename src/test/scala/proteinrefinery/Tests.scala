@@ -5,13 +5,9 @@ import org.scalatest.FunSuite
 import proteinrefinery.lib.syntax._
 import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, SiteLabel}
 
-import scalaz.std.list._
-import scalaz.std.option._
-import scalaz.syntax.traverse._
-
 class Tests extends FunSuite {
 
-  val bindings: List[Binding] = List[Option[Binding]](
+  val bindings: List[Binding] = List[Binding](
     /* 00 */ ('A @@ 'b) binds ('B @@ 'v),
     /* 01 */ ('A('z~"p") @@ 'c) binds ('C @@ 'a),
     /* 02 */ ('A @@ 'e) binds ('E @@ 'a),
@@ -21,7 +17,7 @@ class Tests extends FunSuite {
     /* 06 */ ('B @@ 'v) binds ('Y @@ 'b),
     /* 07 */ ('X @@ 'y) binds ('Y @@ 'x),
     /* 08 */ ('X @@ 'c) binds ('C @@ 'a)
-  ).sequence.get
+  )
 
   val phosphoTargets = List[(Protein, Protein, SiteLabel)](
     ('C, 'B, 's)

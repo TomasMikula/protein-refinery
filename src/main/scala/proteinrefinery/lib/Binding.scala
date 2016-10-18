@@ -6,7 +6,7 @@ import proteinrefinery.lib.ProteinModifications.LocalSiteId
 sealed trait Binding {
 
   /** Rule that witnesses this binding action to occur. */
-  def witness: AdmissibleRule
+  def witness: Rule
 
   /** Index of [[p]] in both LHS and RHS of [[witness]]. */
   def pi: AgentIndex
@@ -49,13 +49,13 @@ sealed trait Binding {
 }
 
 object Binding {
-  private case class Binding0(witness: AdmissibleRule, pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId, qs: LocalSiteId) extends Binding
+  private case class Binding0(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId, qs: LocalSiteId) extends Binding
 
   type Ref = Antichain.Ref[Binding]
 
-  def apply(witness: AdmissibleRule, pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId, qs: LocalSiteId): Binding =
+  def apply(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId, qs: LocalSiteId): Binding =
     Binding0(witness, pi, qi, ps, qs)
 
   def apply(p: Protein, ps: LocalSiteId, q: Protein, qs: LocalSiteId): Binding =
-    (BindingPartnerPattern(p, ps) bind BindingPartnerPattern(q, qs)).get // no failure possible
+    BindingPartnerPattern(p, ps) bind BindingPartnerPattern(q, qs)
 }

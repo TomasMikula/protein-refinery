@@ -12,46 +12,14 @@ import scala.language.higherKinds
 import scalaz.Show
 import scalaz.syntax.equal._
 
-sealed trait Rule
+final case class Rule (lhs: AgentsPattern, actions: List[Action]) {
 
-object Rule {
-  type Update = AgentsPattern.Update
-  type Delta = AgentsPattern.Delta
+  lazy val isAdmissible: Boolean = lhs.isAdmissible
 
-  def apply(lhs: AgentsPattern, actions: List[Action]): Rule = lhs match {
-    case aap @ AdmissibleAgentsPattern(_, _, _) => AdmissibleRule(aap, actions)
-    case InvalidAgentsPattern => InvalidRule
-  }
-
-  implicit def domInstance: Dom.Aux[Rule, Update, Delta] = new Dom[Rule] {
-    type Update = Rule.Update
-    type Delta = Rule.Delta
-
-    def update(r: Rule, u: Update): Option[(Rule, Delta)] = r match {
-      case AdmissibleRule(lhs, actions) => (lhs: AgentsPattern).update(u) match {
-        case Some((lhs, δ)) => Some((Rule(lhs, actions), δ))
-        case None => None
-      }
-      case InvalidRule => None
-    }
-
-    def combineDeltas(d1: Delta, d2: Delta): Delta =
-      Dom[AgentsPattern].combineDeltas(d1, d2)
-
-    def assess(r: Rule): Status[Update] = r match {
-      case AdmissibleRule(lhs, _) => Dom[AgentsPattern].assess(lhs)
-      case InvalidRule => Dom.Failed
-    }
-  }
-}
-
-case object InvalidRule extends Rule
-
-final case class AdmissibleRule(lhs: AdmissibleAgentsPattern, actions: List[Action]) extends Rule {
-  lazy val rhs: AdmissibleAgentsPattern = actions.foldLeft(lhs)((p, a) => p.modify(a))
-  def apply(lhs: AdmissibleAgentsPattern): AdmissibleAgentsPattern = ???
-  def canConsume(ptrn: AdmissibleAgentsPattern): Boolean = ???
-  def canProduce(ptrn: AdmissibleAgentsPattern): Boolean = ???
+  lazy val rhs: AgentsPattern = actions.foldLeft(lhs)((p, a) => p.modify(a))
+  def apply(lhs: AgentsPattern): AgentsPattern = ???
+  def canConsume(ptrn: AgentsPattern): Boolean = ???
+  def canProduce(ptrn: AgentsPattern): Boolean = ???
 
   def mentionedSitesOf(p: Protein): Set[LocalSiteId] = {
     val buf = ArrayBuffer[LocalSiteId]()
@@ -100,9 +68,9 @@ final case class AdmissibleRule(lhs: AdmissibleAgentsPattern, actions: List[Acti
     buf.toSet
   }
 
-  def enables(pat: AdmissibleAgentsPattern): Boolean = {
+  def enables(pat: AgentsPattern): Boolean = {
 
-    def enables(a: Action, pat: AdmissibleAgentsPattern): Boolean = a match {
+    def enables(a: Action, pat: AgentsPattern): Boolean = a match {
 
       case Link(i, si, j, sj) =>
         // does `pat` need this link?
@@ -141,22 +109,44 @@ final case class AdmissibleRule(lhs: AdmissibleAgentsPattern, actions: List[Acti
   }
 
   // TODO: should return a list of explanations instead of Boolean
-  def enables(that: AdmissibleRule): Boolean = enables(that.lhs)
+  def enables(that: Rule): Boolean = enables(that.lhs)
 
   override def toString: String = s"$lhs -> $rhs"
 }
 
-object AdmissibleRule {
-  type Ref = Antichain.Ref[AdmissibleRule]
+object Rule {
+  type Update = AgentsPattern.Update
+  type Delta = AgentsPattern.Delta
+
+  type Ref = Antichain.Ref[Rule]
+
+  implicit def domInstance: Dom.Aux[Rule, Update, Delta] = new Dom[Rule] {
+    type Update = Rule.Update
+    type Delta = Rule.Delta
+
+    def update(r: Rule, u: Update): Option[(Rule, Delta)] = {
+      val Rule(lhs, actions) = r
+      lhs.update(u) match {
+        case Some((lhs, δ)) => Some((Rule(lhs, actions), δ))
+        case None => None
+      }
+    }
+
+    def combineDeltas(d1: Delta, d2: Delta): Delta =
+      Dom[AgentsPattern].combineDeltas(d1, d2)
+
+    def assess(r: Rule): Status[Update] =
+      Dom[AgentsPattern].assess(r.lhs)
+  }
 
   def linksAgentToC[F[_[_], _]](ref: Ref)(p: Protein)(implicit inj: InjectK[PropagationLang, F]): ContF[F, Binding.Ref] =
     ContF(f => PropagationLang.domTriggerF(ref)(r => {
       val now = FreeK.sequence_(r.value.linksAgentTo(p).iterator.map(b => PropagationLang.cellF(Antichain(b)).inject[F].flatMap(f)).toList)
-      val onChange: (Antichain[AdmissibleRule], Antichain.Delta[AdmissibleRule]) => Trigger[FreeK[F, Unit]] = (d, δ) => sys.error("Unreachable code")
+      val onChange: (Antichain[Rule], Antichain.Delta[Rule]) => Trigger[FreeK[F, Unit]] = (d, δ) => sys.error("Unreachable code")
       (Some(now), Some(onChange))
     }))
 
-  implicit def showInstance: Show[AdmissibleRule] = new Show[AdmissibleRule] {
-    override def shows(r: AdmissibleRule): String = r.toString
+  implicit def showInstance: Show[Rule] = new Show[Rule] {
+    override def shows(r: Rule): String = r.toString
   }
 }

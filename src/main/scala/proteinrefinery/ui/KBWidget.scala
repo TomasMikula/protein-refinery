@@ -10,7 +10,7 @@ import nutcracker.util.KMap
 import org.reactfx.collection.LiveArrayList
 import org.reactfx.value.{Val, Var}
 import org.reactfx.{EventSource, EventStream, EventStreams}
-import proteinrefinery.lib.{Protein, ProteinModifications, ProteinPattern, AdmissibleRule, SiteLabel, SiteState}
+import proteinrefinery.lib.{Protein, ProteinModifications, ProteinPattern, Rule, SiteLabel, SiteState}
 import proteinrefinery.ui.FactType.{FactKinase, FactPhosTarget, FactRule}
 import proteinrefinery.ui.util.syntax._
 
@@ -25,7 +25,7 @@ class KBWidget {
   ).ignoreResult }
 
   private val dialogHolder = new StackPane()
-  private val rules = new ListView[AdmissibleRule]
+  private val rules = new ListView[Rule]
   private val phosSites = new ListView[(Protein, Protein, SiteLabel)]
   private val kinases = new ListView[ProteinPattern]
 
@@ -58,7 +58,7 @@ class KBWidget {
     factHandlers.getOrElse(t)(a => sys.error(s"Unexpected fact type: $t"))(fact)
   }
 
-  private def ruleAdded(r: AdmissibleRule): Unit = rules.getItems.add(r).ignoreResult()
+  private def ruleAdded(r: Rule): Unit = rules.getItems.add(r).ignoreResult()
 
   private def phosTargetAdded(k: Protein, s: Protein, ss: SiteLabel): Unit = phosSites.getItems.add((k, s, ss)).ignoreResult()
 
@@ -74,7 +74,7 @@ object KBWidget {
 
 trait FactType[A] { self: Singleton => }
 object FactType {
-  object FactRule extends FactType[AdmissibleRule]
+  object FactRule extends FactType[Rule]
   object FactKinase extends FactType[ProteinPattern]
   object FactPhosTarget extends FactType[(Protein, Protein, SiteLabel)]
 }
