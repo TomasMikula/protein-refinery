@@ -5,7 +5,7 @@ import nutcracker.util.ContF
 import proteinrefinery.DSL
 
 sealed trait PositiveInfluenceOnKinaseActivity {
-  def agent: Protein
+  def agent: ProteinPattern
   def kinase: Protein
 }
 
@@ -16,7 +16,7 @@ object PositiveInfluenceOnKinaseActivity {
   // Constructors
 
   final case class PositiveInfluenceOnActiveState(infl: PositiveInfluenceOnState) extends PositiveInfluenceOnKinaseActivity {
-    def agent: Protein = infl.agent
+    def agent = infl.agent
     def kinase: Protein = infl.target.protein
   }
   def positiveInfluenceOnActiveState(infl: PositiveInfluenceOnState): PositiveInfluenceOnKinaseActivity = PositiveInfluenceOnActiveState(infl)

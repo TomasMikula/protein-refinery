@@ -10,7 +10,7 @@ import proteinrefinery.util.OnceTrigger
 import scalaz.syntax.equal._
 
 sealed trait PositiveInfluenceOnState {
-  def agent: Protein
+  def agent: ProteinPattern
   def target: ProteinPattern
 }
 
@@ -25,7 +25,7 @@ object PositiveInfluenceOnState {
   }
 
   final case class ByPhosphorylation(infl: PositiveInfluenceOnPhosphorylation, target: ProteinPattern) extends PositiveInfluenceOnState {
-    def agent: Protein = infl.agent
+    def agent = infl.agent
   }
   def byPhosphorylation(infl: PositiveInfluenceOnPhosphorylation, target: ProteinPattern): PositiveInfluenceOnState = ByPhosphorylation(infl, target)
 
