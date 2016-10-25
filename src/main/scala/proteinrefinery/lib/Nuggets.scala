@@ -8,6 +8,7 @@ import nutcracker.util.ContF._
 import nutcracker.{Antichain, DSet, IncSet, PropagationLang}
 import proteinrefinery.util.TrackLang._
 import proteinrefinery.util.DomType.AntichainDomType
+import proteinrefinery.util.OnceTrigger.Fire
 import proteinrefinery.util.{OnceTrigger, TrackLang}
 
 import scala.language.higherKinds
@@ -104,4 +105,6 @@ object Nuggets {
   def kinasesOfS[F[_[_], _]](substrate: Protein, site: SiteLabel)(implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): FreeK[F, IncSetRef[Protein]] =
     IncSet.collect(kinasesOfC(substrate, site))
 
+  def forEachRule[F[_[_], _]](implicit i: InjectK[PropagationLang, F], j: InjectK[TrackLang, F]): ContF[F, Rule.Ref] =
+    rulesC[F](r => Fire(()))
 }

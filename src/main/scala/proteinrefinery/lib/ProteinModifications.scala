@@ -60,8 +60,12 @@ object ProteinModifications {
   type Delta = AutoUnificationBag.Delta[SiteWithState, SiteWithState.Delta]
 
   def apply(mods: (SiteLabel, SiteState)*): ProteinModifications = {
-    val mods1 = mods.map({ case (s, st) => SiteWithState(s, st) })
-    val bag = AutoUnificationBag(mods1:_*)
+    val mods1 = mods.foldRight[List[SiteWithState]](Nil){ case ((s, st), sss) => SiteWithState(s, st) :: sss }
+    ProteinModifications(mods1)
+  }
+
+  def apply(mods: List[SiteWithState]): ProteinModifications = {
+    val bag = AutoUnificationBag(mods:_*)
     ProteinModifications(bag)
   }
 

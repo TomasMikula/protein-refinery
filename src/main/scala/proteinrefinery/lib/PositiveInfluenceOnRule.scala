@@ -1,9 +1,11 @@
 package proteinrefinery.lib
 
-import nutcracker.Antichain
-import nutcracker.util.ContF
+import nutcracker.{Antichain, IncSet}
+import nutcracker.IncSet.IncSetRef
+import nutcracker.util.{ContF, FreeK}
 import proteinrefinery.DSL
 import proteinrefinery.util.OnceTrigger
+
 import scalaz.syntax.equal._
 
 sealed trait PositiveInfluenceOnRule {
@@ -25,6 +27,12 @@ object PositiveInfluenceOnRule {
 
 
   // Search
+
+  def search(agent: Protein, rule: Rule): FreeK[DSL, IncSetRef[Ref]] =
+    IncSet.collect(searchC(agent, rule))
+
+  def search(agent: ProteinPattern, rule: Rule): FreeK[DSL, IncSetRef[Ref]] =
+    IncSet.collect(searchC(agent, rule))
 
   // TODO: make `rule: Rule.Ref`
   def searchC(agent: Protein, rule: Rule): ContF[DSL, Ref] =

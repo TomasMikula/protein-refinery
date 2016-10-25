@@ -9,7 +9,7 @@ import scalaz.Leibniz.===
 import scalaz.std.list._
 import scalaz.syntax.equal._
 import scalaz.syntax.foldable._
-import scalaz.{Equal, Foldable, Monoid}
+import scalaz.{-\/, Equal, Foldable, Monoid, \/, \/-}
 
 class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends AnyVal
 {
@@ -125,11 +125,18 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
   }
 
   override def toString: String = elems.toString()
+  override def equals(other: Any): Boolean =
+    if(other.isInstanceOf[AutoUnificationBag[A]]) {
+      val that = other.asInstanceOf[AutoUnificationBag[A]]
+      (this.size == that.size) && (this.elems.forall(that.elems.contains(_))) // XXX O(n^2)
+    } else {
+      false
+    }
 }
 
 object AutoUnificationBag {
 
-  class Delta[A, Δ] private(private val roots: List[Delta.Node[A, Δ]]) {
+  case class Delta[A, Δ] private(private val roots: List[Delta.Node[A, Δ]]) {
     import Delta._
 
     private val flat: Need1[Dom[A] { type Delta = Δ }, (List[A], List[(A, Δ)])] =
@@ -143,10 +150,10 @@ object AutoUnificationBag {
       else Some(this)
 
     def append(addedElem: A, updatedElems: List[(A, Option[Δ])])(implicit A: Equal[A]): Delta[A, Δ] =
-      updatedElems.foldLeft[(List[Node[A, Δ]], List[(Node[A, Δ], Option[Δ])])]((roots, Nil))({ case ((roots, addedElemChildren), (updatedElem, delta)) =>
+      updatedElems.foldLeft[(List[Node[A, Δ]], List[(PreExisting[A] \/ Node[A, Δ], Option[Δ])])]((roots, Nil))({ case ((roots, addedElemChildren), (updatedElem, delta)) =>
         roots.removeFirst(_.value === updatedElem) match {
-          case Some((node, roots)) => (roots, (node, delta) :: addedElemChildren)
-          case None => (roots, (Node[A, Δ](updatedElem, Nil), delta) :: addedElemChildren)
+          case Some((node, roots)) => (roots, (\/-(node), delta) :: addedElemChildren)
+          case None => (roots, (-\/(PreExisting[A](updatedElem)), delta) :: addedElemChildren)
         }
       }) match { case (roots, addedElemChildren) => new Delta(Node(addedElem, addedElemChildren) :: roots) }
 
@@ -187,11 +194,15 @@ object AutoUnificationBag {
 
   object Delta {
 
-    private[Delta] case class Node[A, Δ](value: A, children: List[(Node[A, Δ], Option[Δ])]) {
-      def flatten[U](implicit dom: Dom.Aux[A, U, Δ]): (A, List[(A, Option[Δ])]) = (value, children.flatMap({ case (node, delta) =>
-        node.flatten._2.map({ case (a, d) => (a, combineDeltasOpt(d, delta)) })
-      }))
+    private[Delta] case class Node[A, Δ](value: A, children: List[(PreExisting[A] \/ Node[A, Δ], Option[Δ])]) {
+      def flatten[U](implicit dom: Dom.Aux[A, U, Δ]): (A, List[(A, Option[Δ])]) =
+        (value, children.flatMap({ case (child, delta) => child match {
+          case -\/(PreExisting(a)) => List((a, delta))
+          case \/-(node) =>
+            node.flatten._2.map({ case (a, d) => (a, combineDeltasOpt(d, delta)) })
+        }}))
     }
+    private[Delta] case class PreExisting[A](value: A)
 
     def empty[A, Δ] = new Delta[A, Δ](Nil)
 

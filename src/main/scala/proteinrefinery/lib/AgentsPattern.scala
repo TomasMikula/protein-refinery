@@ -11,7 +11,7 @@ import scalaz.Id.Id
 import scalaz.{Equal, State}
 
 case class AgentsPattern(
-  private val agents: Vector[Option[ProteinPattern]],
+  agents: Vector[Option[ProteinPattern]],
   bonds: Vector[Option[(AgentIndex, LocalSiteId, AgentIndex, LocalSiteId)]],
   unbound: List[(AgentIndex, LocalSiteId)]
 ) {
@@ -214,8 +214,8 @@ object AgentsPattern {
         }
       }
 
-      val bonds = ap1.bonds ++ ap2.bonds
-      val unbound = ap1.unbound ++ ap2.unbound
+      val bonds = (ap1.bonds ++ ap2.bonds).distinct
+      val unbound = (ap1.unbound ++ ap2.unbound).distinct
 
       val delta1 = Delta(newAgs1.result(), deltas1.result())
       val delta2 = Delta(newAgs2.result(), deltas2.result())

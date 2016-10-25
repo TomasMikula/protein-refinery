@@ -11,10 +11,20 @@ package object syntax {
     def apply(ss: (SiteLabel, SiteState)*): ProteinPattern =
       ProteinPattern(Protein(sym), ProteinModifications(ss:_*))
 
-    def @@ (s: SiteLabel): BindingPartnerPattern = BindingPartnerPattern(Protein(sym), LocalSiteId(s))
+    def @@ (s: SiteLabel): BindingPartnerPattern =
+      BindingPartnerPattern(Protein(sym), LocalSiteId(s))
 
     def ~(s: SiteState): (SiteLabel, SiteState) = (SiteLabel(sym.name), s)
 
+  }
+
+  implicit class ProteinOps(p: Protein) {
+
+    def apply(ss: (SiteLabel, SiteState)*): ProteinPattern =
+      ProteinPattern(p, ProteinModifications(ss:_*))
+
+    def @@ (s: SiteLabel): BindingPartnerPattern =
+      BindingPartnerPattern(p, LocalSiteId(s))
   }
 
   implicit class ProteinPatternOps(p: ProteinPattern) {

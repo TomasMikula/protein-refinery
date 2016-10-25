@@ -68,8 +68,8 @@ case class ProteinPattern(protein: Protein, mods: ProteinModifications) {
       }
       val stateS = state match {
         case Empty => ""
-        case Completed(label) => label.value
-        case Conflict => "⊥"
+        case Completed(label) => "~" + label.value
+        case Conflict => "~⊥"
       }
       val linkS = link match {
         case Empty => "?"
