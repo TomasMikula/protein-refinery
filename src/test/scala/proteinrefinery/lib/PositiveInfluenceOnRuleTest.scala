@@ -27,7 +27,7 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
     (GSK, β_Cat, 'S33)
   )
 
-  val initialNuggets: Prg[Unit] = Nuggets.addAll(
+  val initialNuggets: Prg[Unit] = Lib.addNuggets(
     rules = bindings.map(_.witness),
     phosphoSites = phosphoTargets
   )
@@ -35,7 +35,7 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
   val Interpreter = proteinrefinery.interpreterF
 
   test("1") {
-    val prg = initialNuggets >> PositiveInfluenceOnRule.search(β_Cat('S45~"p", 'T41~"p"), bindings(3).witness)
+    val prg = initialNuggets >> Lib.positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bindings(3).witness)
     val (s, solutionsRef) = Interpreter(prg)(proteinrefinery.emptyState)
     val solutionRefs = proteinrefinery.fetchIncSet(solutionsRef)(s)
     val solutions = solutionRefs.toList.map(ref => proteinrefinery.fetch(ref)(s))
@@ -45,7 +45,7 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
   }
 
   test("2") {
-    val prg = initialNuggets >> PositiveInfluenceOnRule.search(β_Cat('S45~"p", 'T41~"p"), bindings(4).witness)
+    val prg = initialNuggets >> Lib.positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bindings(4).witness)
     val (s, solutionsRef) = Interpreter(prg)(proteinrefinery.emptyState)
     val solutionRefs = proteinrefinery.fetchIncSet(solutionsRef)(s)
     val solutions = solutionRefs.toList.map(ref => proteinrefinery.fetch(ref)(s))
@@ -55,7 +55,7 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
   }
 
   test("3") {
-    val prg = initialNuggets >> PositiveInfluenceOnRule.search(β_Cat('S45~"p", 'T41~"p"), bindings(5).witness)
+    val prg = initialNuggets >> Lib.positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bindings(5).witness)
     val (s, solutionsRef) = Interpreter(prg)(proteinrefinery.emptyState)
     val solutionRefs = proteinrefinery.fetchIncSet(solutionsRef)(s)
     val solutions = solutionRefs.toList.map(ref => proteinrefinery.fetch(ref)(s))

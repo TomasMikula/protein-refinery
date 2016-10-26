@@ -3,7 +3,7 @@ package proteinrefinery
 import nutcracker._
 import org.scalatest.FunSuite
 import proteinrefinery.lib.syntax._
-import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, SiteLabel}
+import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein, Lib, SiteLabel}
 
 class Tests extends FunSuite {
 
@@ -23,7 +23,7 @@ class Tests extends FunSuite {
     ('C, 'B, 's)
   )
 
-  val initialNuggets: Prg[Unit] = Nuggets.addAll(
+  val initialNuggets: Prg[Unit] = Lib.addNuggets(
     rules = bindings.map(_.witness),
     phosphoSites = phosphoTargets
   )
@@ -31,7 +31,7 @@ class Tests extends FunSuite {
   val Interpreter = proteinrefinery.interpreterF
 
   test("Phosphorylation search") {
-    val problem = Phosphorylation.search('C, 'B)
+    val problem = Lib.phosphorylation('C, 'B)
     val (s, ref) = Interpreter(initialNuggets >> problem)(proteinrefinery.emptyState)
     val solutionRefs = proteinrefinery.fetchIncSet(ref)(s)
     val solutions = solutionRefs.map(fetch(_)(s).value)
@@ -46,9 +46,9 @@ class Tests extends FunSuite {
   test("Negative influence on phosphorylation") {
 
     val problem = IncSet.collect(for {
-      phosRef <- Phosphorylation.searchC('C, 'B)
+      phosRef <- Lib.phosphorylationC('C, 'B)
       phos <- phosRef.asCont[DSL]
-      niRef <- NegativeInfluenceOnPhosphorylation.searchC('D, phos)
+      niRef <- Lib .negativeInfluenceOnPhosphorylationC('D, phos)
       ni <- niRef.asCont[DSL]
     } yield (phos, ni))
 

@@ -7,7 +7,7 @@ import nutcracker.util.CoproductK.:++:
 import nutcracker.util.{FreeK, InjectK}
 import nutcracker.{Antichain, DRef, Diff, Dom, IncSet, PropagationLang}
 import org.reactfx.EventStreams
-import proteinrefinery.lib.{Assoc, Binding, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, Protein, ProteinPattern, SiteLabel}
+import proteinrefinery.lib.{Binding, Phosphorylation, Protein, ProteinPattern, Lib, SiteLabel}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.UIUpdateLang._
@@ -38,31 +38,31 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   }
 
   private def addGoalAssoc(p: Protein, q: Protein): Prg[Unit] =
-    Assoc.search(p, q).inject[DSL] >>= {
+    Lib.assoc(p, q).inject[DSL] >>= {
       observeGoal(s"Association between $p and $q", _)
     }
 
   private def addGoalPhos(kinase: Protein, substrate: Protein): Prg[Unit] =
-    Phosphorylation.search(kinase, substrate).inject[DSL] >>= {
+    Lib.phosphorylation(kinase, substrate).inject[DSL] >>= {
       observeGoal(s"Phosphorylation of $substrate by $kinase", _)
     }
 
   private def addGoalPhosNegInfl(agent: Protein, phosGoal: IncSetRef[_ <: DRef[Antichain[Phosphorylation]]], phosDesc: String): Prg[Unit] =
-    IncSet.relBind(phosGoal)(phRef => NegativeInfluenceOnPhosphorylation.search_r(agent, phRef.infer)).inject[DSL] >>= {
+    IncSet.relBind(phosGoal)(phRef => Lib.negativeInfluenceOnPhosphorylation_r(agent, phRef.infer)).inject[DSL] >>= {
       observeGoal(s"Negative influence of $agent on $phosDesc", _)
     }
 
   private def addFactBind(p: Protein, ps: SiteLabel, q: Protein, qs: SiteLabel): Prg[Unit] = {
     val rule = Binding(p, LocalSiteId(ps), q, LocalSiteId(qs)).witness
-    Nuggets.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
+    Lib.addRuleF[DSL](rule) >> newFactF(FactRule, rule)
   }
 
   private def addFactKinase(pp: ProteinPattern): Prg[Unit] = {
-    Nuggets.addKinaseActivityF[DSL](pp) >> newFactF(FactKinase, pp)
+    Lib.addKinaseActivityF[DSL](pp) >> newFactF(FactKinase, pp)
   }
 
   private def addFactPhosSite(k: Protein, s: Protein, ss: SiteLabel): Prg[Unit] =
-    Nuggets.addPhosphoTargetF[DSL](k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
+    Lib.addPhosphoTargetF[DSL](k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
 
   private def observeGoal[A](desc: String, ref: IncSetRef[_ <: DRef[A]])(implicit t: GoalType[A], dom: Dom[A], show: Show[A]): Prg[Unit] =
     domTriggerF(ref)(d => {

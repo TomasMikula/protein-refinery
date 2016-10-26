@@ -21,9 +21,13 @@ object Nuggets {
     implicit object Kinases extends AntichainDomType[ProteinPattern]
   }
 
-  import DomTypes._
+}
 
-  def addAll[F[_[_], _]](
+trait Nuggets {
+  import Nuggets._
+  import Nuggets.DomTypes._
+
+  def addNuggets[F[_[_], _]](
     rules: List[Rule] = Nil,
     phosphoSites: List[(Protein, Protein, SiteLabel)] = Nil
   )(implicit

@@ -5,7 +5,7 @@ import nutcracker._
 import nutcracker.util.ContF
 import org.scalatest.FunSuite
 import proteinrefinery.lib.syntax._
-import proteinrefinery.lib.{AgentsPattern, Binding, Nuggets, PositiveInfluenceOnRule, Protein, ProteinModifications, ProteinPattern, Rule, SiteLabel}
+import proteinrefinery.lib.{AgentsPattern, Binding, PositiveInfluenceOnRule, Protein, ProteinModifications, ProteinPattern, Rule, Lib, SiteLabel}
 import proteinrefinery.util.Unification.Syntax._
 
 class PrimingExample extends FunSuite {
@@ -31,12 +31,12 @@ class PrimingExample extends FunSuite {
     (GSK, β_Cat, 'S33)
   )
 
-  val initialNuggets: Prg[Unit] = Nuggets.addAll(
+  val initialNuggets: Prg[Unit] = Lib.addNuggets(
     rules = bindings.map(_.witness),
     phosphoSites = phosphoTargets
   )
 
-  private def forEachRule = Nuggets.forEachRule[DSL]
+  private def forEachRule = Lib.forEachRule[DSL]
 
   val watchForExplanationsViaPositiveInfluenceC: ContF[DSL, (Rule, PositiveInfluenceOnRule)] = for {
     ref1 <- forEachRule
@@ -46,7 +46,7 @@ class PrimingExample extends FunSuite {
     (d1, r, d2) = r1.value unify r2.value
     diff <- if(d2.isEmpty && d1.isDefined) ContF.point[DSL, Rule.Delta](d1.get) else ContF.noop[DSL, Rule.Delta]
     diffPatterns = breakDown(r1.value.lhs, diff, r2.value.lhs)
-    searches = diffPatterns.map(pp => PositiveInfluenceOnRule.searchC(pp, r1.value))
+    searches = diffPatterns.map(pp => Lib.positiveInfluenceOnRuleC(pp, r1.value))
     inflRef <- ContF.sequence(searches)
     infl <- inflRef.asCont[DSL]
   } yield (r2.value, infl)

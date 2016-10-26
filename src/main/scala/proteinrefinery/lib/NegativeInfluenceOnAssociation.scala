@@ -19,26 +19,30 @@ object NegativeInfluenceOnAssociation {
   def        byCompetitiveBinding(value: CompetitiveBinding):        NegativeInfluenceOnAssociation = ByCompetitiveBinding(value)
 
 
-  // Search
+  trait Search {
 
-  // TODO: should return DSet
-  def search(p: Protein, a: Assoc): Prg[IncSetRef[Ref]] =
-    IncSet.collectAll(a.bindings.map(b => searchCompetitiveBinding(p, b)))
+    def Nuggets: proteinrefinery.lib.Nuggets
 
-  def searchC(p: Protein, a: Assoc): ContF[DSL, Ref] =
-    ContF.sequence(a.bindings.map(b => searchCompetitiveBinding(p, b)))
+    // TODO: should return DSet
+    def negativeInfluenceOnAssociation(p: Protein, a: Assoc): Prg[IncSetRef[Ref]] =
+      IncSet.collectAll(a.bindings.map(b => searchCompetitiveBinding(p, b)))
 
-  private def searchCompetitiveBinding(competitor: Protein, bnd: Binding): ContF[DSL, Ref] = {
-    val l = Antichain.map(competitiveBindings(competitor, bnd.leftPattern ))(cb => byCompetitiveBinding(CompetitiveBinding(bnd.flip, cb)))
-    val r = Antichain.map(competitiveBindings(competitor, bnd.rightPattern))(cb => byCompetitiveBinding(CompetitiveBinding(bnd,      cb)))
-    ContF.sequence(l, r)
-  }
+    def negativeInfluenceOnAssociationC(p: Protein, a: Assoc): ContF[DSL, Ref] =
+      ContF.sequence(a.bindings.map(b => searchCompetitiveBinding(p, b)))
 
-  // TODO: return Prg[DSet[Binding]] instead
-  private def competitiveBindings(competitor: Protein, bp: BindingPartnerPattern): ContF[DSL, Binding.Ref] =
-    ContF.filterMap(Nuggets.bindingsOfC[DSL](competitor).flatMap(ref => ref.asCont[DSL].map((ref, _)))) {
-      case (ref, bnd) => if(bnd.rightPattern overlaps bp) Option(ref) else None
+    private def searchCompetitiveBinding(competitor: Protein, bnd: Binding): ContF[DSL, Ref] = {
+      val l = Antichain.map(competitiveBindings(competitor, bnd.leftPattern ))(cb => byCompetitiveBinding(CompetitiveBinding(bnd.flip, cb)))
+      val r = Antichain.map(competitiveBindings(competitor, bnd.rightPattern))(cb => byCompetitiveBinding(CompetitiveBinding(bnd,      cb)))
+      ContF.sequence(l, r)
     }
+
+    // TODO: return Prg[DSet[Binding]] instead
+    private def competitiveBindings(competitor: Protein, bp: BindingPartnerPattern): ContF[DSL, Binding.Ref] =
+      ContF.filterMap(Nuggets.bindingsOfC[DSL](competitor).flatMap(ref => ref.asCont[DSL].map((ref, _)))) {
+        case (ref, bnd) => if(bnd.rightPattern overlaps bp) Option(ref) else None
+      }
+
+  }
 
 
   // Typeclass instances

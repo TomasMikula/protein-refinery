@@ -22,10 +22,15 @@ object PositiveInfluenceOnKinaseActivity {
   def positiveInfluenceOnActiveState(infl: PositiveInfluenceOnState): PositiveInfluenceOnKinaseActivity = PositiveInfluenceOnActiveState(infl)
 
 
-  // Search
+  trait Search { self: PositiveInfluenceOnState.Search =>
 
-  def searchC(agent: Protein, kinase: Protein): ContF[DSL, Ref] = for {
-    ppref <- Nuggets.kinaseActivityC[DSL](kinase)
-    res <- Antichain.map(Antichain.mapC(ppref)(pp => PositiveInfluenceOnState.searchC(agent, pp)))(positiveInfluenceOnActiveState(_))
-  } yield res
+    def Nuggets: proteinrefinery.lib.Nuggets
+
+    def positiveInfluenceOnKinaseActivityC(agent: Protein, kinase: Protein): ContF[DSL, Ref] = for {
+      ppref <- Nuggets.kinaseActivityC[DSL](kinase)
+      res <- Antichain.map(Antichain.mapC(ppref)(pp => positiveInfluenceOnStateC(agent, pp)))(positiveInfluenceOnActiveState(_))
+    } yield res
+
+  }
+
 }

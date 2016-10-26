@@ -35,27 +35,34 @@ object PositiveInfluenceOnPhosphorylation {
   }
 
 
-  // Search
+  trait Search { self: PositiveInfluenceOnKinaseActivity.Search =>
 
-  def searchC(p: Protein, ph: Phosphorylation): ContF[DSL, Ref] = {
+    def positiveInfluenceOnPhosphorylationC(p: Protein, ph: Phosphorylation): ContF[DSL, Ref] = {
 
-    // we can immediately tell whether `p` is the kinase or part of the scaffold in `ph`
-    val immediate: List[ContF[DSL, Ref]] = {
-      val isKinase = if(ph.kinase == p) List(IsKinase(ph)) else Nil
-      val inScaffold = if(ph.assoc.bindings.tail.exists(_.left == p)) List(InScaffold(ProteinPattern(p), ph)) else Nil
-      (isKinase ++ inScaffold).map(Antichain.cellC[DSL, PositiveInfluenceOnPhosphorylation](_))
+      // we can immediately tell whether `p` is the kinase or part of the scaffold in `ph`
+      val immediate: List[ContF[DSL, Ref]] = {
+        val isKinase = if (ph.kinase == p) List(IsKinase(ph)) else Nil
+        val inScaffold = if (ph.assoc.bindings.tail.exists(_.left == p)) List(InScaffold(ProteinPattern(p), ph)) else Nil
+        (isKinase ++ inScaffold).map(Antichain.cellC[DSL, PositiveInfluenceOnPhosphorylation](_))
+      }
+
+      val indirect: ContF[DSL, Ref] = Antichain.map(positiveInfluenceOnKinaseActivityC(p, ph.kinase))(infl => ActivatesKinase(infl, ph))
+
+      ContF.sequence(indirect :: immediate)
     }
 
-    val indirect: ContF[DSL, Ref] = Antichain.map(PositiveInfluenceOnKinaseActivity.searchC(p, ph.kinase))(infl => ActivatesKinase(infl, ph))
-
-    ContF.sequence(indirect :: immediate)
   }
+
 }
 
-object PositiveInfluenceOnPhosphorylatedState {
-  def searchC(agent: Protein, target: Protein): ContF[DSL, PositiveInfluenceOnState.Ref] =
+trait PositiveInfluenceOnPhosphorylatedStateSearch { self: PositiveInfluenceOnState.Search =>
+
+  def Nuggets: proteinrefinery.lib.Nuggets
+
+  def positiveInfluenceOnPhosphorylatedStateC(agent: Protein, target: Protein): ContF[DSL, PositiveInfluenceOnState.Ref] =
     Nuggets.phosphoSitesC[DSL](target).flatMap(site => {
       val pat = ProteinPattern(target).addModification(site, SiteState("p")) // XXX hard-coded phosphorylated state as "p"
-      PositiveInfluenceOnState.searchC(agent, pat)
+      positiveInfluenceOnStateC(agent, pat)
     })
+
 }

@@ -13,31 +13,35 @@ case class Assoc(bindings: List[Binding]) extends AnyVal {
 
 object Assoc {
 
-  // Search
+  trait Search {
 
-  def search(p: Protein, q: Protein): Prg[IncSetRef[Antichain.Ref[Assoc]]] =
-    IncSet.collect(searchC(p, q))
+    def Nuggets: proteinrefinery.lib.Nuggets
 
-  def searchC(p: Protein, q: Protein): ContF[DSL, Antichain.Ref[Assoc]] =
-    search0(Nil, p, q, Nil)
+    def assoc(p: Protein, q: Protein): Prg[IncSetRef[Antichain.Ref[Assoc]]] =
+      IncSet.collect(assocC(p, q))
 
-  private def search0(leftTail: List[Binding], p: Protein, q: Protein, rightTail: List[Binding]): ContF[DSL, Antichain.Ref[Assoc]] = for {
-    bref <- Nuggets.bindingsOfC[DSL](p)
-    b <- bref.asCont[DSL]
-    aref <- {
-      if(leftTail.nonEmpty && b.leftS == leftTail.head.rightS) ContF.noop[DSL, Antichain.Ref[Assoc]] // linter:ignore DuplicateIfBranches
-      else if(leftTail.contains(b) || rightTail.contains(b)) ContF.noop[DSL, Antichain.Ref[Assoc]]
-      else {
-        val indirect0 = search0(b :: leftTail, b.right, q, rightTail)
-        val indirect = DeferLang.deferC(Cost.complexity(10), indirect0)
-        if(b.right == q) {
-          val direct = ContF.liftM(PropagationLang.cellF(Antichain(Assoc(leftTail reverse_::: b :: rightTail))).inject[DSL])
-          ContF.sequence(direct, indirect)
-        } else
-          indirect
+    def assocC(p: Protein, q: Protein): ContF[DSL, Antichain.Ref[Assoc]] =
+      assocC0(Nil, p, q, Nil)
+
+    private def assocC0(leftTail: List[Binding], p: Protein, q: Protein, rightTail: List[Binding]): ContF[DSL, Antichain.Ref[Assoc]] = for {
+      bref <- Nuggets.bindingsOfC[DSL](p)
+      b <- bref.asCont[DSL]
+      aref <- {
+        if (leftTail.nonEmpty && b.leftS == leftTail.head.rightS) ContF.noop[DSL, Antichain.Ref[Assoc]] // linter:ignore DuplicateIfBranches
+        else if (leftTail.contains(b) || rightTail.contains(b)) ContF.noop[DSL, Antichain.Ref[Assoc]]
+        else {
+          val indirect0 = assocC0(b :: leftTail, b.right, q, rightTail)
+          val indirect = DeferLang.deferC(Cost.complexity(10), indirect0)
+          if (b.right == q) {
+            val direct = ContF.liftM(PropagationLang.cellF(Antichain(Assoc(leftTail reverse_::: b :: rightTail))).inject[DSL])
+            ContF.sequence(direct, indirect)
+          } else
+            indirect
+        }
       }
-    }
-  } yield aref
+    } yield aref
+
+  }
 
 
   // Typeclass instances

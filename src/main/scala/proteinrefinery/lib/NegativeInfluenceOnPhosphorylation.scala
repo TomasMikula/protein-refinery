@@ -20,26 +20,30 @@ object NegativeInfluenceOnPhosphorylation {
   def byCompetitiveBinding(cb: CompetitiveBinding): NegativeInfluenceOnPhosphorylation = byNegativeInfluenceOnAssociation(NegativeInfluenceOnAssociation.byCompetitiveBinding(cb))
 
 
-  // Search
+  trait Search {
 
-  def search(p: Protein, ph: Phosphorylation): Prg[IncSetRef[Ref]] = {
-    IncSet.collect(searchC(p, ph))
-  }
+    def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search
 
-  def search_r(p: Protein, phRef: Phosphorylation.Ref): Prg[IncSetRef[Ref]] = {
-    IncSet.collect(searchC_r(p, phRef))
-  }
+    def negativeInfluenceOnPhosphorylation(p: Protein, ph: Phosphorylation): Prg[IncSetRef[Ref]] = {
+      IncSet.collect(negativeInfluenceOnPhosphorylationC(p, ph))
+    }
 
-  def searchC(p: Protein, ph: Phosphorylation): ContF[DSL, Ref] = {
-    // currently the only way a protein can have negative influence on phosphorylation
-    // is via negative influence on the association of the enzyme to the substrate
-    Antichain.map(NegativeInfluenceOnAssociation.searchC(p, ph.assoc))(byNegativeInfluenceOnAssociation)
-  }
+    def negativeInfluenceOnPhosphorylation_r(p: Protein, phRef: Phosphorylation.Ref): Prg[IncSetRef[Ref]] = {
+      IncSet.collect(negativeInfluenceOnPhosphorylationC_r(p, phRef))
+    }
 
-  def searchC_r(p: Protein, phRef: Phosphorylation.Ref): ContF[DSL, Ref] = {
-    // currently the only way a protein can have negative influence on phosphorylation
-    // is via negative influence on the association of the enzyme to the substrate
-    phRef.asCont[DSL] flatMap { searchC(p, _) }
+    def negativeInfluenceOnPhosphorylationC(p: Protein, ph: Phosphorylation): ContF[DSL, Ref] = {
+      // currently the only way a protein can have negative influence on phosphorylation
+      // is via negative influence on the association of the enzyme to the substrate
+      Antichain.map(NegativeInfluenceOnAssociationSearch.negativeInfluenceOnAssociationC(p, ph.assoc))(byNegativeInfluenceOnAssociation)
+    }
+
+    def negativeInfluenceOnPhosphorylationC_r(p: Protein, phRef: Phosphorylation.Ref): ContF[DSL, Ref] = {
+      // currently the only way a protein can have negative influence on phosphorylation
+      // is via negative influence on the association of the enzyme to the substrate
+      phRef.asCont[DSL] flatMap { negativeInfluenceOnPhosphorylationC(p, _) }
+    }
+
   }
 
 

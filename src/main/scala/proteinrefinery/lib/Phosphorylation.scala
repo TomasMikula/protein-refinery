@@ -20,24 +20,28 @@ object Phosphorylation {
 
   type Ref = Antichain.Ref[Phosphorylation]
 
-  // Search
+  trait Search {
+    def Nuggets: proteinrefinery.lib.Nuggets
+    def AssocSearch: Assoc.Search
 
-  def search(kinase: Protein, substrate: Protein): Prg[IncSetRef[Ref]] =
-    IncSet.collect(searchC(kinase, substrate))
+    def phosphorylation(kinase: Protein, substrate: Protein): Prg[IncSetRef[Ref]] =
+      IncSet.collect(phosphorylationC(kinase, substrate))
 
-  def searchC(kinase: Protein, substrate: Protein): ContF[DSL, Ref] = {
-    Nuggets.phosphoSitesC[DSL](kinase, substrate).flatMap(s => searchC(kinase, substrate, s))
-  }
-
-  def searchC(kinase: Protein, substrate: Protein, s: SiteLabel): ContF[DSL, Ref] = {
-    // XXX this version is quite primitive and cannot infer much beyond what is already given by the knowledge base,
-    // except for finding indirect enzyme-substrate associations. In the future, we would like it to be able to hypothesize
-    // phosphorylation at site s, if, e.g., s is a Serine and kinase is a Serine kinase.
-    // Should be easy to achieve by having phosphoSites not as an atomic query, but as a search on top of more basic facts.
-    Antichain.filterMap(Assoc.searchC(kinase, substrate)) { a =>
-      if (s != a.bindings.last.rightS) Some(Phosphorylation(a, s))
-      else                             None
+    def phosphorylationC(kinase: Protein, substrate: Protein): ContF[DSL, Ref] = {
+      Nuggets.phosphoSitesC[DSL](kinase, substrate).flatMap(s => phosphorylationC(kinase, substrate, s))
     }
+
+    def phosphorylationC(kinase: Protein, substrate: Protein, s: SiteLabel): ContF[DSL, Ref] = {
+      // XXX this version is quite primitive and cannot infer much beyond what is already given by the knowledge base,
+      // except for finding indirect enzyme-substrate associations. In the future, we would like it to be able to hypothesize
+      // phosphorylation at site s, if, e.g., s is a Serine and kinase is a Serine kinase.
+      // Should be easy to achieve by having phosphoSites not as an atomic query, but as a search on top of more basic facts.
+      Antichain.filterMap(AssocSearch.assocC(kinase, substrate)) { a =>
+        if (s != a.bindings.last.rightS) Some(Phosphorylation(a, s))
+        else None
+      }
+    }
+
   }
 
 
