@@ -37,12 +37,13 @@ class PrimingExample extends FunSuite {
   )
 
   private def forEachRule = Lib.forEachRule[DSL]
+  private def peekC[D](ref: DRef[D]): ContF[DSL, D] = ContF(f => PropagationLang.peek(ref)(f))
 
   val watchForExplanationsViaPositiveInfluenceC: ContF[DSL, (Rule, PositiveInfluenceOnRule)] = for {
     ref1 <- forEachRule
     ref2 <- forEachRule
-    r1 <- ref1.peekC[DSL]
-    r2 <- ref2.peekC[DSL]
+    r1 <- peekC(ref1)
+    r2 <- peekC(ref2)
     (d1, r, d2) = r1.value unify r2.value
     diff <- if(d2.isEmpty && d1.isDefined) ContF.point[DSL, Rule.Delta](d1.get) else ContF.noop[DSL, Rule.Delta]
     diffPatterns = breakDown(r1.value.lhs, diff, r2.value.lhs)
