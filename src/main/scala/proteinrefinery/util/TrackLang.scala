@@ -1,10 +1,11 @@
 package proteinrefinery.util
 
 import nutcracker.util.{FreeK, FunctorKA, InjectK}
-import nutcracker.{Alternator, Antichain, DRef, DomSet, PropagationLang, Revocable, Trigger}
+import nutcracker.{Alternator, Antichain, DRef, DomSet, Propagation, Revocable, Trigger}
 
 import scala.language.higherKinds
-import scalaz.~>
+import scalaz.{Monad, ~>}
+import scalaz.syntax.monad._
 
 sealed abstract class TrackLang[K[_], A]
 
@@ -20,46 +21,61 @@ object TrackLang {
   def handleF[F[_[_], _], D, U, Δ](t: DomType.Aux[D, U, Δ])(f: DRef.Aux[D, U, Δ] => FreeK[F, Unit])(implicit inj: InjectK[TrackLang, F]): FreeK[F, Unit] =
     FreeK.injLiftF[TrackLang, F, Unit](handle(t, f))
 
-  def thresholdQuery[F[_[_], _], D](t: DomType[D])(f: D => OnceTrigger[DRef.Aux[D, t.Update, t.Delta] => FreeK[F, Unit]])(implicit
-    i: InjectK[TrackLang, F],
-    j: InjectK[PropagationLang, F]
-  ): FreeK[F, Unit] =
-    handleF[F, D, t.Update, t.Delta](t)(ref => PropagationLang.valTriggerF(ref)(d => f(d) match {
-      case OnceTrigger.Sleep() => Trigger.sleep[F]
-      case OnceTrigger.Discard() => Trigger.discard[F]
-      case OnceTrigger.Fire(h) => Trigger.fire[F](h(ref))
-    }))
-
-  def dynamicQuery[F[_[_], _], D, Q](t: DomType[D])(qref: DRef[Q])(rel: QueryRel[Q, D])(implicit
-    i: InjectK[TrackLang, F],
-    j: InjectK[PropagationLang, F]
-  ): FreeK[F, DomSet.Ref[Revocable[DRef[D]]]] = for {
-    res <- DomSet.init[F, Revocable[DRef[D]]]
-    _ <- handleF[F, D, t.Update, t.Delta](t)(dref =>
-      PropagationLang.alternate[F, Q, D, Unit, Revocable.Ref[DRef[D]]](qref, dref)(
-        (q, d) => rel(q, d) match {
-          case QueryRel.Match => Alternator.Left
-          case QueryRel.NoMatch => Alternator.Right
-          case QueryRel.Irreconcilable => Alternator.Stop
-        },
-        onStartLeft = () => FreeK.pure[F, Unit](()),
-        onStartRight = () => Revocable.init[F, DRef[D]](dref) effect { DomSet.insert(_, res) },
-        onSwitchToLeft = revref => Revocable.revoke(revref),
-        onSwitchToRight = (_: Unit) => Revocable.init[F, DRef[D]](dref) effect { DomSet.insert(_, res) },
-        onStop = (_ match {
-          case Some(Right(revref)) => Revocable.revoke(revref)
-          case _ => FreeK.pure[F, Unit](())
-        })
-      )
-    )
-  } yield res
-
   implicit def functorKAInstance: FunctorKA[TrackLang] = new FunctorKA[TrackLang] {
     def transform[K[_], L[_], A](inst: TrackLang[K, A])(f: K ~> L): TrackLang[L, A] = inst match {
       case Track(t, ref) => Track(t, ref)
       case Handle(t, h) => Handle(t, h andThen (f.apply))
     }
   }
+
+  implicit def freeTracking[F[_[_], _]](implicit i: InjectK[TrackLang, F]): Tracking[FreeK[F, ?]] =
+    new Tracking[FreeK[F, ?]] {
+      def track[D](ref: DRef[D])(implicit t: DomType.Aux[D, ref.Update, ref.Delta]): FreeK[F, Unit] = trackF[F, D](ref)
+      def handle[D, U, Δ](t: DomType.Aux[D, U, Δ])(f: (DRef.Aux[D, U, Δ]) => FreeK[F, Unit]): FreeK[F, Unit] = handleF(t)(f)
+    }
+}
+
+trait Tracking[M[_]] {
+  def track[D](ref: DRef[D])(implicit t: DomType.Aux[D, ref.Update, ref.Delta]): M[Unit]
+  def handle[D, U, Δ](t: DomType.Aux[D, U, Δ])(f: DRef.Aux[D, U, Δ] => M[Unit]): M[Unit]
+
+
+  def thresholdQuery[D](t: DomType[D])(f: D => OnceTrigger[DRef.Aux[D, t.Update, t.Delta] => M[Unit]])(implicit
+    P: Propagation[M]
+  ): M[Unit] =
+    handle[D, t.Update, t.Delta](t)(ref => P.valTrigger(ref)(d => f(d) match {
+      case OnceTrigger.Sleep() => Trigger.sleep[M]
+      case OnceTrigger.Discard() => Trigger.discard[M]
+      case OnceTrigger.Fire(h) => Trigger.fire[M](h(ref))
+    }))
+
+  def dynamicQuery[D, Q](t: DomType[D])(qref: DRef[Q])(rel: QueryRel[Q, D])(implicit
+    P: Propagation[M],
+    M: Monad[M]
+  ): M[DomSet.Ref[Revocable[DRef[D]]]] = for {
+    res <- DomSet.init[M, Revocable[DRef[D]]]
+    _ <- handle[D, t.Update, t.Delta](t)(dref =>
+      P.alternate[Q, D, Unit, Revocable.Ref[DRef[D]]](qref, dref)(
+        (q, d) => rel(q, d) match {
+          case QueryRel.Match => Alternator.Left
+          case QueryRel.NoMatch => Alternator.Right
+          case QueryRel.Irreconcilable => Alternator.Stop
+        },
+        onStartLeft = () => M.pure(()),
+        onStartRight = () => Revocable.init[M, DRef[D]](dref) >>! { DomSet.insert(_, res) },
+        onSwitchToLeft = revref => Revocable.revoke(revref),
+        onSwitchToRight = (_: Unit) => Revocable.init[M, DRef[D]](dref) >>! { DomSet.insert(_, res) },
+        onStop = (_ match {
+          case Some(Right(revref)) => Revocable.revoke(revref)
+          case _ => M.pure(())
+        })
+      )
+    )
+  } yield res
+}
+
+object Tracking {
+  def apply[M[_]](implicit ev: Tracking[M]): Tracking[M] = ev
 }
 
 trait DomType[D] { self: Singleton =>

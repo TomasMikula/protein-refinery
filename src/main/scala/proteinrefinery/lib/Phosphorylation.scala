@@ -1,11 +1,11 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
 import nutcracker.{Antichain, IncSet}
 import nutcracker.IncSet._
-import nutcracker.util.ContF
-import proteinrefinery._
+import nutcracker.util.ContU
 
-import scalaz.Show
+import scalaz.{Monad, Show}
 
 case class Phosphorylation(
   assoc: Assoc,
@@ -20,18 +20,21 @@ object Phosphorylation {
 
   type Ref = Antichain.Ref[Phosphorylation]
 
-  trait Search {
-    def Nuggets: proteinrefinery.lib.Nuggets
-    def AssocSearch: Assoc.Search
+  trait Search[M[_]] {
+    implicit def Propagation: nutcracker.Propagation[M]
+    implicit def Tracking: proteinrefinery.util.Tracking[M]
 
-    def phosphorylation(kinase: Protein, substrate: Protein): Prg[IncSetRef[Ref]] =
+    def Nuggets: proteinrefinery.lib.Nuggets[M]
+    def AssocSearch: Assoc.Search[M]
+
+    def phosphorylation(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): M[IncSetRef[Ref]] =
       IncSet.collect(phosphorylationC(kinase, substrate))
 
-    def phosphorylationC(kinase: Protein, substrate: Protein): ContF[DSL, Ref] = {
-      Nuggets.phosphoSitesC[DSL](kinase, substrate).flatMap(s => phosphorylationC(kinase, substrate, s))
+    def phosphorylationC(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): ContU[M, Ref] = {
+      Nuggets.phosphoSitesC(kinase, substrate).flatMap(s => phosphorylationC(kinase, substrate, s))
     }
 
-    def phosphorylationC(kinase: Protein, substrate: Protein, s: SiteLabel): ContF[DSL, Ref] = {
+    def phosphorylationC(kinase: Protein, substrate: Protein, s: SiteLabel)(implicit M: Monad[M]): ContU[M, Ref] = {
       // XXX this version is quite primitive and cannot infer much beyond what is already given by the knowledge base,
       // except for finding indirect enzyme-substrate associations. In the future, we would like it to be able to hypothesize
       // phosphorylation at site s, if, e.g., s is a Serine and kinase is a Serine kinase.

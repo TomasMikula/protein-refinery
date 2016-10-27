@@ -1,6 +1,6 @@
 name := "protein-refinery"
 
-version := "0.1.4"
+version := "0.2-SNAPSHOT"
 
 scalaVersion := "2.11.8"
 
@@ -34,7 +34,7 @@ javacOptions ++= Seq(
   "-Xlint:deprecation")
 
 libraryDependencies ++= Seq(
-  "com.github.tomasmikula" %% "nutcracker" % "0.1.5",
+  "com.github.tomasmikula" %% "nutcracker" % "0.2-SNAPSHOT",
   "org.typelevel" %% "algebra" % "0.5.0",
   "org.scalaz" %% "scalaz-core" % "7.3.0-M5",
   "org.reactfx" % "reactfx" % "2.0-M5",

@@ -1,8 +1,10 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
 import nutcracker.Antichain
-import nutcracker.util.ContF
-import proteinrefinery._
+import nutcracker.util.ContU
+
+import scalaz.Monad
 
 sealed trait PositiveInfluenceOnPhosphorylation {
   def agent: ProteinPattern
@@ -35,32 +37,34 @@ object PositiveInfluenceOnPhosphorylation {
   }
 
 
-  trait Search { self: PositiveInfluenceOnKinaseActivity.Search =>
+  trait Search[M[_]] { self: PositiveInfluenceOnKinaseActivity.Search[M] =>
 
-    def positiveInfluenceOnPhosphorylationC(p: Protein, ph: Phosphorylation): ContF[DSL, Ref] = {
+    implicit def Propagation: nutcracker.Propagation[M]
+
+    def positiveInfluenceOnPhosphorylationC(p: Protein, ph: Phosphorylation)(implicit M: Monad[M]): ContU[M, Ref] = {
 
       // we can immediately tell whether `p` is the kinase or part of the scaffold in `ph`
-      val immediate: List[ContF[DSL, Ref]] = {
+      val immediate: List[ContU[M, Ref]] = {
         val isKinase = if (ph.kinase == p) List(IsKinase(ph)) else Nil
         val inScaffold = if (ph.assoc.bindings.tail.exists(_.left == p)) List(InScaffold(ProteinPattern(p), ph)) else Nil
-        (isKinase ++ inScaffold).map(Antichain.cellC[DSL, PositiveInfluenceOnPhosphorylation](_))
+        (isKinase ++ inScaffold).map(Antichain.cellC[M, PositiveInfluenceOnPhosphorylation](_))
       }
 
-      val indirect: ContF[DSL, Ref] = Antichain.map(positiveInfluenceOnKinaseActivityC(p, ph.kinase))(infl => ActivatesKinase(infl, ph))
+      val indirect: ContU[M, Ref] = Antichain.map(positiveInfluenceOnKinaseActivityC(p, ph.kinase))(infl => ActivatesKinase(infl, ph))
 
-      ContF.sequence(indirect :: immediate)
+      ContU.sequence(indirect :: immediate)
     }
 
   }
 
 }
 
-trait PositiveInfluenceOnPhosphorylatedStateSearch { self: PositiveInfluenceOnState.Search =>
+trait PositiveInfluenceOnPhosphorylatedStateSearch[M[_]] { self: PositiveInfluenceOnState.Search[M] =>
 
-  def Nuggets: proteinrefinery.lib.Nuggets
+  def Nuggets: proteinrefinery.lib.Nuggets[M]
 
-  def positiveInfluenceOnPhosphorylatedStateC(agent: Protein, target: Protein): ContF[DSL, PositiveInfluenceOnState.Ref] =
-    Nuggets.phosphoSitesC[DSL](target).flatMap(site => {
+  def positiveInfluenceOnPhosphorylatedStateC(agent: Protein, target: Protein)(implicit M: Monad[M]): ContU[M, PositiveInfluenceOnState.Ref] =
+    Nuggets.phosphoSitesC(target).flatMap(site => {
       val pat = ProteinPattern(target).addModification(site, SiteState("p")) // XXX hard-coded phosphorylated state as "p"
       positiveInfluenceOnStateC(agent, pat)
     })

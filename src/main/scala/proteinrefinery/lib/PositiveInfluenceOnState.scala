@@ -1,12 +1,13 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
 import nutcracker.Antichain
 import nutcracker.Promise.Completed
-import nutcracker.util.ContF
-import proteinrefinery.DSL
+import nutcracker.util.ContU
 import proteinrefinery.util.syntax._
 import proteinrefinery.util.OnceTrigger
 
+import scalaz.Monad
 import scalaz.syntax.equal._
 
 sealed trait PositiveInfluenceOnState {
@@ -30,27 +31,30 @@ object PositiveInfluenceOnState {
   def byPhosphorylation(infl: PositiveInfluenceOnPhosphorylation, target: ProteinPattern): PositiveInfluenceOnState = ByPhosphorylation(infl, target)
 
 
-  trait Search {
-    self: PositiveInfluenceOnRule.Search with
-          PositiveInfluenceOnPhosphorylation.Search =>
+  trait Search[M[_]] {
+    self: PositiveInfluenceOnRule.Search[M] with
+          PositiveInfluenceOnPhosphorylation.Search[M] =>
 
-    def PhosphorylationSearch: Phosphorylation.Search
+    implicit def Propagation: nutcracker.Propagation[M]
+    implicit def Tracking: proteinrefinery.util.Tracking[M]
 
-    def positiveInfluenceOnStateC(agent: Protein, target: ProteinPattern): ContF[DSL, Ref] =
-      ContF.sequence(searchByRule(agent, target), searchByPhosphorylation(agent, target))
+    def PhosphorylationSearch: Phosphorylation.Search[M]
 
-    private def searchByRule(agent: Protein, target: ProteinPattern): ContF[DSL, Ref] = {
+    def positiveInfluenceOnStateC(agent: Protein, target: ProteinPattern)(implicit M: Monad[M]): ContU[M, Ref] =
+      ContU.sequence(searchByRule(agent, target), searchByPhosphorylation(agent, target))
+
+    private def searchByRule(agent: Protein, target: ProteinPattern)(implicit M: Monad[M]): ContU[M, Ref] = {
       val ap = AgentsPattern.empty.addAgent(target)._1
       for {
-        rRef <- Nuggets.rulesC[DSL](r => if (r enables ap) OnceTrigger.Fire(()) else OnceTrigger.Sleep())
-        r <- rRef.asCont[DSL]
+        rRef <- Nuggets.rulesC(r => if (r enables ap) OnceTrigger.Fire(()) else OnceTrigger.Sleep())
+        r <- rRef.asCont[M]
         inflRef <- positiveInfluenceOnRuleC(agent, r)
-        infl <- inflRef.asCont[DSL]
-        res <- Antichain.cellC[DSL, PositiveInfluenceOnState](ByRule(infl, target))
+        infl <- inflRef.asCont[M]
+        res <- Antichain.cellC[M, PositiveInfluenceOnState](ByRule(infl, target))
       } yield res
     }
 
-    private def searchByPhosphorylation(agent: Protein, target: ProteinPattern): ContF[DSL, Ref] = {
+    private def searchByPhosphorylation(agent: Protein, target: ProteinPattern)(implicit M: Monad[M]): ContU[M, Ref] = {
       val conts = target.mods.mods.list.iterator.mapFilter({ case SiteWithState(site, state) =>
         if (state === SiteState("p")) // XXX hardcoded phosphorylated state as "p"
           site.content match {
@@ -59,17 +63,17 @@ object PositiveInfluenceOnState {
           }
         else
           None
-      }).map[ContF[DSL, Ref]](siteLabel =>
+      }).map[ContU[M, Ref]](siteLabel =>
         for {
-          k <- Nuggets.kinasesOfC[DSL](target.protein, siteLabel)
+          k <- Nuggets.kinasesOfC(target.protein, siteLabel)
           phRef <- PhosphorylationSearch.phosphorylationC(k, target.protein, siteLabel)
-          ph <- phRef.asCont[DSL]
+          ph <- phRef.asCont[M]
           inflRef <- positiveInfluenceOnPhosphorylationC(agent, ph)
-          infl <- inflRef.asCont[DSL]
-          res <- Antichain.cellC[DSL, PositiveInfluenceOnState](byPhosphorylation(infl, target))
+          infl <- inflRef.asCont[M]
+          res <- Antichain.cellC[M, PositiveInfluenceOnState](byPhosphorylation(infl, target))
         } yield res
       ).toList
-      ContF.sequence(conts)
+      ContU.sequence(conts)
     }
 
   }

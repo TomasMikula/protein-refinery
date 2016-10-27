@@ -1,9 +1,9 @@
 package proteinrefinery.lib
 
-import nutcracker.{Antichain, Dom, Promise, PropagationLang, Trigger}
+import nutcracker.{Antichain, Dom, Promise, Propagation, Trigger}
 import nutcracker.Dom.{Aux, Status}
 import nutcracker.syntax.dom._
-import nutcracker.util.{ContF, FreeK, InjectK}
+import nutcracker.util.ContU
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.Unification
@@ -11,8 +11,10 @@ import proteinrefinery.util.Unification.Syntax._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds
-import scalaz.Show
+import scalaz.{Monad, Show}
+import scalaz.std.list._
 import scalaz.syntax.equal._
+import scalaz.syntax.monad._
 
 final case class Rule (lhs: AgentsPattern, actions: List[Action]) {
 
@@ -156,10 +158,11 @@ object Rule {
     def dom: Aux[Rule, Update, Delta] = domInstance
   }
 
-  def linksAgentToC[F[_[_], _]](ref: Ref)(p: Protein)(implicit inj: InjectK[PropagationLang, F]): ContF[F, Binding.Ref] =
-    ContF(f => PropagationLang.domTriggerF(ref)(r => {
-      val now = FreeK.sequence_(r.value.linksAgentTo(p).iterator.map(b => PropagationLang.cellF(Antichain(b)).inject[F].flatMap(f)).toList)
-      val onChange: (Antichain[Rule], Antichain.Delta[Rule]) => Trigger[FreeK[F, Unit]] = (d, δ) => sys.error("Unreachable code")
+  def linksAgentToC[M[_]](ref: Ref)(p: Protein)(implicit P: Propagation[M], M: Monad[M]): ContU[M, Binding.Ref] =
+    ContU(f => P.domTrigger(ref)(r => {
+      import scalaz.syntax.traverse._
+      val now = r.value.linksAgentTo(p).iterator.map(b => P.cell(Antichain(b)).flatMap(f)).toList.sequence_
+      val onChange: (Antichain[Rule], Antichain.Delta[Rule]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
       (Some(now), Some(onChange))
     }))
 

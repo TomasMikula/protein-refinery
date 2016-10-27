@@ -3,7 +3,7 @@ package proteinrefinery
 import nutcracker._
 import org.scalatest.FunSuite
 import proteinrefinery.lib.syntax._
-import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein, Lib, SiteLabel}
+import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein, SiteLabel}
 
 class Tests extends FunSuite {
 
@@ -47,9 +47,9 @@ class Tests extends FunSuite {
 
     val problem = IncSet.collect(for {
       phosRef <- Lib.phosphorylationC('C, 'B)
-      phos <- phosRef.asCont[DSL]
+      phos <- phosRef.asCont[Prg]
       niRef <- Lib .negativeInfluenceOnPhosphorylationC('D, phos)
-      ni <- niRef.asCont[DSL]
+      ni <- niRef.asCont[Prg]
     } yield (phos, ni))
 
     val (s, ref) = Interpreter(initialNuggets >> problem)(proteinrefinery.emptyState)

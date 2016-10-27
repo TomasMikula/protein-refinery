@@ -1,8 +1,10 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
 import nutcracker.Antichain
-import nutcracker.util.ContF
-import proteinrefinery.DSL
+import nutcracker.util.ContU
+
+import scalaz.Monad
 
 sealed trait PositiveInfluenceOnKinaseActivity {
   def agent: ProteinPattern
@@ -22,12 +24,12 @@ object PositiveInfluenceOnKinaseActivity {
   def positiveInfluenceOnActiveState(infl: PositiveInfluenceOnState): PositiveInfluenceOnKinaseActivity = PositiveInfluenceOnActiveState(infl)
 
 
-  trait Search { self: PositiveInfluenceOnState.Search =>
+  trait Search[M[_]] { self: PositiveInfluenceOnState.Search[M] =>
 
-    def Nuggets: proteinrefinery.lib.Nuggets
+    def Nuggets: proteinrefinery.lib.Nuggets[M]
 
-    def positiveInfluenceOnKinaseActivityC(agent: Protein, kinase: Protein): ContF[DSL, Ref] = for {
-      ppref <- Nuggets.kinaseActivityC[DSL](kinase)
+    def positiveInfluenceOnKinaseActivityC(agent: Protein, kinase: Protein)(implicit M: Monad[M]): ContU[M, Ref] = for {
+      ppref <- Nuggets.kinaseActivityC(kinase)
       res <- Antichain.map(Antichain.mapC(ppref)(pp => positiveInfluenceOnStateC(agent, pp)))(positiveInfluenceOnActiveState(_))
     } yield res
 

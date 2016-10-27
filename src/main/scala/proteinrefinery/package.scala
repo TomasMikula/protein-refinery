@@ -6,6 +6,7 @@ import nutcracker._
 import nutcracker.util.FreeK
 import nutcracker.util.CoproductK._
 import nutcracker.util.KList._
+import proteinrefinery.lib.Lib
 import proteinrefinery.util.{TrackLang, Tracker}
 
 package object proteinrefinery extends ImplicitConversions {
@@ -16,6 +17,8 @@ package object proteinrefinery extends ImplicitConversions {
   type State[K]     = (Tracker   :*: PropagationStore :**: DeferS)#Out[K]
   type Prg[A] = FreeK[DSL, A]
   private[proteinrefinery] type PU = Prg[Unit]
+
+  val Lib = new Lib[Prg]
 
   val interpreter = Tracker.interpreter :&: PropagationStore.interpreter :&&: DeferStore.interpreter[Cost]
   val interpreterF = interpreter.freeInstance

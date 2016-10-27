@@ -1,11 +1,12 @@
 package proteinrefinery.lib
 
-import nutcracker.{Antichain, IncSet}
+import scala.language.higherKinds
+import nutcracker.{Antichain, IncSet, Propagation}
 import nutcracker.IncSet.IncSetRef
-import nutcracker.util.ContF
-import proteinrefinery.{DSL, Prg}
+import nutcracker.util.ContU
+import proteinrefinery.util.Tracking
 
-import scalaz.Show
+import scalaz.{Monad, Show}
 
 sealed trait NegativeInfluenceOnAssociation
 
@@ -19,26 +20,28 @@ object NegativeInfluenceOnAssociation {
   def        byCompetitiveBinding(value: CompetitiveBinding):        NegativeInfluenceOnAssociation = ByCompetitiveBinding(value)
 
 
-  trait Search {
+  trait Search[M[_]] {
 
-    def Nuggets: proteinrefinery.lib.Nuggets
+    implicit def Propagation: Propagation[M]
+    implicit def Tracking: Tracking[M]
+    def Nuggets: proteinrefinery.lib.Nuggets[M]
 
     // TODO: should return DSet
-    def negativeInfluenceOnAssociation(p: Protein, a: Assoc): Prg[IncSetRef[Ref]] =
+    def negativeInfluenceOnAssociation(p: Protein, a: Assoc)(implicit M: Monad[M]): M[IncSetRef[Ref]] =
       IncSet.collectAll(a.bindings.map(b => searchCompetitiveBinding(p, b)))
 
-    def negativeInfluenceOnAssociationC(p: Protein, a: Assoc): ContF[DSL, Ref] =
-      ContF.sequence(a.bindings.map(b => searchCompetitiveBinding(p, b)))
+    def negativeInfluenceOnAssociationC(p: Protein, a: Assoc)(implicit M: Monad[M]): ContU[M, Ref] =
+      ContU.sequence(a.bindings.map(b => searchCompetitiveBinding(p, b)))
 
-    private def searchCompetitiveBinding(competitor: Protein, bnd: Binding): ContF[DSL, Ref] = {
+    private def searchCompetitiveBinding(competitor: Protein, bnd: Binding)(implicit M: Monad[M]): ContU[M, Ref] = {
       val l = Antichain.map(competitiveBindings(competitor, bnd.leftPattern ))(cb => byCompetitiveBinding(CompetitiveBinding(bnd.flip, cb)))
       val r = Antichain.map(competitiveBindings(competitor, bnd.rightPattern))(cb => byCompetitiveBinding(CompetitiveBinding(bnd,      cb)))
-      ContF.sequence(l, r)
+      ContU.sequence(l, r)
     }
 
     // TODO: return Prg[DSet[Binding]] instead
-    private def competitiveBindings(competitor: Protein, bp: BindingPartnerPattern): ContF[DSL, Binding.Ref] =
-      ContF.filterMap(Nuggets.bindingsOfC[DSL](competitor).flatMap(ref => ref.asCont[DSL].map((ref, _)))) {
+    private def competitiveBindings(competitor: Protein, bp: BindingPartnerPattern)(implicit M: Monad[M]): ContU[M, Binding.Ref] =
+      ContU.filterMap(Nuggets.bindingsOfC(competitor).flatMap(ref => ref.asCont[M].map((ref, _)))) {
         case (ref, bnd) => if(bnd.rightPattern overlaps bp) Option(ref) else None
       }
 

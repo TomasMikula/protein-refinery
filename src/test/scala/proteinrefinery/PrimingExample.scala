@@ -2,10 +2,10 @@ package proteinrefinery
 
 import nutcracker.IncSet.IncSetRef
 import nutcracker._
-import nutcracker.util.ContF
+import nutcracker.util.ContU
 import org.scalatest.FunSuite
 import proteinrefinery.lib.syntax._
-import proteinrefinery.lib.{AgentsPattern, Binding, PositiveInfluenceOnRule, Protein, ProteinModifications, ProteinPattern, Rule, Lib, SiteLabel}
+import proteinrefinery.lib.{AgentsPattern, Binding, PositiveInfluenceOnRule, Protein, ProteinModifications, ProteinPattern, Rule, SiteLabel}
 import proteinrefinery.util.Unification.Syntax._
 
 class PrimingExample extends FunSuite {
@@ -36,20 +36,17 @@ class PrimingExample extends FunSuite {
     phosphoSites = phosphoTargets
   )
 
-  private def forEachRule = Lib.forEachRule[DSL]
-  private def peekC[D](ref: DRef[D]): ContF[DSL, D] = ContF(f => PropagationLang.peek(ref)(f))
-
-  val watchForExplanationsViaPositiveInfluenceC: ContF[DSL, (Rule, PositiveInfluenceOnRule)] = for {
-    ref1 <- forEachRule
-    ref2 <- forEachRule
-    r1 <- peekC(ref1)
-    r2 <- peekC(ref2)
+  val watchForExplanationsViaPositiveInfluenceC: ContU[Prg, (Rule, PositiveInfluenceOnRule)] = for {
+    ref1 <- Lib.forEachRule
+    ref2 <- Lib.forEachRule
+    r1 <- ref1.peekC[Prg]
+    r2 <- ref2.peekC[Prg]
     (d1, r, d2) = r1.value unify r2.value
-    diff <- if(d2.isEmpty && d1.isDefined) ContF.point[DSL, Rule.Delta](d1.get) else ContF.noop[DSL, Rule.Delta]
+    diff <- if(d2.isEmpty && d1.isDefined) ContU.point[Prg, Rule.Delta](d1.get) else ContU.noop[Prg, Rule.Delta]
     diffPatterns = breakDown(r1.value.lhs, diff, r2.value.lhs)
     searches = diffPatterns.map(pp => Lib.positiveInfluenceOnRuleC(pp, r1.value))
-    inflRef <- ContF.sequence(searches)
-    infl <- inflRef.asCont[DSL]
+    inflRef <- ContU.sequence(searches)
+    infl <- inflRef.asCont[Prg]
   } yield (r2.value, infl)
 
   val watchForExplanationsViaPositiveInfluence: Prg[IncSetRef[(Rule, PositiveInfluenceOnRule)]] =
