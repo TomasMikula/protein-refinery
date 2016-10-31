@@ -8,7 +8,7 @@ resolvers += "bintray/non" at "http://dl.bintray.com/non/maven"
 resolvers += Resolver.sonatypeRepo("releases")
 
 autoCompilerPlugins := true
-addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.0" cross CrossVersion.binary)
+addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.2" cross CrossVersion.binary)
 addCompilerPlugin("com.milessabin" % "si2712fix-plugin" % "1.2.0" cross CrossVersion.full)
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.15")
 
@@ -35,8 +35,8 @@ javacOptions ++= Seq(
 
 libraryDependencies ++= Seq(
   "com.github.tomasmikula" %% "nutcracker" % "0.2-SNAPSHOT",
-  "org.typelevel" %% "algebra" % "0.5.0",
-  "org.scalaz" %% "scalaz-core" % "7.3.0-M5",
+  "org.typelevel" %% "algebra" % "0.5.1",
+  "org.scalaz" %% "scalaz-core" % "7.3.0-M6",
   "org.reactfx" % "reactfx" % "2.0-M5",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 )
