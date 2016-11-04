@@ -2,6 +2,7 @@ package proteinrefinery.util
 
 import scala.annotation.tailrec
 import scala.collection.mutable.{Map => MMap}
+import scalaz.\&/
 
 package object syntax {
 
@@ -76,10 +77,15 @@ package object syntax {
       builder.result()
     }
 
-    def pairWithOpt[W](that: Map[K, W]): Map[K, (Option[V], Option[W])] = {
+    def pairWithOpt[W](that: Map[K, W]): Map[K, V \&/ W] = {
       val keys = self.keySet union that.keySet
-      var builder = Map.newBuilder[K, (Option[V], Option[W])]
-      keys.foreach(a => builder += ((a, (self.get(a), that.get(a)))))
+      var builder = Map.newBuilder[K, V \&/ W]
+      keys.foreach(a => builder += ((a, (self.get(a), that.get(a)) match {
+        case (Some(v), Some(w)) => \&/.Both(v, w)
+        case (Some(v), None) => \&/.This(v)
+        case (None, Some(w)) => \&/.That(w)
+        case _ => sys.error("Unreachable code")
+      })))
       builder.result()
     }
 
