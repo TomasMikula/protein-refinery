@@ -1,10 +1,10 @@
-package proteinrefinery.lib
+package proteinrefinery
 
 import org.scalatest.FunSuite
-import proteinrefinery.lib.syntax._
 import proteinrefinery.util.Unification.Syntax._
 
 class RuleUnificationTest extends FunSuite {
+  import proteinrefinery.Lib._
 
   test("unification") {
     val β_TrCP = Protein("β-TrCP")

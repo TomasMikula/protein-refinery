@@ -1,45 +1,45 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Antichain, IncSet, Propagation}
-import nutcracker.IncSet.IncSetRef
-import nutcracker.util.ContU
+import nutcracker._
+import nutcracker.util.{ContU, EqualK}
 
 import scalaz.{Monad, Show}
 
-sealed trait NegativeInfluenceOnPhosphorylation
+sealed trait NegativeInfluenceOnPhosphorylation[Ref[_]]
 
 object NegativeInfluenceOnPhosphorylation {
 
-  type Ref = Antichain.Ref[NegativeInfluenceOnPhosphorylation]
+  type Ref[Var[_]] = Var[Antichain[NegativeInfluenceOnPhosphorylation[Var]]]
 
   // Constructors
 
-  case class ByNegativeInfluenceOnAssociation(value: NegativeInfluenceOnAssociation) extends NegativeInfluenceOnPhosphorylation
-  def        byNegativeInfluenceOnAssociation(value: NegativeInfluenceOnAssociation):        NegativeInfluenceOnPhosphorylation = ByNegativeInfluenceOnAssociation(value)
-  def byCompetitiveBinding(cb: CompetitiveBinding): NegativeInfluenceOnPhosphorylation = byNegativeInfluenceOnAssociation(NegativeInfluenceOnAssociation.byCompetitiveBinding(cb))
+  case class ByNegativeInfluenceOnAssociation[Var[_]](value: NegativeInfluenceOnAssociation[Var]) extends NegativeInfluenceOnPhosphorylation[Var]
+  def        byNegativeInfluenceOnAssociation[Var[_]](value: NegativeInfluenceOnAssociation[Var]):        NegativeInfluenceOnPhosphorylation[Var] = ByNegativeInfluenceOnAssociation(value)
+  def byCompetitiveBinding[Var[_]](cb: CompetitiveBinding[Var]): NegativeInfluenceOnPhosphorylation[Var] = byNegativeInfluenceOnAssociation(NegativeInfluenceOnAssociation.byCompetitiveBinding(cb))
 
 
-  trait Search[M[_]] {
-    implicit def Propagation: Propagation[M]
+  trait Search[M[_], Var[_]] {
+    implicit def Propagation: Propagation[M, Var]
 
-    def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M]
+    def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Var]
+    def IncSets: nutcracker.IncSets[M, Var]
 
-    def negativeInfluenceOnPhosphorylation(p: Protein, ph: Phosphorylation)(implicit M: Monad[M]): M[IncSetRef[Ref]] = {
-      IncSet.collect(negativeInfluenceOnPhosphorylationC(p, ph))
+    def negativeInfluenceOnPhosphorylation(p: Protein, ph: Phosphorylation[Var])(implicit M: Monad[M], E: EqualK[Var]): M[Var[IncSet[Ref[Var]]]] = {
+      IncSets.collect(negativeInfluenceOnPhosphorylationC(p, ph))
     }
 
-    def negativeInfluenceOnPhosphorylation_r(p: Protein, phRef: Phosphorylation.Ref)(implicit M: Monad[M]): M[IncSetRef[Ref]] = {
-      IncSet.collect(negativeInfluenceOnPhosphorylationC_r(p, phRef))
+    def negativeInfluenceOnPhosphorylation_r(p: Protein, phRef: Phosphorylation.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): M[Var[IncSet[Ref[Var]]]] = {
+      IncSets.collect(negativeInfluenceOnPhosphorylationC_r(p, phRef))
     }
 
-    def negativeInfluenceOnPhosphorylationC(p: Protein, ph: Phosphorylation)(implicit M: Monad[M]): ContU[M, Ref] = {
+    def negativeInfluenceOnPhosphorylationC(p: Protein, ph: Phosphorylation[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] = {
       // currently the only way a protein can have negative influence on phosphorylation
       // is via negative influence on the association of the enzyme to the substrate
       Antichain.map(NegativeInfluenceOnAssociationSearch.negativeInfluenceOnAssociationC(p, ph.assoc))(byNegativeInfluenceOnAssociation)
     }
 
-    def negativeInfluenceOnPhosphorylationC_r(p: Protein, phRef: Phosphorylation.Ref)(implicit M: Monad[M]): ContU[M, Ref] = {
+    def negativeInfluenceOnPhosphorylationC_r(p: Protein, phRef: Phosphorylation.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] = {
       // currently the only way a protein can have negative influence on phosphorylation
       // is via negative influence on the association of the enzyme to the substrate
       phRef.asCont[M] flatMap { negativeInfluenceOnPhosphorylationC(p, _) }
@@ -50,9 +50,9 @@ object NegativeInfluenceOnPhosphorylation {
 
   // Typeclass instances
 
-  implicit def showInstance: Show[NegativeInfluenceOnPhosphorylation] = new Show[NegativeInfluenceOnPhosphorylation] {
-    override def shows(x: NegativeInfluenceOnPhosphorylation): String = x match {
-      case ByNegativeInfluenceOnAssociation(ni) => Show[NegativeInfluenceOnAssociation].shows(ni)
+  implicit def showInstance[Var[_]]: Show[NegativeInfluenceOnPhosphorylation[Var]] = new Show[NegativeInfluenceOnPhosphorylation[Var]] {
+    override def shows(x: NegativeInfluenceOnPhosphorylation[Var]): String = x match {
+      case ByNegativeInfluenceOnAssociation(ni) => Show[NegativeInfluenceOnAssociation[Var]].shows(ni)
     }
   }
 }

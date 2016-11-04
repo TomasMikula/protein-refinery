@@ -1,10 +1,15 @@
-package proteinrefinery.lib
+package proteinrefinery
 
+import nutcracker.DRef
 import org.scalatest.{Assertion, FunSuite}
+import proteinrefinery.lib.Site._
+import proteinrefinery.util.Identification.Syntax._
 
 import scalaz.Equal
 
 class ProteinModificationsTests extends FunSuite {
+  val lib = new Lib[Prg, DRef]
+  import lib._
 
   private def assertEqual[A: Equal](a1: A, a2: A): Assertion =
     assert(Equal[A].equal(a1, a2), s"because $a1 is not equal to $a2")
@@ -24,7 +29,7 @@ class ProteinModificationsTests extends FunSuite {
 
   test("site identification") {
     val s = Site.fromLabel(SiteLabel("a"))
-    Site.identificationInstance.unifyIfNecessary(s, s) match {
+    (s unifyIfNecessary s) match {
       case None => assert(false, "unexpected non-obligation to unify")
       case Some((d1, s2, d2)) =>
         assertEqual(s2, s)
@@ -35,7 +40,7 @@ class ProteinModificationsTests extends FunSuite {
 
   test("site-with-state identification") {
     val ss1 = SiteWithState(SiteLabel("a"), SiteState("x"))
-    SiteWithState.identificationInstance.unifyIfNecessary(ss1, ss1) match {
+    (ss1 unifyIfNecessary ss1) match {
       case None => assert(false, "unexpected non-obligation to unify")
       case Some((d1, ss2, d2)) =>
         assertEqual(ss2, ss1)

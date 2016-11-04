@@ -1,8 +1,10 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
 import nutcracker.Dom.Status
 import nutcracker.{Dom, Promise}
 import nutcracker.Promise.{Complete, Completed, Conflict, Empty}
+import nutcracker.util.EqualK
 import proteinrefinery.util.{HomSet, Identification, Unification}
 import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
 
@@ -13,7 +15,7 @@ import scalaz.syntax.equal._
 object Site {
 
   type Dom = Promise[SiteLabel]
-  type Ref = Promise.Ref[SiteLabel]
+  type Ref[Var[_]] = Var[Promise[SiteLabel]]
   type Update = Promise.Update[SiteLabel]
   type Delta = Promise.Delta[SiteLabel]
 
@@ -52,17 +54,18 @@ object Site {
 }
 
 /** Site together with a bag of site references. */
-case class ISite private(content: Site.Dom, refs: Set[Site.Ref])
+case class ISite[Ref[_]] private(content: Site.Dom, refs: Set[Site.Ref[Ref]])
 
 object ISite {
-  type Update = Site.Update \&/ Set[Site.Ref]
-  type Delta  = Site.Delta  \&/ Set[Site.Ref]
+  type Update[Ref[_]] = Site.Update \&/ Set[Site.Ref[Ref]]
+  type Delta[Ref[_]]  = Site.Delta  \&/ Set[Site.Ref[Ref]]
 
-  def apply(site: Site.Definite, refs: Site.Ref*): ISite = new ISite(Site.wrap(site), Set(refs:_*))
-  def apply(ref: Site.Ref, refs: Site.Ref*): ISite = ISite(Site.unknown, Set(refs:_*) + ref)
+  def apply[Ref[_]](site: Site.Definite, refs: Site.Ref[Ref]*): ISite[Ref] = new ISite(Site.wrap(site), Set(refs:_*))
+  def apply[Ref[_]](ref: Site.Ref[Ref], refs: Site.Ref[Ref]*): ISite[Ref] = ISite(Site.unknown, Set(refs:_*) + ref)
 
-  implicit def equalInstance: Equal[ISite] = new Equal[ISite] {
-    def equal(a1: ISite, a2: ISite): Boolean =
+  implicit def equalInstance[Ref[_]](implicit ev: EqualK[Ref]): Equal[ISite[Ref]] = new Equal[ISite[Ref]] {
+    import EqualK._
+    def equal(a1: ISite[Ref], a2: ISite[Ref]): Boolean =
       a1.content === a2.content && a1.refs === a2.refs
 
     // XXX slow (n^2)
@@ -71,9 +74,9 @@ object ISite {
     }
   }
 
-  implicit def identificationInstance: Identification.Aux[ISite, Update, Delta] = {
+  implicit def identificationInstance[Ref[_]]: Identification.Aux[ISite[Ref], Update[Ref], Delta[Ref]] = {
 
-    implicit def rawIdentificationInstance: Identification.Aux[(Site.Dom, Set[Site.Ref]), Update, Delta] = {
+    implicit def rawIdentificationInstance: Identification.Aux[(Site.Dom, Set[Site.Ref[Ref]]), Update[Ref], Delta[Ref]] = {
       implicit def siteIdentification = Site.identificationInstance
 
       implicit def setIdentificationByNonEmptyIntersection[A]: Identification.Aux[Set[A], Set[A], Set[A]] = new Identification[Set[A]] {
@@ -112,23 +115,24 @@ object ISite {
         }
       }
 
-      Identification.tuple2[Site.Dom, Set[Site.Ref]]
+      Identification.tuple2[Site.Dom, Set[Site.Ref[Ref]]]
     }
 
-    Identification.via[ISite, (Site.Dom, Set[Site.Ref])](pairIso)
+    Identification.via[ISite[Ref], (Site.Dom, Set[Site.Ref[Ref]])](pairIso)
   }
 
   // Not really an isomorphism, since ISite does not allow both components to be bottom at the same time.
   // Anyway, it still is a monomorphism, which is sufficient to get a correct Unification instance via.
-  private val pairIso: ISite <=> (Site.Dom, Set[Site.Ref]) = new (ISite <=> (Site.Dom, Set[Site.Ref])) {
-    def to: (ISite) => (Site.Dom, Set[Site.Ref]) = is => (is.content, is.refs)
+  private def pairIso[Ref[_]]: ISite[Ref] <=> (Site.Dom, Set[Site.Ref[Ref]]) =
+    new (ISite[Ref] <=> (Site.Dom, Set[Site.Ref[Ref]])) {
+      def to: (ISite[Ref]) => (Site.Dom, Set[Site.Ref[Ref]]) = is => (is.content, is.refs)
 
-    def from: ((Site.Dom, Set[Site.Ref])) => ISite = sr => {
-      val (s, refs) = sr
-      if(s.isEmpty && refs.isEmpty)
-          sys.error("Oops, should have never happened to get underspecified site with no refs")
-        else
-          new ISite(s, refs)
-    }
+      def from: ((Site.Dom, Set[Site.Ref[Ref]])) => ISite[Ref] = sr => {
+        val (s, refs) = sr
+        if(s.isEmpty && refs.isEmpty)
+            sys.error("Oops, should have never happened to get underspecified site with no refs")
+          else
+            new ISite(s, refs)
+      }
   }
 }

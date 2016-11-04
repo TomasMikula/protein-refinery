@@ -1,3 +1,5 @@
 package proteinrefinery.lib
 
-case class KinaseActivityIncreaseByModification(kinase: Protein, mods: ProteinModifications)
+import scala.language.higherKinds
+
+case class KinaseActivityIncreaseByModification[Ref[_]](kinase: Protein, mods: ProteinModifications[Ref])

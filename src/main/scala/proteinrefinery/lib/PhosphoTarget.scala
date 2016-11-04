@@ -1,5 +1,7 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
+
 import nutcracker.Antichain
 
 final case class PhosphoTarget(kinase: Protein, substrate: Protein, targetSite: SiteLabel) {
@@ -7,5 +9,5 @@ final case class PhosphoTarget(kinase: Protein, substrate: Protein, targetSite: 
 }
 
 object PhosphoTarget {
-  type Ref = Antichain.Ref[PhosphoTarget]
+  type Ref[Var[_]] = Var[Antichain[PhosphoTarget]]
 }

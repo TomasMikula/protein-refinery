@@ -1,14 +1,12 @@
 package proteinrefinery
 
-import nutcracker.IncSet.IncSetRef
 import nutcracker._
 import nutcracker.util.ContU
 import org.scalatest.FunSuite
-import proteinrefinery.lib.syntax._
-import proteinrefinery.lib.{AgentsPattern, Binding, PositiveInfluenceOnRule, Protein, ProteinModifications, ProteinPattern, Rule, SiteLabel}
 import proteinrefinery.util.Unification.Syntax._
 
 class PrimingExample extends FunSuite {
+  import proteinrefinery.Lib._
 
   val β_TrCP = Protein("β-TrCP")
   val β_Cat  = Protein("β-Catenin")
@@ -49,8 +47,8 @@ class PrimingExample extends FunSuite {
     infl <- inflRef.asCont[Prg]
   } yield (r2.value, infl)
 
-  val watchForExplanationsViaPositiveInfluence: Prg[IncSetRef[(Rule, PositiveInfluenceOnRule)]] =
-    IncSet.collect(watchForExplanationsViaPositiveInfluenceC)
+  val watchForExplanationsViaPositiveInfluence: Prg[DRef[IncSet[(Rule, PositiveInfluenceOnRule)]]] =
+    IncSets.collect(watchForExplanationsViaPositiveInfluenceC)
 
   val Interpreter = proteinrefinery.interpreterF
 

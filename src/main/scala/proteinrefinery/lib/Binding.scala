@@ -1,12 +1,14 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
+
 import nutcracker.Antichain
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
-sealed trait Binding {
+sealed trait Binding[Ref[_]] {
 
   /** Rule that witnesses this binding action to occur. */
-  def witness: Rule
+  def witness: Rule[Ref]
 
   /** Index of [[p]] in both LHS and RHS of [[witness]]. */
   def pi: AgentIndex
@@ -15,10 +17,10 @@ sealed trait Binding {
   def qi: AgentIndex
 
   /** binding site at [[p]] */
-  def ps: LocalSiteId
+  def ps: LocalSiteId[Ref]
 
   /** binding site at [[q]] */
-  def qs: LocalSiteId
+  def qs: LocalSiteId[Ref]
 
   /** first binding partner */
   def p: Protein = witness.lhs(pi).protein
@@ -38,24 +40,24 @@ sealed trait Binding {
   /** Alias for [[qs]]. */
   def rightS = qs
 
-  def pPattern: BindingPartnerPattern = BindingPartnerPattern(witness.lhs(pi), ps)
-  def qPattern: BindingPartnerPattern = BindingPartnerPattern(witness.lhs(qi), qs)
+  def pPattern: BindingPartnerPattern[Ref] = BindingPartnerPattern(witness.lhs(pi), ps)
+  def qPattern: BindingPartnerPattern[Ref] = BindingPartnerPattern(witness.lhs(qi), qs)
   def leftPattern = pPattern
   def rightPattern = qPattern
 
-  def flip: Binding = Binding(witness, qi, pi, qs, ps)
+  def flip: Binding[Ref] = Binding(witness, qi, pi, qs, ps)
 
   override def toString = s"$p>$ps - $qs<$q"
 }
 
 object Binding {
-  private case class Binding0(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId, qs: LocalSiteId) extends Binding
+  private case class Binding0[Var[_]](witness: Rule[Var], pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId[Var], qs: LocalSiteId[Var]) extends Binding[Var]
 
-  type Ref = Antichain.Ref[Binding]
+  type Ref[Var[_]] = Var[Antichain[Binding[Var]]]
 
-  def apply(witness: Rule, pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId, qs: LocalSiteId): Binding =
+  def apply[Var[_]](witness: Rule[Var], pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId[Var], qs: LocalSiteId[Var]): Binding[Var] =
     Binding0(witness, pi, qi, ps, qs)
 
-  def apply(p: Protein, ps: LocalSiteId, q: Protein, qs: LocalSiteId): Binding =
+  def apply[Var[_]](p: Protein, ps: LocalSiteId[Var], q: Protein, qs: LocalSiteId[Var]): Binding[Var] =
     BindingPartnerPattern(p, ps) bind BindingPartnerPattern(q, qs)
 }

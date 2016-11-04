@@ -1,10 +1,9 @@
-package proteinrefinery.lib
+package proteinrefinery
 
 import org.scalatest.FunSuite
-import proteinrefinery._
-import proteinrefinery.lib.syntax._
 
 class PositiveInfluenceOnRuleTest extends FunSuite {
+  import proteinrefinery.Lib._
 
   val β_TrCP = Protein("β-TrCP")
   val β_Cat  = Protein("β-Catenin")

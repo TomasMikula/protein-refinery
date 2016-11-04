@@ -1,27 +1,27 @@
 package proteinrefinery.util
 
 import nutcracker.DRef
-import nutcracker.util.{K3Map, Lst, Step, WriterState}
+import nutcracker.util.{HHKMap, Lst, Step, WriterState}
 import proteinrefinery.util.TrackLang._
-import proteinrefinery.util.Tracker.SingleTypeTracker
+import proteinrefinery.util.Tracker._
 
 import scala.language.higherKinds
 import scalaz.std.list._
 import scalaz.syntax.traverse._
 
-final case class Tracker[K](map: K3Map[DomType.Aux, SingleTypeTracker[K, ?, ?, ?]]) {
+final case class Tracker[K](map: HHKMap[DomType, STTBuilder[K]#Out]) {
 
-  def track[D, U, Δ](t: DomType.Aux[D, U, Δ], ref: DRef.Aux[D, U, Δ]): (Tracker[K], Lst[K]) = {
-    val tr = map.getOrElse[D, U, Δ](t)(SingleTypeTracker.empty[K, D, U, Δ])
+  def track[D[_[_]]](t: DomType[D], ref: DRef[D[DRef]]): (Tracker[K], Lst[K]) = {
+    val tr = map.getOrElse[D](t)(SingleTypeTracker.empty[K, D])
     val ks = tr.queries.foldLeft(Lst.empty[K])((ks, f) => f(ref) :: ks)
     (Tracker(map.put(t)(tr.copy(refs = ref :: tr.refs))), ks)
   }
 
-  def trackAll[D, U, Δ](t: DomType.Aux[D, U, Δ], refs: List[DRef.Aux[D, U, Δ]]): (Tracker[K], Lst[K]) =
+  def trackAll[D[_[_]]](t: DomType[D], refs: List[DRef[D[DRef]]]): (Tracker[K], Lst[K]) =
     Tracker.trackAll(t, refs)(this)
 
-  def handle[D, U, Δ](t: DomType.Aux[D, U, Δ])(f: DRef.Aux[D, U, Δ] => K): (Tracker[K], Lst[K]) = {
-    val tr = map.getOrElse[D, U, Δ](t)(SingleTypeTracker.empty[K, D, U, Δ])
+  def handle[D[_[_]]](t: DomType[D])(f: DRef[D[DRef]] => K): (Tracker[K], Lst[K]) = {
+    val tr = map.getOrElse[D](t)(SingleTypeTracker.empty[K, D])
     val ks = tr.refs.foldLeft(Lst.empty[K])((ks, ref) => f(ref) :: ks)
     (Tracker(map.put(t)(tr.copy(queries = f :: tr.queries))), ks)
   }
@@ -29,24 +29,26 @@ final case class Tracker[K](map: K3Map[DomType.Aux, SingleTypeTracker[K, ?, ?, ?
 }
 
 object Tracker {
-  private[proteinrefinery] final case class SingleTypeTracker[K, D, U, Δ](refs: List[DRef.Aux[D, U, Δ]], queries: List[DRef.Aux[D, U, Δ] => K])
+  sealed trait STTBuilder[K] { type Out[D[_[_]]] = SingleTypeTracker[K, D] }
+
+  private[proteinrefinery] final case class SingleTypeTracker[K, D[_[_]]](refs: List[DRef[D[DRef]]], queries: List[DRef[D[DRef]] => K])
   private[proteinrefinery] object SingleTypeTracker {
-    def empty[K, D, U, Δ] = SingleTypeTracker[K, D, U, Δ](Nil, Nil)
+    def empty[K, D[_[_]]] = SingleTypeTracker[K, D](Nil, Nil)
   }
 
-  def empty[K]: Tracker[K] = Tracker(K3Map[DomType.Aux, SingleTypeTracker[K, ?, ?, ?]])
+  def empty[K]: Tracker[K] = Tracker(HHKMap[DomType, STTBuilder[K]#Out])
 
-  def track[K, D, U, Δ](t: DomType.Aux[D, U, Δ], ref: DRef.Aux[D, U, Δ]): scalaz.State[Tracker[K], Lst[K]] =
+  def track[K, D[_[_]]](t: DomType[D], ref: DRef[D[DRef]]): scalaz.State[Tracker[K], Lst[K]] =
     scalaz.State(tr => tr.track(t, ref))
 
-  def trackAll[K, D, U, Δ](t: DomType.Aux[D, U, Δ], refs: List[DRef.Aux[D, U, Δ]]): scalaz.State[Tracker[K], Lst[K]] =
-    refs.traverseS(track[K, D, U, Δ](t, _)).map(_.foldLeft(Lst.empty[K])(_ ++ _))
+  def trackAll[K, D[_[_]]](t: DomType[D], refs: List[DRef[D[DRef]]]): scalaz.State[Tracker[K], Lst[K]] =
+    refs.traverseS(track[K, D](t, _)).map(_.foldLeft(Lst.empty[K])(_ ++ _))
 
   def interpreter: Step[TrackLang, Tracker] = new Step[TrackLang, Tracker] {
     def apply[K[_], A](t: TrackLang[K, A]): WriterState[Lst[K[Unit]], Tracker[K[Unit]], A] =
       WriterState(tracker => t match {
-        case Track(t, ref) => tracker.track(t, ref) match { case (tr, ks) => (ks, tr, ()) }
-        case Handle(t, f) => tracker.handle(t)(f) match { case (tr, ks) => (ks, tr, ()) }
+        case i @ Track(t, ref) => tracker.track[i.Tracked](t, ref) match { case (tr, ks) => (ks, tr, ()) }
+        case i @ Handle(t, f) => tracker.handle[i.Tracked](t)(f) match { case (tr, ks) => (ks, tr, ()) }
       })
   }
 }

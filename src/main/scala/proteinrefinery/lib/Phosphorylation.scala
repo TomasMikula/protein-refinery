@@ -2,13 +2,12 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.{Antichain, IncSet}
-import nutcracker.IncSet._
 import nutcracker.util.ContU
 
 import scalaz.{Monad, Show}
 
-case class Phosphorylation(
-  assoc: Assoc,
+case class Phosphorylation[Ref[_]](
+  assoc: Assoc[Ref],
   phosphoSite: SiteLabel
 ) {
   def kinase: Protein = assoc.bindings.head.left
@@ -18,23 +17,24 @@ case class Phosphorylation(
 
 object Phosphorylation {
 
-  type Ref = Antichain.Ref[Phosphorylation]
+  type Ref[Var[_]] = Var[Antichain[Phosphorylation[Var]]]
 
-  trait Search[M[_]] {
-    implicit def Propagation: nutcracker.Propagation[M]
-    implicit def Tracking: proteinrefinery.util.Tracking[M]
+  trait Search[M[_], Var[_]] {
+    implicit def Propagation: nutcracker.Propagation[M, Var]
+    implicit def Tracking: proteinrefinery.util.Tracking[M, Var]
 
-    def Nuggets: proteinrefinery.lib.Nuggets[M]
-    def AssocSearch: Assoc.Search[M]
+    def IncSets: nutcracker.IncSets[M, Var]
+    def Nuggets: proteinrefinery.lib.Nuggets[M, Var]
+    def AssocSearch: Assoc.Search[M, Var]
 
-    def phosphorylation(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): M[IncSetRef[Ref]] =
-      IncSet.collect(phosphorylationC(kinase, substrate))
+    def phosphorylation(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): M[Var[IncSet[Ref[Var]]]] =
+      IncSets.collect(phosphorylationC(kinase, substrate))
 
-    def phosphorylationC(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): ContU[M, Ref] = {
+    def phosphorylationC(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): ContU[M, Ref[Var]] = {
       Nuggets.phosphoSitesC(kinase, substrate).flatMap(s => phosphorylationC(kinase, substrate, s))
     }
 
-    def phosphorylationC(kinase: Protein, substrate: Protein, s: SiteLabel)(implicit M: Monad[M]): ContU[M, Ref] = {
+    def phosphorylationC(kinase: Protein, substrate: Protein, s: SiteLabel)(implicit M: Monad[M]): ContU[M, Ref[Var]] = {
       // XXX this version is quite primitive and cannot infer much beyond what is already given by the knowledge base,
       // except for finding indirect enzyme-substrate associations. In the future, we would like it to be able to hypothesize
       // phosphorylation at site s, if, e.g., s is a Serine and kinase is a Serine kinase.
@@ -50,7 +50,7 @@ object Phosphorylation {
 
   // Typeclass instances
 
-  implicit def showInstance: Show[Phosphorylation] = new Show[Phosphorylation] {
-    override def shows(p: Phosphorylation): String = p.toString
+  implicit def showInstance[Var[_]]: Show[Phosphorylation[Var]] = new Show[Phosphorylation[Var]] {
+    override def shows(p: Phosphorylation[Var]): String = p.toString
   }
 }

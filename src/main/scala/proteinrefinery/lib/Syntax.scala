@@ -1,17 +1,18 @@
 package proteinrefinery.lib
 
-import scala.language.implicitConversions
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
 
-package object syntax {
+import scala.language.{higherKinds, implicitConversions}
+
+trait Syntax[Ref[_]] {
 
   implicit class SymbolOps(sym: Symbol) {
 
-    def apply(ss: (SiteLabel, SiteState)*): ProteinPattern =
+    def apply(ss: (SiteLabel, SiteState)*): ProteinPattern[Ref] =
       ProteinPattern(Protein(sym), ProteinModifications(ss:_*))
 
-    def @@ (s: SiteLabel): BindingPartnerPattern =
+    def @@ (s: SiteLabel): BindingPartnerPattern[Ref] =
       BindingPartnerPattern(Protein(sym), LocalSiteId(s))
 
     def ~(s: SiteState): (SiteLabel, SiteState) = (SiteLabel(sym.name), s)
@@ -20,21 +21,21 @@ package object syntax {
 
   implicit class ProteinOps(p: Protein) {
 
-    def apply(ss: (SiteLabel, SiteState)*): ProteinPattern =
+    def apply(ss: (SiteLabel, SiteState)*): ProteinPattern[Ref] =
       ProteinPattern(p, ProteinModifications(ss:_*))
 
-    def @@ (s: SiteLabel): BindingPartnerPattern =
+    def @@ (s: SiteLabel): BindingPartnerPattern[Ref] =
       BindingPartnerPattern(p, LocalSiteId(s))
   }
 
-  implicit class ProteinPatternOps(p: ProteinPattern) {
+  implicit class ProteinPatternOps(p: ProteinPattern[Ref]) {
 
-    def @@ (s: SiteLabel): BindingPartnerPattern = BindingPartnerPattern(p, LocalSiteId(s))
+    def @@ (s: SiteLabel): BindingPartnerPattern[Ref] = BindingPartnerPattern(p, LocalSiteId(s))
 
   }
 
-  implicit class BindingPartnerPatternOps(bp: BindingPartnerPattern) {
-    def binds(that: BindingPartnerPattern): Binding = bp bind that
+  implicit class BindingPartnerPatternOps(bp: BindingPartnerPattern[Ref]) {
+    def binds(that: BindingPartnerPattern[Ref]): Binding[Ref] = bp bind that
   }
 
   implicit def symbolToProtein(sym: Symbol): Protein = Protein(sym)

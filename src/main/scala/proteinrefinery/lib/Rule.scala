@@ -1,9 +1,9 @@
 package proteinrefinery.lib
 
 import nutcracker.{Antichain, Dom, Promise, Propagation, Trigger}
-import nutcracker.Dom.{Aux, Status}
+import nutcracker.Dom.Status
 import nutcracker.syntax.dom._
-import nutcracker.util.ContU
+import nutcracker.util.{ContU, EqualK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.Unification
@@ -16,17 +16,17 @@ import scalaz.std.list._
 import scalaz.syntax.equal._
 import scalaz.syntax.monad._
 
-final case class Rule (lhs: AgentsPattern, actions: List[Action]) {
+final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref]]) {
 
   lazy val isAdmissible: Boolean = lhs.isAdmissible
 
-  lazy val rhs: AgentsPattern = actions.foldLeft(lhs)((p, a) => p.modify(a))
-  def apply(lhs: AgentsPattern): AgentsPattern = ???
-  def canConsume(ptrn: AgentsPattern): Boolean = ???
-  def canProduce(ptrn: AgentsPattern): Boolean = ???
+  lazy val rhs: AgentsPattern[Ref] = actions.foldLeft(lhs)((p, a) => p.modify(a))
+  def apply(lhs: AgentsPattern[Ref]): AgentsPattern[Ref] = ???
+  def canConsume(ptrn: AgentsPattern[Ref]): Boolean = ???
+  def canProduce(ptrn: AgentsPattern[Ref]): Boolean = ???
 
-  def mentionedSitesOf(p: Protein): Set[LocalSiteId] = {
-    val buf = ArrayBuffer[LocalSiteId]()
+  def mentionedSitesOf(p: Protein): Set[LocalSiteId[Ref]] = {
+    val buf = ArrayBuffer[LocalSiteId[Ref]]()
 
     // sites mentioned in agent patterns
     lhs.agentIterator.filter(_.protein == p).foreach(buf ++= _.mentionedSites)
@@ -58,8 +58,8 @@ final case class Rule (lhs: AgentsPattern, actions: List[Action]) {
     buf.toSet
   }
 
-  def linksAgentTo(p: Protein): Set[Binding] = {
-    val buf = ArrayBuffer[Binding]()
+  def linksAgentTo(p: Protein): Set[Binding[Ref]] = {
+    val buf = ArrayBuffer[Binding[Ref]]()
     actions.foldLeft(())({
       case ((), Link(i, si, j, sj)) =>
         if(lhs(i).protein == p)
@@ -72,9 +72,9 @@ final case class Rule (lhs: AgentsPattern, actions: List[Action]) {
     buf.toSet
   }
 
-  def enables(pat: AgentsPattern): Boolean = {
+  def enables(pat: AgentsPattern[Ref]): Boolean = {
 
-    def enables(a: Action, pat: AgentsPattern): Boolean = a match {
+    def enables(a: Action[Ref], pat: AgentsPattern[Ref]): Boolean = a match {
 
       case Link(i, si, j, sj) =>
         // does `pat` need this link?
@@ -99,8 +99,8 @@ final case class Rule (lhs: AgentsPattern, actions: List[Action]) {
         pat.agentIterator.exists(q => {
           if(q.protein =/= p) false
           else {
-            val addModsMap = addMods.mods.toMap[ISite, SiteState](_.tuple).mapValues(st => Promise.completed(st))
-            val qModsMap   =  q.mods.mods.toMap[ISite, SiteState](_.tuple).mapValues(st => Promise.completed(st))
+            val addModsMap = addMods.mods.toMap[ISite[Ref], SiteState](_.tuple).mapValues(st => Promise.completed(st))
+            val qModsMap   =  q.mods.mods.toMap[ISite[Ref], SiteState](_.tuple).mapValues(st => Promise.completed(st))
             val meet = addModsMap.intersect(qModsMap)((p1, p2) => Promise.meet(p1, p2))
             meet.entries.exists(_._2.nonEmpty)
           }
@@ -113,22 +113,22 @@ final case class Rule (lhs: AgentsPattern, actions: List[Action]) {
   }
 
   // TODO: should return a list of explanations instead of Boolean
-  def enables(that: Rule): Boolean = enables(that.lhs)
+  def enables(that: Rule[Ref]): Boolean = enables(that.lhs)
 
   override def toString: String = s"$lhs -> $rhs"
 }
 
 object Rule {
-  type Update = AgentsPattern.Update
-  type Delta = AgentsPattern.Delta
+  type Update[Var[_]] = AgentsPattern.Update[Var]
+  type Delta[Var[_]] = AgentsPattern.Delta[Var]
 
-  type Ref = Antichain.Ref[Rule]
+  type Ref[Var[_]] = Var[Antichain[Rule[Var]]]
 
-  implicit def domInstance: Dom.Aux[Rule, Update, Delta] = new Dom[Rule] {
-    type Update = Rule.Update
-    type Delta = Rule.Delta
+  implicit def domInstance[Var[_]](implicit ev: EqualK[Var]): Dom.Aux[Rule[Var], Update[Var], Delta[Var]] = new Dom[Rule[Var]] {
+    type Update = Rule.Update[Var]
+    type Delta = Rule.Delta[Var]
 
-    def update(r: Rule, u: Update): Option[(Rule, Delta)] = {
+    def update(r: Rule[Var], u: Update): Option[(Rule[Var], Delta)] = {
       val Rule(lhs, actions) = r
       lhs.update(u) match {
         case Some((lhs, δ)) => Some((Rule(lhs, actions), δ))
@@ -137,17 +137,17 @@ object Rule {
     }
 
     def combineDeltas(d1: Delta, d2: Delta): Delta =
-      Dom[AgentsPattern].combineDeltas(d1, d2)
+      Dom[AgentsPattern[Var]].combineDeltas(d1, d2)
 
-    def assess(r: Rule): Status[Update] =
-      Dom[AgentsPattern].assess(r.lhs)
+    def assess(r: Rule[Var]): Status[Update] =
+      Dom[AgentsPattern[Var]].assess(r.lhs)
   }
 
-  implicit def unificationInstance: Unification.Aux[Rule, Update, Delta] = new Unification[Rule] {
-    type Update = Rule.Update
-    type Delta = Rule.Delta
+  implicit def unificationInstance[Var[_]](implicit ev: EqualK[Var]): Unification.Aux[Rule[Var], Update[Var], Delta[Var]] = new Unification[Rule[Var]] {
+    type Update = Rule.Update[Var]
+    type Delta = Rule.Delta[Var]
 
-    def unify(r1: Rule, r2: Rule): (Option[Delta], Rule, Option[Delta]) = {
+    def unify(r1: Rule[Var], r2: Rule[Var]): (Option[Delta], Rule[Var], Option[Delta]) = {
       val Rule(lhs1, actions1) = r1
       val Rule(lhs2, actions2) = r2
       val (d1, lhs, d2) = lhs1 unify lhs2
@@ -155,18 +155,18 @@ object Rule {
       (d1, Rule(lhs, actions), d2)
     }
 
-    def dom: Aux[Rule, Update, Delta] = domInstance
+    def dom: Dom.Aux[Rule[Var], Update, Delta] = domInstance
   }
 
-  def linksAgentToC[M[_]](ref: Ref)(p: Protein)(implicit P: Propagation[M], M: Monad[M]): ContU[M, Binding.Ref] =
-    ContU(f => P.domTrigger(ref)(r => {
+  def linksAgentToC[M[_], Var[_]](ref: Rule.Ref[Var])(p: Protein)(implicit P: Propagation[M, Var], M: Monad[M]): ContU[M, Binding.Ref[Var]] =
+    ContU(f => P.observe(ref).by(r => {
       import scalaz.syntax.traverse._
       val now = r.value.linksAgentTo(p).iterator.map(b => P.cell(Antichain(b)).flatMap(f)).toList.sequence_
-      val onChange: (Antichain[Rule], Antichain.Delta[Rule]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
+      val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
       (Some(now), Some(onChange))
     }))
 
-  implicit def showInstance: Show[Rule] = new Show[Rule] {
-    override def shows(r: Rule): String = r.toString
+  implicit def showInstance[Var[_]]: Show[Rule[Var]] = new Show[Rule[Var]] {
+    override def shows(r: Rule[Var]): String = r.toString
   }
 }

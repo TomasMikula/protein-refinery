@@ -5,13 +5,12 @@ import javafx.scene.control.TitledPane
 import javafx.scene.layout.VBox
 import javafx.scene.text.Text
 
-import nutcracker.DRef
-import nutcracker.IncSet.IncSetRef
+import nutcracker.{DRef, IncSet}
 import proteinrefinery.ui.util.syntax._
 
 import scalaz.Show
 
-class GoalView[A](val goalType: GoalType[A], val desc: String, val ref: IncSetRef[_ <: DRef[A]]) {
+class GoalView[A](val goalType: GoalType[A], val desc: String, val ref: DRef[IncSet[DRef[A]]]) {
 
   private val solutionNodes = new VBox()
 
@@ -36,7 +35,7 @@ class GoalView[A](val goalType: GoalType[A], val desc: String, val ref: IncSetRe
 
 object GoalView {
 
-  def init[A](gt: GoalType[A], desc: String, ref: IncSetRef[_ <: DRef[A]]): GoalView[A] =
+  def init[A](gt: GoalType[A], desc: String, ref: DRef[IncSet[DRef[A]]]): GoalView[A] =
     new GoalView[A](gt, desc, ref)
 
 }

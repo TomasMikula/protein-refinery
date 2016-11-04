@@ -2,10 +2,9 @@ package proteinrefinery
 
 import nutcracker._
 import org.scalatest.FunSuite
-import proteinrefinery.lib.syntax._
-import proteinrefinery.lib.{Assoc, Binding, CompetitiveBinding, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein, SiteLabel}
 
 class Tests extends FunSuite {
+  import proteinrefinery.Lib._
 
   val bindings: List[Binding] = List[Binding](
     /* 00 */ ('A @@ 'b) binds ('B @@ 'v),
@@ -45,7 +44,7 @@ class Tests extends FunSuite {
 
   test("Negative influence on phosphorylation") {
 
-    val problem = IncSet.collect(for {
+    val problem = IncSets.collect(for {
       phosRef <- Lib.phosphorylationC('C, 'B)
       phos <- phosRef.asCont[Prg]
       niRef <- Lib .negativeInfluenceOnPhosphorylationC('D, phos)

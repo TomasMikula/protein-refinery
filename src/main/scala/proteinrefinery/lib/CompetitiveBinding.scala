@@ -1,18 +1,18 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
+
 import scalaz.Show
 
-case class CompetitiveBinding(
-  base: Binding,
-  competing: Binding
+case class CompetitiveBinding[Ref[_]](
+  base: Binding[Ref],
+  competing: Binding[Ref]
 ) {
-  assert(base.rightPattern overlaps competing.rightPattern)
-
   override def toString = s"Binding ${competing} competes with binding ${base}"
 }
 
 object CompetitiveBinding {
-  implicit def showInstance: Show[CompetitiveBinding] = new Show[CompetitiveBinding] {
-    override def shows(c: CompetitiveBinding): String = c.toString
+  implicit def showInstance[Ref[_]]: Show[CompetitiveBinding[Ref]] = new Show[CompetitiveBinding[Ref]] {
+    override def shows(c: CompetitiveBinding[Ref]): String = c.toString
   }
 }

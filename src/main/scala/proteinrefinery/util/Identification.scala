@@ -91,4 +91,18 @@ object Identification {
       def unification: Unification.Aux[Promise[A], Update, Delta] =
         Unification.promiseUnification[A]
     }
+
+  trait Syntax {
+    import scala.language.implicitConversions
+    import Syntax._
+
+    implicit def identificationOps[A](a: A)(implicit i: Identification[A]): IdentificationOps[A, i.Update, i.Delta] =
+      new IdentificationOps[A, i.Update, i.Delta](a)(i)
+  }
+
+  object Syntax extends Syntax {
+    class IdentificationOps[A, U, Δ](a: A)(implicit i: Identification.Aux[A, U, Δ]) {
+      def unifyIfNecessary(b: A): Option[(Option[Δ], A, Option[Δ])] = i.unifyIfNecessary(a, b)
+    }
+  }
 }

@@ -1,6 +1,8 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
 import nutcracker.Dom
+import nutcracker.util.EqualK
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{Identification, Unification}
 
@@ -8,35 +10,36 @@ import scalaz.{Equal, \&/}
 import scalaz.Isomorphism._
 import scalaz.syntax.equal._
 
-case class SiteWithState(site: ISite, state: SiteState) {
-  def tuple: (ISite, SiteState) = (site, state)
+case class SiteWithState[Ref[_]](site: ISite[Ref], state: SiteState) {
+  def tuple: (ISite[Ref], SiteState) = (site, state)
 }
 object SiteWithState {
-  type Update = ISite.Update \&/ SiteState.Update
-  type Delta = ISite.Delta \&/ SiteState.Delta
+  type Update[Ref[_]] = ISite.Update[Ref] \&/ SiteState.Update
+  type Delta[Ref[_]] = ISite.Delta[Ref] \&/ SiteState.Delta
 
-  def apply(s: SiteLabel, st: SiteState): SiteWithState =
-    SiteWithState(ISite(s), st)
+  def apply[Ref[_]](s: SiteLabel, st: SiteState): SiteWithState[Ref] =
+    SiteWithState(ISite[Ref](s), st)
 
-  implicit val equalInstance: Equal[SiteWithState] = new Equal[SiteWithState] {
-    def equal(a1: SiteWithState, a2: SiteWithState): Boolean =
+  implicit def equalInstance[Ref[_]](implicit ev: EqualK[Ref]): Equal[SiteWithState[Ref]] = new Equal[SiteWithState[Ref]] {
+    def equal(a1: SiteWithState[Ref], a2: SiteWithState[Ref]): Boolean =
       (a1.site === a2.site) && (a1.state === a2.state)
   }
 
-  implicit def unificationInstance: Unification.Aux[SiteWithState, Update, Delta] = {
+  implicit def unificationInstance[Ref[_]]: Unification.Aux[SiteWithState[Ref], Update[Ref], Delta[Ref]] = {
     implicit def stateUnif = SiteState.unificationInstance
 
-    Unification.tuple2[ISite, SiteState].translate(pairIso.flip)
+    Unification.tuple2[ISite[Ref], SiteState].translate(pairIso.flip)
   }
 
-  implicit def identificationInstance: Identification.Aux[SiteWithState, Update, Delta] =
-    ISite.identificationInstance.zoomOut[SiteWithState](_.site)(unificationInstance)
+  implicit def identificationInstance[Ref[_]]: Identification.Aux[SiteWithState[Ref], Update[Ref], Delta[Ref]] =
+    ISite.identificationInstance.zoomOut[SiteWithState[Ref]](_.site)(unificationInstance)
 
-  implicit def domInstance: Dom.Aux[SiteWithState, Update, Delta] =
-    unificationInstance.dom
+  implicit def domInstance[Ref[_]]: Dom.Aux[SiteWithState[Ref], Update[Ref], Delta[Ref]] =
+    unificationInstance[Ref].dom
 
-  private val pairIso: SiteWithState <=> (ISite, SiteState) = new (SiteWithState <=> (ISite, SiteState)) {
-    val to: (SiteWithState) => (ISite, SiteState) = _.tuple
-    def from: ((ISite, SiteState)) => SiteWithState = ss => SiteWithState(ss._1, ss._2)
-  }
+  private def pairIso[Ref[_]]: SiteWithState[Ref] <=> (ISite[Ref], SiteState) =
+    new (SiteWithState[Ref] <=> (ISite[Ref], SiteState)) {
+      val to: (SiteWithState[Ref]) => (ISite[Ref], SiteState) = _.tuple
+      def from: ((ISite[Ref], SiteState)) => SiteWithState[Ref] = ss => SiteWithState(ss._1, ss._2)
+    }
 }
