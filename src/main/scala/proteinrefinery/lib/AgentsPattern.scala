@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.Dom
+import nutcracker.{Dom, IncSet}
 import nutcracker.syntax.dom._
 import nutcracker.util.EqualK
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
@@ -15,6 +15,7 @@ import scalaz.{Equal, State}
 case class AgentsPattern[Ref[_]](
   agents: Vector[Option[ProteinPattern[Ref]]],
   bonds: Vector[Option[(AgentIndex, LocalSiteId[Ref], AgentIndex, LocalSiteId[Ref])]],
+  assocs: Vector[Option[(AgentIndex, LocalSiteId[Ref], AgentIndex, LocalSiteId[Ref], Ref[IncSet[Ref[Assoc[Ref]]]])]],
   unbound: List[(AgentIndex, LocalSiteId[Ref])]
 ) {
   import AgentsPattern._
@@ -54,7 +55,7 @@ case class AgentsPattern[Ref[_]](
   def requireUnbound0(i: AgentIndex, s: LocalSiteId[Ref]): AgentsPattern[Ref] = {
     require(hasAgent(i.value))
     require(isNotBound(i, s))
-    AgentsPattern(agents, bonds, (i, s) :: unbound)
+    AgentsPattern(agents, bonds, assocs, (i, s) :: unbound)
   }
 
   def link(i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel): (AgentsPattern[Ref], LinkId) =
@@ -65,13 +66,13 @@ case class AgentsPattern[Ref[_]](
     require(hasAgent(j.value))
     require(isUnbound(i, si))
     require(isUnbound(j, sj))
-    (AgentsPattern(agents, bonds :+ Some((i, si, j, sj)), unbound.filter(u => u != ((i, si)) && u != ((j, sj)))), LinkId(bonds.size))
+    (AgentsPattern(agents, bonds :+ Some((i, si, j, sj)), assocs, unbound.filter(u => u != ((i, si)) && u != ((j, sj)))), LinkId(bonds.size))
   }
 
   def unlink(id: LinkId): AgentsPattern[Ref] = {
     require(hasBond(id.value))
     val Some((i, si, j, sj)) = bonds(id.value)
-    AgentsPattern(agents, bonds.updated(id.value, None), (i, si) :: (j, sj) :: unbound)
+    AgentsPattern(agents, bonds.updated(id.value, None), assocs, (i, si) :: (j, sj) :: unbound)
   }
 
   def getBond(id: LinkId): Option[(ProteinPattern[Ref], LocalSiteId[Ref], ProteinPattern[Ref], LocalSiteId[Ref])] =
@@ -121,6 +122,10 @@ case class AgentsPattern[Ref[_]](
     bonds.forall(_ match {
       case Some((p, ps, q, qs)) => (p != i || ps != s) && (q != i || qs != s)
       case None => true
+    }) &&
+    assocs.forall(_ match {
+      case Some((p, ps, q, qs, _)) => (p != i || ps != s) && (q != i || qs != s)
+      case None => true
     })
 }
 
@@ -143,7 +148,7 @@ object AgentsPattern {
   }
 
   def empty[Ref[_]]: AgentsPattern[Ref] =
-    AgentsPattern(Vector.empty, Vector.empty, Nil)
+    AgentsPattern(Vector.empty, Vector.empty, Vector.empty, Nil)
 
   def addAgent[Ref[_]](a: ProteinPattern[Ref]): State[AgentsPattern[Ref], AgentIndex] =
     State(_.addAgent(a))
@@ -217,12 +222,13 @@ object AgentsPattern {
       }
 
       val bonds = (ap1.bonds ++ ap2.bonds).distinct
+      val assocs = (ap1.assocs ++ ap2.assocs).distinct // XXX will always be distinct, since the Assoc Refs will be distinct
       val unbound = (ap1.unbound ++ ap2.unbound).distinct
 
       val delta1 = Delta(newAgs1.result(), deltas1.result())
       val delta2 = Delta(newAgs2.result(), deltas2.result())
 
-      (delta1.ifNonEmpty, AgentsPattern(agents.result(), bonds, unbound), delta2.ifNonEmpty)
+      (delta1.ifNonEmpty, AgentsPattern(agents.result(), bonds, assocs, unbound), delta2.ifNonEmpty)
     }
 
     def dom: Dom.Aux[AgentsPattern[Ref], Update, Delta] = domInstance
