@@ -2,7 +2,6 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 
-import algebra.Eq
 import nutcracker.util.{DeepEqual, IsEqual}
 
 import scalaz.{Equal, Semigroup, Show}
@@ -41,14 +40,6 @@ object Protein {
 
   val deltaSemigroup: Semigroup[Delta] = new Semigroup[Delta] {
     def append(f1: Delta, f2: => Delta): Delta = ()
-  }
-
-  implicit def eqInstance: Eq[Protein] = new Eq[Protein] {
-    def eqv(x: Protein, y: Protein): Boolean = (x, y) match {
-      case (ProteinLabel(x), ProteinLabel(y)) => x.name == y.name
-      case (Conflict, Conflict) => true
-      case _ => false
-    }
   }
 
   implicit val equalInstance: Equal[Protein] = new Equal[Protein] {
