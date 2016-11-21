@@ -10,7 +10,7 @@ import nutcracker.util.KMap
 import nutcracker.{Antichain, DRef, Dom, IncSet}
 import org.reactfx.value.Val
 import org.reactfx.{EventSource, EventStream}
-import proteinrefinery.lib.{Assoc, NegativeInfluenceOnPhosphorylation, Phosphorylation, Protein}
+import proteinrefinery.lib.{Assoc, NegativeInfluenceOnPhosphorylation, PhosphoTarget, Protein}
 import proteinrefinery.ui.util.syntax._
 
 import scalaz.Show
@@ -90,7 +90,7 @@ object GoalWidget {
 trait GoalType[A] { self: Singleton => }
 object GoalType {
   implicit object GoalAssoc extends GoalType[Antichain[Assoc[DRef]]]
-  implicit object GoalPhos extends GoalType[Antichain[Phosphorylation[DRef]]]
+  implicit object GoalPhos extends GoalType[Antichain[PhosphoTarget[DRef]]]
   implicit object GoalPhosNegInfl extends GoalType[Antichain[NegativeInfluenceOnPhosphorylation[DRef]]]
 }
 
@@ -126,8 +126,8 @@ class PhosGoalInput extends InputForm[(Protein, Protein)] {
     .map2[String, String, (Protein, Protein)]((p1, p2) => (Protein(p1), Protein(p2)))
 }
 
-class PhosNegInflInput(phosGoals: List[GoalView[Antichain[Phosphorylation[DRef]]]]) extends InputForm[(Protein, GoalView[Antichain[Phosphorylation[DRef]]])] {
-  private case class GVWrapper(goalView: GoalView[Antichain[Phosphorylation[DRef]]]) {
+class PhosNegInflInput(phosGoals: List[GoalView[Antichain[PhosphoTarget[DRef]]]]) extends InputForm[(Protein, GoalView[Antichain[PhosphoTarget[DRef]]])] {
+  private case class GVWrapper(goalView: GoalView[Antichain[PhosphoTarget[DRef]]]) {
     override def toString = goalView.desc
   }
 
@@ -143,7 +143,7 @@ class PhosNegInflInput(phosGoals: List[GoalView[Antichain[Phosphorylation[DRef]]
     _.addRow(1, new Label("Phosphorylation"), goalSelection)
   }
 
-  val input: Val[(Protein, GoalView[Antichain[Phosphorylation[DRef]]])] = (agentInput.textProperty() |@| goalSelection.getSelectionModel.selectedItemProperty()).tuple
+  val input: Val[(Protein, GoalView[Antichain[PhosphoTarget[DRef]]])] = (agentInput.textProperty() |@| goalSelection.getSelectionModel.selectedItemProperty()).tuple
     .filter2[String, GVWrapper]((a, gv) => !a.isEmpty && gv != null)
-    .map2[String, GVWrapper, (Protein, GoalView[Antichain[Phosphorylation[DRef]]])]((a, gv) => (Protein(a), gv.goalView))
+    .map2[String, GVWrapper, (Protein, GoalView[Antichain[PhosphoTarget[DRef]]])]((a, gv) => (Protein(a), gv.goalView))
 }

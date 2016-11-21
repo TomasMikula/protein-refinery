@@ -103,6 +103,7 @@ object Identification {
   object Syntax extends Syntax {
     class IdentificationOps[A, U, Δ](a: A)(implicit i: Identification.Aux[A, U, Δ]) {
       def unifyIfNecessary(b: A): Option[(Option[Δ], A, Option[Δ])] = i.unifyIfNecessary(a, b)
+      def necessarilySame(b: A): Boolean = i.necessarilySame(a, b)
     }
   }
 }

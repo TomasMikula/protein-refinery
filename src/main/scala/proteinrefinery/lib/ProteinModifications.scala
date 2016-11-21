@@ -4,7 +4,7 @@ import scala.language.higherKinds
 import nutcracker.Promise.Completed
 import nutcracker.{Dom, Join}
 import nutcracker.syntax.dom._
-import nutcracker.util.EqualK
+import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
 import nutcracker.util.EqualK._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
@@ -21,7 +21,10 @@ final case class ProteinModifications[Ref[_]] private(mods: AutoUnificationBag[S
     if(isAdmissible) Some(this)
     else None
 
-  def addModification(site: Site.Definite, state: SiteState): ProteinModifications[Ref] = {
+  def addModification(site: Site.Definite, state: SiteState): ProteinModifications[Ref] =
+    addModification(ISite[Ref](site), state)
+
+  def addModification(site: ISite[Ref], state: SiteState): ProteinModifications[Ref] = {
     val (mods, _, _) = this.mods.add(SiteWithState(site, state))
     ProteinModifications(mods)
   }
@@ -62,7 +65,12 @@ object ProteinModifications {
   type Update[Ref[_]] = Join[ProteinModifications[Ref]]
   type Delta[Ref[_]] = AutoUnificationBag.Delta[SiteWithState[Ref], SiteWithState.Delta[Ref]]
 
-  def apply[Ref[_]](mods: (SiteLabel, SiteState)*): ProteinModifications[Ref] = {
+  def from[Ref[_]](mods: (SiteLabel, SiteState)*): ProteinModifications[Ref] = {
+    val mods1 = mods.foldRight[List[SiteWithState[Ref]]](Nil){ case ((s, st), sss) => SiteWithState[Ref](s, st) :: sss }
+    ProteinModifications(mods1)
+  }
+
+  def apply[Ref[_]](mods: (ISite[Ref], SiteState)*): ProteinModifications[Ref] = {
     val mods1 = mods.foldRight[List[SiteWithState[Ref]]](Nil){ case ((s, st), sss) => SiteWithState[Ref](s, st) :: sss }
     ProteinModifications(mods1)
   }
@@ -73,16 +81,35 @@ object ProteinModifications {
   }
 
   /** Type that is able to uniquely identify a site within a protein. */
-  type LocalSiteId[Ref[_]] = Either[Site.Definite, Site.Ref[Ref]]
+  sealed abstract class LocalSiteId[Ref[_]]
+  case class DefiniteLabel[Ref[_]](label: Site.Definite) extends LocalSiteId[Ref]
+  case class SiteRef[Ref[_]](ref: Site.Ref[Ref]) extends LocalSiteId[Ref]
   object LocalSiteId {
-    def apply[Ref[_]](label: SiteLabel): LocalSiteId[Ref] = Left(label)
-    def apply[Ref[_]](ref: Site.Ref[Ref]): LocalSiteId[Ref] = Right(ref)
+    def apply[Ref[_]](label: SiteLabel): LocalSiteId[Ref] = DefiniteLabel(label)
+    def apply[Ref[_]](ref: Site.Ref[Ref]): LocalSiteId[Ref] = SiteRef(ref)
+
+    implicit def equalInstance[Ref[_]](implicit ev: EqualK[Ref]): Equal[LocalSiteId[Ref]] = new Equal[LocalSiteId[Ref]] {
+      def equal(a1: LocalSiteId[Ref], a2: LocalSiteId[Ref]): Boolean = (a1, a2) match {
+        case (DefiniteLabel(l1), DefiniteLabel(l2)) => l1 === l2
+        case (SiteRef(ref1), SiteRef(ref2)) => ref1 === ref2
+        case _ => false
+      }
+    }
+
+    implicit def deepEqualKInstance: DeepEqualK[LocalSiteId, LocalSiteId] =
+      new DeepEqualK[LocalSiteId, LocalSiteId] {
+        def equal[Ref1[_], Ref2[_]](a1: LocalSiteId[Ref1], a2: LocalSiteId[Ref2]): IsEqual[Ref1, Ref2] = (a1, a2) match {
+          case (DefiniteLabel(l1), DefiniteLabel(l2)) => IsEqual(l1, l2)
+          case (SiteRef(ref1), SiteRef(ref2)) => IsEqual.refs(ref1, ref2)
+          case _ => IsEqual(false)
+        }
+      }
 
     implicit def showInstance[Ref[_]](implicit ev: ShowK[Ref]): Show[LocalSiteId[Ref]] = new Show[LocalSiteId[Ref]] {
       import scalaz.syntax.show._
       override def shows(id: LocalSiteId[Ref]): String = id match {
-        case Left(s) => s.shows
-        case Right(ref) => s"<site#${ev.shows(ref)}>"
+        case DefiniteLabel(s) => s.shows
+        case SiteRef(ref) => s"<site#${ev.shows(ref)}>"
       }
     }
   }
@@ -111,6 +138,12 @@ object ProteinModifications {
     def equal(a1: ProteinModifications[Ref], a2: ProteinModifications[Ref]): Boolean =
       a1.mods === a2.mods
   }
+
+  implicit val deepEqualKInstance: DeepEqualK[ProteinModifications, ProteinModifications] =
+    new DeepEqualK[ProteinModifications, ProteinModifications] {
+      def equal[Ptr1[_], Ptr2[_]](pm1: ProteinModifications[Ptr1], pm2: ProteinModifications[Ptr2]): IsEqual[Ptr1, Ptr2] =
+        IsEqual(pm1.mods, pm2.mods)
+    }
 
   implicit def unificationInstance[Ref[_]](implicit ev: EqualK[Ref]): Unification.Aux[ProteinModifications[Ref], Update[Ref], Delta[Ref]] =
     new Unification[ProteinModifications[Ref]] {

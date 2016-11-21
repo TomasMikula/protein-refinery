@@ -1,6 +1,7 @@
 package proteinrefinery.util
 
 import nutcracker.Dom
+import nutcracker.util.{DeepEqual, IsEqual}
 import proteinrefinery.util.syntax._
 
 import scala.annotation.tailrec
@@ -221,8 +222,14 @@ object AutoUnificationBag {
 
   implicit def equalInstance[A: Equal]: Equal[AutoUnificationBag[A]] = new Equal[AutoUnificationBag[A]] {
     def equal(bag1: AutoUnificationBag[A], bag2: AutoUnificationBag[A]): Boolean =
-      (bag1.size == bag2.size) && (bag1.elems.forall(a1 => bag2.elems.exists(a2 => a1 === a2))) // XXX O(n^2)
+      (bag1.size == bag2.size) && (bag1.elems.forall(a1 => bag2.elems.exists(a2 => a1 === a2))) // XXX O(n^2) // XXX not correct wrt. number of occurrences
   }
+
+  implicit def deepEqualInstance[Ptr1[_], Ptr2[_], A, B](implicit ev: DeepEqual[A, B, Ptr1, Ptr2]): DeepEqual[AutoUnificationBag[A], AutoUnificationBag[B], Ptr1, Ptr2] =
+    new DeepEqual[AutoUnificationBag[A], AutoUnificationBag[B], Ptr1, Ptr2] {
+      def equal(a1: AutoUnificationBag[A], a2: AutoUnificationBag[B]): IsEqual[Ptr1, Ptr2] =
+        IsEqual.unorderedListEqual(a1.list, a2.list)
+    }
 
   implicit def foldableInstance: Foldable[AutoUnificationBag] = new Foldable[AutoUnificationBag] {
 

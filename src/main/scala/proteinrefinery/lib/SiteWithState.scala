@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Dom
-import nutcracker.util.EqualK
+import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{Identification, Unification}
 
@@ -24,6 +24,12 @@ object SiteWithState {
     def equal(a1: SiteWithState[Ref], a2: SiteWithState[Ref]): Boolean =
       (a1.site === a2.site) && (a1.state === a2.state)
   }
+
+  implicit val deepEqualKInstance: DeepEqualK[SiteWithState, SiteWithState] =
+    new DeepEqualK[SiteWithState, SiteWithState] {
+      def equal[Ptr1[_], Ptr2[_]](f1: SiteWithState[Ptr1], f2: SiteWithState[Ptr2]): IsEqual[Ptr1, Ptr2] =
+        IsEqual(f1.site, f2. site) && IsEqual(f1.state, f2. state)
+    }
 
   implicit def unificationInstance[Ref[_]]: Unification.Aux[SiteWithState[Ref], Update[Ref], Delta[Ref]] = {
     implicit def stateUnif = SiteState.unificationInstance

@@ -6,7 +6,7 @@ import nutcracker.util.CoproductK.:++:
 import nutcracker.util.FreeK
 import nutcracker.{Antichain, DRef, Diff, Dom, IncSet, Propagation, PropagationLang}
 import org.reactfx.EventStreams
-import proteinrefinery.lib.{Binding, Phosphorylation, Protein, ProteinPattern, SiteLabel}
+import proteinrefinery.lib.{Binding, PhosphoTarget, Protein, ProteinPattern, SiteLabel}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.UIUpdateLang._
@@ -41,23 +41,21 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   }
 
   private def addGoalAssoc(p: Protein, q: Protein): Prg[Unit] =
-    Lib.assoc(p, q).inject[DSL] >>= {
+    Lib.assoc(p, q) >>= {
       observeGoal(s"Association between $p and $q", _)
     }
 
   private def addGoalPhos(kinase: Protein, substrate: Protein): Prg[Unit] =
-    Lib.phosphorylation(kinase, substrate).inject[DSL] >>= {
-      observeGoal(s"Phosphorylation of $substrate by $kinase", _)
-    }
+    Lib.phosphorylations(kinase, substrate) >>= { observeGoal(s"Phosphorylation of $substrate by $kinase", _) }
 
-  private def addGoalPhosNegInfl(agent: Protein, phosGoal: DRef[IncSet[DRef[Antichain[Phosphorylation[DRef]]]]], phosDesc: String): Prg[Unit] =
-    IncSets.relBind(phosGoal)(phRef => Lib.negativeInfluenceOnPhosphorylation_r(agent, phRef.infer)) >>= {
+  private def addGoalPhosNegInfl(agent: Protein, phosGoal: DRef[IncSet[DRef[Antichain[PhosphoTarget[DRef]]]]], phosDesc: String): Prg[Unit] =
+    IncSets.relBind(phosGoal)(phRef => Lib.negativeInfluenceOnPhosphorylation_r(agent, phRef)) >>= {
       observeGoal(s"Negative influence of $agent on $phosDesc", _)
     }
 
   private def addFactBind(p: Protein, ps: SiteLabel, q: Protein, qs: SiteLabel): Prg[Unit] = {
-    val rule = Binding[DRef](p, LocalSiteId(ps), q, LocalSiteId(qs)).witness
-    Lib.addRuleF(rule) >> newFactF(FactRule, rule)
+    val rule = Binding(p, LocalSiteId[DRef](ps), q, LocalSiteId[DRef](qs)).witness
+    Lib.addRuleF(rule) >>= (_ => newFactF(FactRule, rule))
   }
 
   private def addFactKinase(pp: ProteinPattern[DRef]): Prg[Unit] = {
@@ -69,7 +67,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
 
   private def observeGoal[A](desc: String, ref: DRef[IncSet[DRef[A]]])(implicit t: GoalType[A], dom: Dom[A], show: Show[A]): Prg[Unit] =
     observe(ref).by(d => {
-      val now = initGoalF(t, ref, desc).inject[DSL]
+      val now = initGoalF(t, ref, desc)
       val onChange = (d: IncSet[DRef[A]], δ: Diff[Set[DRef[A]]]) => fireReload(updateGoal[A](t, ref, δ))
       (Some(now), Some(onChange))
     })

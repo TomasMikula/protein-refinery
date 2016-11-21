@@ -1,12 +1,15 @@
 import scala.language.higherKinds
 import monocle.Lens
 import nutcracker._
-import nutcracker.util.FreeK
+import nutcracker.util.{FreeK, HEqualK}
 import nutcracker.util.CoproductK._
 import nutcracker.util.KList._
 import proteinrefinery.util.{TrackLang, Tracker}
 
-package object proteinrefinery extends ImplicitConversions {
+import scalaz.~>
+import scalaz.Id._
+
+package object proteinrefinery extends ImplicitConversions with Ops {
   type DeferL[K[_], A] = DeferLang[Cost, K, A]
   type DeferS[K] = DeferStore[Cost, K]
 
@@ -30,4 +33,24 @@ package object proteinrefinery extends ImplicitConversions {
   }
   def initialState[K](tr: Tracker[K]): State[K] = tr :*: PropagationStore.empty[K] :**: (DeferStore.empty[Cost, K]: DeferS[K])
   def emptyState[K]: State[K] = initialState(Tracker.empty[K])
+
+  def refinery(): Refinery = new Refinery {
+    type M[A] = Prg[A]
+    type Ref[A] = DRef[A]
+
+    private var state: State[PU] = emptyState
+
+    implicit val refEquality: HEqualK[Ref] = DRef.equalKInstance
+
+    implicit val fetch: DRef ~> Id =
+      λ[DRef ~> Id](proteinrefinery.fetch(_)(state))
+
+    def interpret[A](prg: Prg[A]): A = {
+      val (s, a) = interpreterF(prg)(state)
+      state = s
+      a
+    }
+
+    val lib: Lib[Prg, DRef] = Lib
+  }
 }

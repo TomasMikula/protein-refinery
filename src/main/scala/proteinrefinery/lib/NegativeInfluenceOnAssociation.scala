@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker._
-import nutcracker.util.{ContU, EqualK}
+import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 import proteinrefinery.util.Tracking
 
 import scalaz.{Monad, Show}
@@ -30,6 +30,9 @@ object NegativeInfluenceOnAssociation {
     def negativeInfluenceOnAssociation(p: Protein, a: Assoc[Var])(implicit M: Monad[M], E: EqualK[Var]): M[Var[IncSet[Ref[Var]]]] =
       IncSets.collectAll(a.bindings.map(b => searchCompetitiveBinding(p, b)))
 
+    def negativeInfluenceOnAssociationC(p: Protein, aRef: Assoc.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
+      aRef.asCont[M] flatMap (a => negativeInfluenceOnAssociationC(p, a))
+
     def negativeInfluenceOnAssociationC(p: Protein, a: Assoc[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
       ContU.sequence(a.bindings.map(b => searchCompetitiveBinding(p, b)))
 
@@ -49,6 +52,14 @@ object NegativeInfluenceOnAssociation {
 
 
   // Typeclass instances
+
+  implicit val deepEqualKInstance: DeepEqualK[NegativeInfluenceOnAssociation, NegativeInfluenceOnAssociation] =
+    new DeepEqualK[NegativeInfluenceOnAssociation, NegativeInfluenceOnAssociation] {
+      def equal[Ptr1[_], Ptr2[_]](a1: NegativeInfluenceOnAssociation[Ptr1], a2: NegativeInfluenceOnAssociation[Ptr2]): IsEqual[Ptr1, Ptr2] = {
+        val (ByCompetitiveBinding(cb1), ByCompetitiveBinding(cb2)) = (a1, a2)
+        IsEqual(cb1, cb2)
+      }
+    }
 
   implicit def showInstance[Var[_]]: Show[NegativeInfluenceOnAssociation[Var]] = new Show[NegativeInfluenceOnAssociation[Var]] {
     override def shows(x: NegativeInfluenceOnAssociation[Var]): String = x match {

@@ -1,15 +1,19 @@
 package proteinrefinery
 
+import nutcracker.util.EqualK
 import nutcracker.{Defer, IncSets, Propagation}
-import proteinrefinery.lib.{Assoc, NegativeInfluenceOnAssociation, NegativeInfluenceOnPhosphorylation, Nuggets, Phosphorylation, PositiveInfluenceOnKinaseActivity, PositiveInfluenceOnPhosphorylatedStateSearch, PositiveInfluenceOnPhosphorylation, PositiveInfluenceOnRule, PositiveInfluenceOnState, Syntax}
+import proteinrefinery.lib.{AgentsPattern, Assoc, NegativeInfluenceOnAssociation, NegativeInfluenceOnPhosphorylation, NegativeInfluenceOnRule, Nuggets, PhosphoTarget, Phosphorylation, PositiveInfluenceOnKinaseActivity, PositiveInfluenceOnPhosphorylatedStateSearch, PositiveInfluenceOnPhosphorylation, PositiveInfluenceOnRule, PositiveInfluenceOnState, Syntax}
 import proteinrefinery.util.Tracking
 
 import scala.language.higherKinds
+import scalaz.Monad
 
-class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: Tracking[M, Ref]) extends
+class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: Tracking[M, Ref], M0: Monad[M], E: EqualK[Ref]) extends
   Nuggets[M, Ref] with
   Assoc.Search[M, Ref] with
   Phosphorylation.Search[M, Ref] with
+  PhosphoTarget.Ops[M, Ref] with
+  AgentsPattern.Ops[M, Ref] with
   PositiveInfluenceOnRule.Search[M, Ref] with
   PositiveInfluenceOnState.Search[M, Ref] with
   PositiveInfluenceOnPhosphorylatedStateSearch[M, Ref] with
@@ -17,17 +21,22 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
   PositiveInfluenceOnPhosphorylation.Search[M, Ref] with
   NegativeInfluenceOnAssociation.Search[M, Ref] with
   NegativeInfluenceOnPhosphorylation.Search[M, Ref] with
+  NegativeInfluenceOnRule.Search[M, Ref] with
   Syntax[Ref]
 {
+  implicit val M: Monad[M] = M0
+  implicit val RefEquality: EqualK[Ref] = E
+  implicit val Propagation: Propagation[M, Ref] = P
+  implicit val Tracking: Tracking[M, Ref] = T
+  implicit val Defer: Defer[M, Cost] = D
+
   def Nuggets: Nuggets[M, Ref] = this
   def AssocSearch: lib.Assoc.Search[M, Ref] = this
-  def PhosphorylationSearch: lib.Phosphorylation.Search[M, Ref] = this
+  def PhosphoTargetOps: lib.PhosphoTarget.Ops[M,Ref] = this
+  def AgentsPatternOps: lib.AgentsPattern.Ops[M,Ref] = this
   def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Ref] = this
+  def NegativeInfluenceOnRuleSearch: NegativeInfluenceOnRule.Search[M, Ref] = this
   def IncSets: IncSets[M, Ref] = new IncSets[M, Ref]()(P)
-
-  implicit def Defer: Defer[M, Cost] = D
-  implicit def Tracking: Tracking[M, Ref] = T
-  implicit def Propagation: Propagation[M, Ref] = P
 
   type Protein = lib.Protein
   type SiteLabel = lib.SiteLabel
@@ -54,7 +63,7 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
   }
   def SiteState(label: String): SiteState = lib.SiteState(label)
   def SiteWithState(label: SiteLabel, state: SiteState): SiteWithState = lib.SiteWithState(label, state)
-  def ProteinModifications(mods: (SiteLabel, SiteState)*): ProteinModifications = lib.ProteinModifications(mods:_*)
+  def ProteinModifications(mods: (SiteLabel, SiteState)*): ProteinModifications = lib.ProteinModifications.from(mods:_*)
   def ProteinModifications(mods: List[SiteWithState]): ProteinModifications = lib.ProteinModifications(mods)
   def ProteinPattern(p: Protein): ProteinPattern = lib.ProteinPattern(p)
   def ProteinPattern(p: Protein, mods: ProteinModifications): ProteinPattern = lib.ProteinPattern(p, mods)

@@ -1,21 +1,21 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Dom, IncSet}
+import nutcracker.{Antichain, Dom, IncSet, Propagation}
 import nutcracker.syntax.dom._
-import nutcracker.util.EqualK
+import nutcracker.util.{ContU, DeepEqual, DeepEqualK, EqualK, IsEqual}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.util.{Unification, mapUnion}
 import proteinrefinery.util.Unification.Syntax._
 import proteinrefinery.util.syntax._
 
 import scalaz.Id.Id
-import scalaz.{Equal, State}
+import scalaz.{Applicative, Equal, Monad, State, StateT}
 
 case class AgentsPattern[Ref[_]](
   agents: Vector[Option[ProteinPattern[Ref]]],
   bonds: Vector[Option[(AgentIndex, LocalSiteId[Ref], AgentIndex, LocalSiteId[Ref])]],
-  assocs: Vector[Option[(AgentIndex, LocalSiteId[Ref], AgentIndex, LocalSiteId[Ref], Ref[IncSet[Ref[Assoc[Ref]]]])]],
+  assocs: Vector[Option[(AgentIndex, AgentIndex, Ref[IncSet[Assoc.Ref[Ref]]])]],
   unbound: List[(AgentIndex, LocalSiteId[Ref])]
 ) {
   import AgentsPattern._
@@ -32,7 +32,7 @@ case class AgentsPattern[Ref[_]](
   def modify(a: Action[Ref]): AgentsPattern[Ref] = a match {
     case Link(i, si, j, sj) => link0(i, si, j, sj)._1
     case Unlink(id) => unlink(id)
-    case Modify(i, rmMods, addMods) =>
+    case Modify(i, rmMods, addMods, enzyme) =>
       ???
     case Replace(from, to, insert) =>
       ???
@@ -73,6 +73,11 @@ case class AgentsPattern[Ref[_]](
     require(hasBond(id.value))
     val Some((i, si, j, sj)) = bonds(id.value)
     AgentsPattern(agents, bonds.updated(id.value, None), assocs, (i, si) :: (j, sj) :: unbound)
+  }
+
+  def addAssoc(i: AgentIndex, j: AgentIndex, assocRef: Ref[IncSet[Ref[Antichain[Assoc[Ref]]]]]): (AgentsPattern[Ref], AssocId) = {
+    val assoc = (i, j, assocRef)
+    (AgentsPattern[Ref](agents, bonds, assocs :+ Some(assoc), unbound), AssocId(assocs.size))
   }
 
   def getBond(id: LinkId): Option[(ProteinPattern[Ref], LocalSiteId[Ref], ProteinPattern[Ref], LocalSiteId[Ref])] =
@@ -122,10 +127,6 @@ case class AgentsPattern[Ref[_]](
     bonds.forall(_ match {
       case Some((p, ps, q, qs)) => (p != i || ps != s) && (q != i || qs != s)
       case None => true
-    }) &&
-    assocs.forall(_ match {
-      case Some((p, ps, q, qs, _)) => (p != i || ps != s) && (q != i || qs != s)
-      case None => true
     })
 }
 
@@ -167,6 +168,14 @@ object AgentsPattern {
 
   def removeLink[Ref[_]](id: LinkId): State[AgentsPattern[Ref], Unit] =
     State(s => (s.unlink(id), ()))
+
+  implicit def deepEqualKInstance: DeepEqualK[AgentsPattern, AgentsPattern] = new DeepEqualK[AgentsPattern, AgentsPattern] {
+    def equal[Ptr1[_], Ptr2[_]](ap1: AgentsPattern[Ptr1], ap2: AgentsPattern[Ptr2]): IsEqual[Ptr1, Ptr2] = {
+      val AgentsPattern(ags1, bnds1, ascs1, unb1) = ap1
+      val AgentsPattern(ags2, bnds2, ascs2, unb2) = ap2
+      IsEqual[Ptr1, Ptr2].equal(ags1, ags2) && IsEqual(bnds1, bnds2) && IsEqual(ascs1, ascs2) && IsEqual(unb1, unb2)
+    }
+  }
 
   implicit def domInstance[Ref[_]](implicit ev: EqualK[Ref]): Dom.Aux[AgentsPattern[Ref], Update[Ref], Delta[Ref]] = new Dom[AgentsPattern[Ref]] {
     type Update = AgentsPattern.Update[Ref]
@@ -233,14 +242,63 @@ object AgentsPattern {
 
     def dom: Dom.Aux[AgentsPattern[Ref], Update, Delta] = domInstance
   }
+
+  trait Ops[M[_], Ref[_]] {
+    implicit def Propagation: Propagation[M, Ref]
+
+    def IncSets: nutcracker.IncSets[M, Ref]
+    def AssocSearch: Assoc.Search[M, Ref]
+
+    def requireAssoc(i: AgentIndex, j: AgentIndex, predicate: Assoc[Ref] => Boolean)(implicit M: Monad[M]): StateT[M, AgentsPattern[Ref], AssocId] = {
+      StateT(ap => {
+        val assocC = Antichain.filterMap(AssocSearch.assocC(ap(i).protein, ap(j).protein)) { a =>
+          if (predicate(a)) Some(a)
+          else None
+        }
+        val assocS = IncSets.collect(assocC)
+        M.map(assocS)(ref => ap.addAssoc(i, j, ref))
+      })
+    }
+
+    def forEachAssoc(ap: AgentsPattern[Ref])(implicit M: Applicative[M]): ContU[M, Assoc.Ref[Ref]] = {
+      val as = ap.assocs.flatMap {
+        case Some((_, _, asr)) => Vector(asr)
+        case None => Vector()
+      }
+      ContU.sequence(as.map(asr => IncSets.forEach(asr)))
+    }
+  }
 }
 
 final case class AgentIndex(value: Int) extends AnyVal
+object AgentIndex {
+  implicit val equalInstance: Equal[AgentIndex] = new Equal[AgentIndex] {
+    def equal(i: AgentIndex, j: AgentIndex): Boolean = i.value == j.value
+  }
+
+  implicit def deepEqualInstance[Ptr1[_], Ptr2[_]]: DeepEqual[AgentIndex, AgentIndex, Ptr1, Ptr2] =
+    new DeepEqual[AgentIndex, AgentIndex, Ptr1, Ptr2] {
+      def equal(i: AgentIndex, j: AgentIndex): IsEqual[Ptr1, Ptr2] = IsEqual(i.value == j.value)
+    }
+}
 
 final case class LinkId(value: Int) extends AnyVal
 object LinkId {
   implicit def equalInstance: Equal[LinkId] = new Equal[LinkId] {
     def equal(a1: LinkId, a2: LinkId): Boolean = a1.value == a2.value
+  }
+  implicit def deepEqualInstance[Ptr1[_], Ptr2[_]]: DeepEqual[LinkId, LinkId, Ptr1, Ptr2] =
+    new DeepEqual[LinkId, LinkId, Ptr1, Ptr2] {
+      def equal(a1: LinkId, a2: LinkId): IsEqual[Ptr1, Ptr2] = (a1, a2) match {
+        case (LinkId(i1), LinkId(i2)) => IsEqual(i1 == i2)
+      }
+    }
+}
+
+final case class AssocId(value: Int) extends AnyVal
+object AssocId {
+  implicit def equalInstance: Equal[AssocId] = new Equal[AssocId] {
+    def equal(i: AssocId, j: AssocId): Boolean = i.value == j.value
   }
 }
 
@@ -253,10 +311,28 @@ object Unbound {
 sealed abstract class Action[Ref[_]]
 case class Link[Ref[_]](i1: AgentIndex, s1: LocalSiteId[Ref], i2: AgentIndex, s2: LocalSiteId[Ref]) extends Action[Ref]
 case class Unlink[Ref[_]](id: LinkId) extends Action[Ref]
-case class Modify[Ref[_]](i: AgentIndex, rm: ProteinModifications[Ref], add: ProteinModifications[Ref]) extends Action[Ref]
+case class Modify[Ref[_]](i: AgentIndex, rm: ProteinModifications[Ref], add: ProteinModifications[Ref], enzyme: Option[AgentIndex]) extends Action[Ref]
 case class Replace[Ref[_]](from: AgentIndex, to: AgentIndex, insert: List[ProteinPattern[Ref]]) extends Action[Ref]
 
 object Link {
   def apply[Ref[_]](i1: AgentIndex, s1: Site.Definite, i2: AgentIndex, s2: Site.Definite): Link[Ref] =
-    Link(i1, LocalSiteId(s1), i2, LocalSiteId(s2))
+    Link(i1, LocalSiteId[Ref](s1), i2, LocalSiteId[Ref](s2))
+}
+
+object Action {
+  implicit val deepEqualKInstance: DeepEqualK[Action, Action] = new DeepEqualK[Action, Action] {
+    def equal[Ptr1[_], Ptr2[_]](a1: Action[Ptr1], a2: Action[Ptr2]): IsEqual[Ptr1, Ptr2] =
+      (a1, a2) match {
+        case (Link(i1, si1, j1, sj1), Link(i2, si2, j2, sj2)) =>
+          IsEqual[Ptr1, Ptr2].equal(i1, i2) && IsEqual(si1, si2) && IsEqual(j1, j2) && IsEqual(sj1, sj2)
+        case (Unlink(l1), Unlink(l2)) =>
+          IsEqual(l1, l2)
+        case (Modify(i1, rm1, add1, enz1), Modify(i2, rm2, add2, enz2)) =>
+          IsEqual[Ptr1, Ptr2].equal(i1, i2) && IsEqual(rm1, rm2) && IsEqual(add1, add2) && IsEqual(enz1, enz2)
+        case (Replace(f1, t1, ins1), Replace(f2, t2, ins2)) =>
+          IsEqual[Ptr1, Ptr2].equal(f1, f2) && IsEqual(t1, t2) && IsEqual(ins1, ins2)
+        case _ =>
+          IsEqual(false)
+      }
+  }
 }

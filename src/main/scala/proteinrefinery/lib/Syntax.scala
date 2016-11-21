@@ -10,10 +10,10 @@ trait Syntax[Ref[_]] {
   implicit class SymbolOps(sym: Symbol) {
 
     def apply(ss: (SiteLabel, SiteState)*): ProteinPattern[Ref] =
-      ProteinPattern(Protein(sym), ProteinModifications(ss:_*))
+      ProteinPattern(Protein(sym), ProteinModifications.from(ss:_*))
 
     def @@ (s: SiteLabel): BindingPartnerPattern[Ref] =
-      BindingPartnerPattern(Protein(sym), LocalSiteId(s))
+      BindingPartnerPattern(Protein(sym), LocalSiteId[Ref](s))
 
     def ~(s: SiteState): (SiteLabel, SiteState) = (SiteLabel(sym.name), s)
 
@@ -22,20 +22,22 @@ trait Syntax[Ref[_]] {
   implicit class ProteinOps(p: Protein) {
 
     def apply(ss: (SiteLabel, SiteState)*): ProteinPattern[Ref] =
-      ProteinPattern(p, ProteinModifications(ss:_*))
+      ProteinPattern(p, ProteinModifications.from(ss:_*))
 
     def @@ (s: SiteLabel): BindingPartnerPattern[Ref] =
-      BindingPartnerPattern(p, LocalSiteId(s))
+      BindingPartnerPattern(p, LocalSiteId[Ref](s))
   }
 
-  implicit class ProteinPatternOps(p: ProteinPattern[Ref]) {
+  implicit class ProteinPatternOps[Var[_]](p: ProteinPattern[Var]) {
 
-    def @@ (s: SiteLabel): BindingPartnerPattern[Ref] = BindingPartnerPattern(p, LocalSiteId(s))
+    def @@ (s: SiteLabel): BindingPartnerPattern[Var] = BindingPartnerPattern(p, LocalSiteId[Var](s))
 
   }
 
-  implicit class BindingPartnerPatternOps(bp: BindingPartnerPattern[Ref]) {
-    def binds(that: BindingPartnerPattern[Ref]): Binding[Ref] = bp bind that
+  implicit class BindingPartnerPatternOps[Var[_]](bp: BindingPartnerPattern[Var]) {
+
+    def binds(that: BindingPartnerPattern[Var]): Binding[Var] = bp bind that
+
   }
 
   implicit def symbolToProtein(sym: Symbol): Protein = Protein(sym)
@@ -50,4 +52,8 @@ trait Syntax[Ref[_]] {
   'A('x~"p")
   'A('x~"p")@@'z
   'A('x~"p")@@'z binds 'B('y~"u")@@'w
+}
+
+object Syntax {
+  def apply[Ref[_]]: Syntax[Ref] = new Syntax[Ref]{}
 }

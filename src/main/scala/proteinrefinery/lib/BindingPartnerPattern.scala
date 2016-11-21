@@ -7,7 +7,6 @@ import nutcracker.util.EqualK._
 import proteinrefinery.lib.AgentsPattern._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import scalaz.State
-import scalaz.std.either._
 import scalaz.syntax.equal._
 
 case class BindingPartnerPattern[Ref[_]](p: ProteinPattern[Ref], s: LocalSiteId[Ref]) {

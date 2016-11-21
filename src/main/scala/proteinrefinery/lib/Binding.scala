@@ -1,8 +1,8 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-
 import nutcracker.Antichain
+import nutcracker.util.{DeepEqualK, IsEqual}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 sealed trait Binding[Ref[_]] {
@@ -60,4 +60,9 @@ object Binding {
 
   def apply[Var[_]](p: Protein, ps: LocalSiteId[Var], q: Protein, qs: LocalSiteId[Var]): Binding[Var] =
     BindingPartnerPattern(p, ps) bind BindingPartnerPattern(q, qs)
+
+  implicit val deepEqualKInstance: DeepEqualK[Binding, Binding] = new DeepEqualK[Binding, Binding] {
+    def equal[Ptr1[_], Ptr2[_]](b1: Binding[Ptr1], b2: Binding[Ptr2]): IsEqual[Ptr1, Ptr2] =
+      IsEqual(b1.witness, b2.witness) && IsEqual(b1.pi, b2.pi) && IsEqual(b1.qi, b2.qi) && IsEqual(b1.ps, b2.ps) && IsEqual(b1.qs, b2.qs)
+  }
 }

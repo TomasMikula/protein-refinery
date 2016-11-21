@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Antichain
-import nutcracker.util.ContU
+import nutcracker.util.{ContU, EqualK}
 
 import scalaz.Monad
 
@@ -29,7 +29,7 @@ object PositiveInfluenceOnKinaseActivity {
 
     def Nuggets: proteinrefinery.lib.Nuggets[M, Var]
 
-    def positiveInfluenceOnKinaseActivityC(agent: Protein, kinase: Protein)(implicit M: Monad[M]): ContU[M, Ref[Var]] = for {
+    def positiveInfluenceOnKinaseActivityC(agent: Protein, kinase: Protein)(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] = for {
       ppref <- Nuggets.kinaseActivityC(kinase)
       res <- Antichain.map(Antichain.mapC(ppref)(pp => positiveInfluenceOnStateC(agent, pp)))(positiveInfluenceOnActiveState(_))
     } yield res

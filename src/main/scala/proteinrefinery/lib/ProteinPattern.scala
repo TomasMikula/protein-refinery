@@ -4,7 +4,7 @@ import scala.language.higherKinds
 import nutcracker.Promise.{Completed, Conflict, Empty}
 import nutcracker.{Antichain, Dom, Promise}
 import nutcracker.syntax.dom._
-import nutcracker.util.EqualK
+import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteLabel._
 import proteinrefinery.lib.SiteState.SiteState
@@ -23,6 +23,9 @@ case class ProteinPattern[Ref[_]](protein: Protein, mods: ProteinModifications[R
     (this.protein == that.protein) && this.isAdmissible && that.isAdmissible && (this.mods combine that.mods).isAdmissible
 
   def addModification(site: SiteLabel, state: SiteState): ProteinPattern[Ref] =
+    addModification(ISite[Ref](site), state)
+
+  def addModification(site: ISite[Ref], state: SiteState): ProteinPattern[Ref] =
     ProteinPattern(protein, mods.addModification(site, state))
 
   def mentionedSites: Set[LocalSiteId[Ref]] = mods.mentionedSites
@@ -41,10 +44,7 @@ case class ProteinPattern[Ref[_]](protein: Protein, mods: ProteinModifications[R
     val bonds1: List[(ISite[Ref], SiteAttr)] =
       bonds.foldLeft[List[(ISite[Ref], SiteAttr)]](Nil)((l, siteIdLink) => {
         val (siteId, link) = siteIdLink
-        val siteDesc: ISite[Ref] = siteId match {
-          case Left(label) => ISite(label)
-          case Right(ref)  => ISite(ref)
-        }
+        val siteDesc: ISite[Ref] = ISite(siteId)
         val linkDom = Promise.completed(link)
         (siteDesc, (linkDom, Promise.empty)) :: l
       })
@@ -142,6 +142,12 @@ object ProteinPattern {
           case (None, Some(b)) => Some(\&/.That(b))
           case (None, None) => None
         }
+    }
+
+  implicit val deepEqualKInstance: DeepEqualK[ProteinPattern, ProteinPattern] =
+    new DeepEqualK[ProteinPattern, ProteinPattern] {
+      def equal[Ptr1[_], Ptr2[_]](pp1: ProteinPattern[Ptr1], pp2: ProteinPattern[Ptr2]): IsEqual[Ptr1, Ptr2] =
+        IsEqual[Ptr1, Ptr2].equal(pp1.protein, pp2.protein) && IsEqual(pp1.mods, pp2.mods)
     }
 
   implicit def showInstance[Var[_]]: Show[ProteinPattern[Var]] = new Show[ProteinPattern[Var]] {

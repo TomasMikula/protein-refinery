@@ -5,6 +5,7 @@ import nutcracker.{Antichain, IncSet}
 import nutcracker.util.ContU
 
 import scalaz.{Monad, Show}
+import scalaz.syntax.equal._
 
 case class Phosphorylation[Ref[_]](
   assoc: Assoc[Ref],
@@ -27,23 +28,17 @@ object Phosphorylation {
     def Nuggets: proteinrefinery.lib.Nuggets[M, Var]
     def AssocSearch: Assoc.Search[M, Var]
 
-    def phosphorylation(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): M[Var[IncSet[Ref[Var]]]] =
-      IncSets.collect(phosphorylationC(kinase, substrate))
+    def phosphorylationsC(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
+      ContU(f =>
+        Nuggets.phosphoTargetsF(ptRef => Propagation.observe(ptRef).by(apt => {
+          val pt = apt.value
+          if (pt.kinase === kinase && pt.substrate === substrate) (Some(f(ptRef)), Some((d, δ) => ???))
+          else (None, Some((d, δ) => ???))
+        }))
+      )
 
-    def phosphorylationC(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): ContU[M, Ref[Var]] = {
-      Nuggets.phosphoSitesC(kinase, substrate).flatMap(s => phosphorylationC(kinase, substrate, s))
-    }
-
-    def phosphorylationC(kinase: Protein, substrate: Protein, s: SiteLabel)(implicit M: Monad[M]): ContU[M, Ref[Var]] = {
-      // XXX this version is quite primitive and cannot infer much beyond what is already given by the knowledge base,
-      // except for finding indirect enzyme-substrate associations. In the future, we would like it to be able to hypothesize
-      // phosphorylation at site s, if, e.g., s is a Serine and kinase is a Serine kinase.
-      // Should be easy to achieve by having phosphoSites not as an atomic query, but as a search on top of more basic facts.
-      Antichain.filterMap(AssocSearch.assocC(kinase, substrate)) { a =>
-        if (s != a.bindings.last.rightS) Some(Phosphorylation(a, s))
-        else None
-      }
-    }
+    def phosphorylations(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): M[Var[IncSet[PhosphoTarget.Ref[Var]]]] =
+      IncSets.collect(phosphorylationsC(kinase, substrate))
 
   }
 

@@ -3,7 +3,7 @@ package proteinrefinery.lib
 import nutcracker.{Antichain, Dom, Promise, Propagation, Trigger}
 import nutcracker.Dom.Status
 import nutcracker.syntax.dom._
-import nutcracker.util.{ContU, EqualK}
+import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.Unification
@@ -11,7 +11,7 @@ import proteinrefinery.util.Unification.Syntax._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds
-import scalaz.{Monad, Show}
+import scalaz.{Lens, Monad, Show, Store}
 import scalaz.std.list._
 import scalaz.syntax.equal._
 import scalaz.syntax.monad._
@@ -46,7 +46,7 @@ final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref
         if(lhs(i).protein == p) buf += si
         if(lhs(j).protein == p) buf += sj
       case Unlink(_) => // do nothing
-      case Modify(i, rm, add) =>
+      case Modify(i, rm, add, _) =>
         if(lhs(i).protein == p) {
           buf ++= rm.mentionedSites
           buf ++= add.mentionedSites
@@ -72,6 +72,18 @@ final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref
     buf.toSet
   }
 
+  def phosphorylations: List[PhosphoTarget[Ref]] = {
+    val buf = actions.foldLeft(List.newBuilder[PhosphoTarget[Ref]])((buf, a) => a match {
+      case Modify(i, rm, add, Some(enzyme)) =>
+        add.mods.list.foreach(ss =>
+          if(ss.state === SiteState("p")) buf += PhosphoTarget(this, enzyme, i, ss.site)
+        )
+        buf
+      case _ => buf
+    })
+    buf.result()
+  }
+
   def enables(pat: AgentsPattern[Ref]): Boolean = {
 
     def enables(a: Action[Ref], pat: AgentsPattern[Ref]): Boolean = a match {
@@ -82,7 +94,7 @@ final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref
         val pj = lhs(j).protein
         pat.getBonds.exists({ case (p, ps, q, qs) =>
           (p.protein == pi && ps == si && q.protein == pj && qs == sj) ||
-            (p.protein == pj && ps == sj && q.protein == pi && qs == si)
+          (p.protein == pj && ps == sj && q.protein == pi && qs == si)
         })
 
       case Unlink(linkId) =>
@@ -90,10 +102,10 @@ final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref
         val (p, ps, q, qs) = lhs.getBond(linkId).get
         pat.getUnbound.exists({ case (pp, s) =>
           (pp.protein == p.protein && s == ps) ||
-            (pp.protein == q.protein && s == qs)
+          (pp.protein == q.protein && s == qs)
         })
 
-      case Modify(i, rmMods, addMods) =>
+      case Modify(i, rmMods, addMods, _) =>
         // does `pat` need some of the introduced modifications?
         val p = lhs(i).protein
         pat.agentIterator.exists(q => {
@@ -115,14 +127,26 @@ final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref
   // TODO: should return a list of explanations instead of Boolean
   def enables(that: Rule[Ref]): Boolean = enables(that.lhs)
 
-  override def toString: String = s"$lhs -> $rhs"
+  override def toString: String = s"$lhs << $actions"
 }
 
 object Rule {
   type Update[Var[_]] = AgentsPattern.Update[Var]
   type Delta[Var[_]] = AgentsPattern.Delta[Var]
 
+  /** Lens to access the left-hand side of a rule.
+    * Care must be taken that the lhs is updated consistently with actions,
+    * e.g. only by refinements.
+    */
+  def lhs[Var[_]]: Lens[Rule[Var], AgentsPattern[Var]] =
+    Lens(r => Store(lhs => Rule(lhs, r.actions), r.lhs))
+
   type Ref[Var[_]] = Var[Antichain[Rule[Var]]]
+
+  implicit val deepEqualKInstance: DeepEqualK[Rule, Rule] = new DeepEqualK[Rule, Rule] {
+    def equal[Ptr1[_], Ptr2[_]](r1: Rule[Ptr1], r2: Rule[Ptr2]): IsEqual[Ptr1, Ptr2] =
+      IsEqual(r1.lhs, r2.lhs) && IsEqual(r1.actions, r2.actions)
+  }
 
   implicit def domInstance[Var[_]](implicit ev: EqualK[Var]): Dom.Aux[Rule[Var], Update[Var], Delta[Var]] = new Dom[Rule[Var]] {
     type Update = Rule.Update[Var]
@@ -162,6 +186,14 @@ object Rule {
     ContU(f => P.observe(ref).by(r => {
       import scalaz.syntax.traverse._
       val now = r.value.linksAgentTo(p).iterator.map(b => P.cell(Antichain(b)).flatMap(f)).toList.sequence_
+      val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
+      (Some(now), Some(onChange))
+    }))
+
+  def phosphorylationsC[M[_], Var[_]](ref: Rule.Ref[Var])(implicit P: Propagation[M, Var], M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
+    ContU(f => P.observe(ref).by(r => {
+      import scalaz.syntax.traverse._
+      val now = r.value.phosphorylations.iterator.map(p => P.cell(Antichain(p)).flatMap(f)).toList.sequence_
       val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
       (Some(now), Some(onChange))
     }))

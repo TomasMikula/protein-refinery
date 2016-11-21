@@ -1,6 +1,9 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
+
 import algebra.Eq
+import nutcracker.util.{DeepEqual, IsEqual}
 
 import scalaz.{Equal, Semigroup, Show}
 
@@ -48,13 +51,18 @@ object Protein {
     }
   }
 
-  implicit def equalInstance: Equal[Protein] = new Equal[Protein] {
+  implicit val equalInstance: Equal[Protein] = new Equal[Protein] {
     def equal(x: Protein, y: Protein): Boolean = (x, y) match {
       case (ProteinLabel(x), ProteinLabel(y)) => x.name == y.name
       case (Conflict, Conflict) => true
       case _ => false
     }
   }
+
+  implicit def deepEqualInstance[Ptr1[_], Ptr2[_]]: DeepEqual[Protein, Protein, Ptr1, Ptr2] =
+    new DeepEqual[Protein, Protein, Ptr1, Ptr2] {
+      def equal(p1: Protein, p2: Protein): IsEqual[Ptr1, Ptr2] = IsEqual(equalInstance.equal(p1, p2))
+    }
 
   implicit def showInstance: Show[Protein] = new Show[Protein] {
     override def shows(p: Protein): String = p.toString

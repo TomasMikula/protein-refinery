@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Antichain
-import nutcracker.util.ContU
+import nutcracker.util.{ContU, EqualK}
 
 import scalaz.Monad
 
@@ -41,7 +41,7 @@ object PositiveInfluenceOnPhosphorylation {
 
     implicit def Propagation: nutcracker.Propagation[M, Var]
 
-    def positiveInfluenceOnPhosphorylationC(p: Protein, ph: Phosphorylation[Var])(implicit M: Monad[M]): ContU[M, Ref[Var]] = {
+    def positiveInfluenceOnPhosphorylationC(p: Protein, ph: Phosphorylation[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] = {
 
       // we can immediately tell whether `p` is the kinase or part of the scaffold in `ph`
       val immediate: List[ContU[M, Ref[Var]]] = {
@@ -63,7 +63,7 @@ trait PositiveInfluenceOnPhosphorylatedStateSearch[M[_], Ref[_]] { self: Positiv
 
   def Nuggets: proteinrefinery.lib.Nuggets[M, Ref]
 
-  def positiveInfluenceOnPhosphorylatedStateC(agent: Protein, target: Protein)(implicit M: Monad[M]): ContU[M, PositiveInfluenceOnState.Ref[Ref]] =
+  def positiveInfluenceOnPhosphorylatedStateC(agent: Protein, target: Protein)(implicit M: Monad[M], E: EqualK[Ref]): ContU[M, PositiveInfluenceOnState.Ref[Ref]] =
     Nuggets.phosphoSitesC(target).flatMap(site => {
       val pat = ProteinPattern[Ref](target).addModification(site, SiteState("p")) // XXX hard-coded phosphorylated state as "p"
       positiveInfluenceOnStateC(agent, pat)

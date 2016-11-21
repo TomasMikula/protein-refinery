@@ -1,6 +1,7 @@
 package proteinrefinery.lib
 
-import algebra.Eq
+import scala.language.higherKinds
+import nutcracker.util.{DeepEqual, IsEqual}
 
 import scalaz.{Equal, Show}
 
@@ -10,13 +11,14 @@ case class SiteLabel(name: String) {
 
 object SiteLabel {
 
-  implicit def eqInstance: Eq[SiteLabel] = new Eq[SiteLabel] {
-    def eqv(x: SiteLabel, y: SiteLabel): Boolean = x.name == y.name
-  }
-
   implicit def equalInstance: Equal[SiteLabel] = new Equal[SiteLabel] {
     def equal(s1: SiteLabel, s2: SiteLabel): Boolean = s1.name == s2.name
   }
+
+  implicit def deepEqualInstance[Ptr1[_], Ptr2[_]]: DeepEqual[SiteLabel, SiteLabel, Ptr1, Ptr2] =
+    new DeepEqual[SiteLabel, SiteLabel, Ptr1, Ptr2] {
+      def equal(s1: SiteLabel, s2: SiteLabel): IsEqual[Ptr1, Ptr2] = IsEqual(s1.name == s2.name)
+    }
 
   implicit def showInstance: Show[SiteLabel] = new Show[SiteLabel] {
     override def shows(s: SiteLabel): String = s.name

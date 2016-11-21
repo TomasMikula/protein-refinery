@@ -4,7 +4,8 @@ import scala.language.higherKinds
 import nutcracker.Dom.Status
 import nutcracker.{Dom, Promise}
 import nutcracker.Promise.{Complete, Completed, Conflict, Empty}
-import nutcracker.util.EqualK
+import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
+import proteinrefinery.lib.ProteinModifications.{DefiniteLabel, LocalSiteId, SiteRef}
 import proteinrefinery.util.{HomSet, Identification, Unification}
 import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
 
@@ -62,16 +63,20 @@ object ISite {
 
   def apply[Ref[_]](site: Site.Definite, refs: Site.Ref[Ref]*): ISite[Ref] = new ISite(Site.wrap(site), Set(refs:_*))
   def apply[Ref[_]](ref: Site.Ref[Ref], refs: Site.Ref[Ref]*): ISite[Ref] = ISite(Site.unknown, Set(refs:_*) + ref)
+  def apply[Ref[_]](s: LocalSiteId[Ref]): ISite[Ref] = s match {
+    case DefiniteLabel(s) => ISite(s)
+    case SiteRef(ref) => ISite(ref)
+  }
 
   implicit def equalInstance[Ref[_]](implicit ev: EqualK[Ref]): Equal[ISite[Ref]] = new Equal[ISite[Ref]] {
     import EqualK._
     def equal(a1: ISite[Ref], a2: ISite[Ref]): Boolean =
       a1.content === a2.content && a1.refs === a2.refs
+  }
 
-    // XXX slow (n^2)
-    private implicit def setEqual[A: Equal]: Equal[Set[A]] = new Equal[Set[A]] {
-      def equal(s1: Set[A], s2: Set[A]): Boolean = s1.size == s2.size && s1.forall(a1 => s2.exists(a2 => a1 === a2))
-    }
+  implicit def deepEqualKInstance: DeepEqualK[ISite, ISite] = new DeepEqualK[ISite, ISite] {
+    def equal[Ptr1[_], Ptr2[_]](s1: ISite[Ptr1], s2: ISite[Ptr2]): IsEqual[Ptr1, Ptr2] =
+      IsEqual(s1.content, s2.content) // ignore refs, their content is eventually reflected in the content
   }
 
   implicit def identificationInstance[Ref[_]]: Identification.Aux[ISite[Ref], Update[Ref], Delta[Ref]] = {
@@ -119,6 +124,11 @@ object ISite {
     }
 
     Identification.via[ISite[Ref], (Site.Dom, Set[Site.Ref[Ref]])](pairIso)
+  }
+
+  // XXX slow (n^2)
+  private implicit def setEqual[A: Equal]: Equal[Set[A]] = new Equal[Set[A]] {
+    def equal(s1: Set[A], s2: Set[A]): Boolean = s1.size == s2.size && s1.forall(a1 => s2.exists(a2 => a1 === a2))
   }
 
   // Not really an isomorphism, since ISite does not allow both components to be bottom at the same time.

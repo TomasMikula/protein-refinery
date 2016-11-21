@@ -1,6 +1,9 @@
 package proteinrefinery.lib
 
+import scala.language.higherKinds
+
 import nutcracker.Promise
+import nutcracker.util.{DeepEqual, IsEqual}
 import proteinrefinery.util.{HomSet, Unification}
 
 import scalaz.Equal
@@ -11,9 +14,14 @@ case class StateLabel(value: String) extends AnyVal {
 }
 
 object StateLabel {
-  implicit def equalInstance: Equal[StateLabel] = new Equal[StateLabel] {
+  implicit val equalInstance: Equal[StateLabel] = new Equal[StateLabel] {
     def equal(s1: StateLabel, a2: StateLabel): Boolean = s1.value == a2.value
   }
+
+  implicit def deepEqualInstance[Ptr1[_], Ptr2[_]]: DeepEqual[StateLabel, StateLabel, Ptr1, Ptr2] =
+    new DeepEqual[StateLabel, StateLabel, Ptr1, Ptr2] {
+      def equal(a1: StateLabel, a2: StateLabel): IsEqual[Ptr1, Ptr2] = IsEqual(equalInstance.equal(a1, a2))
+    }
 }
 
 object SiteState {
