@@ -13,7 +13,7 @@ case class BindingPartnerPattern[Ref[_]](p: ProteinPattern[Ref], s: LocalSiteId[
   def overlaps(that: BindingPartnerPattern[Ref])(implicit ev: EqualK[Ref]): Boolean =
     (this.s === that.s) && (this.p isCompatibleWith that.p)
 
-  def bind(that: BindingPartnerPattern[Ref]): Binding[Ref] = (for {
+  def bind(that: BindingPartnerPattern[Ref])(implicit ev: EqualK[Ref]): Binding[Ref] = (for {
     i <- addAgent(this.p)
     j <- addAgent(that.p)
     _ <- requireUnbound0(i, this.s)

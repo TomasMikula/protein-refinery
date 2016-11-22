@@ -11,6 +11,8 @@ import proteinrefinery.util.syntax._
 
 import scalaz.Id.Id
 import scalaz.{Applicative, Equal, Monad, State, StateT}
+import scalaz.std.tuple._
+import scalaz.syntax.equal._
 
 case class AgentsPattern[Ref[_]](
   agents: Vector[Option[ProteinPattern[Ref]]],
@@ -29,7 +31,7 @@ case class AgentsPattern[Ref[_]](
 
   def agentIterator: Iterator[ProteinPattern[Ref]] = agents.iterator.mapFilter(identity)
 
-  def modify(a: Action[Ref]): AgentsPattern[Ref] = a match {
+  def modify(a: Action[Ref])(implicit ev: EqualK[Ref]): AgentsPattern[Ref] = a match {
     case Link(i, si, j, sj) => link0(i, si, j, sj)._1
     case Unlink(id) => unlink(id)
     case Modify(i, rmMods, addMods, enzyme) =>
@@ -49,24 +51,24 @@ case class AgentsPattern[Ref[_]](
       case None => None
     }
 
-  def requireUnbound(i: AgentIndex, s: SiteLabel): AgentsPattern[Ref] =
+  def requireUnbound(i: AgentIndex, s: SiteLabel)(implicit ev: EqualK[Ref]): AgentsPattern[Ref] =
     requireUnbound0(i, LocalSiteId(s))
 
-  def requireUnbound0(i: AgentIndex, s: LocalSiteId[Ref]): AgentsPattern[Ref] = {
+  def requireUnbound0(i: AgentIndex, s: LocalSiteId[Ref])(implicit ev: EqualK[Ref]): AgentsPattern[Ref] = {
     require(hasAgent(i.value))
     require(isNotBound(i, s))
     AgentsPattern(agents, bonds, assocs, (i, s) :: unbound)
   }
 
-  def link(i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel): (AgentsPattern[Ref], LinkId) =
+  def link(i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel)(implicit ev: EqualK[Ref]): (AgentsPattern[Ref], LinkId) =
     link0(i, LocalSiteId(si), j, LocalSiteId(sj))
 
-  def link0(i: AgentIndex, si: LocalSiteId[Ref], j: AgentIndex, sj: LocalSiteId[Ref]): (AgentsPattern[Ref], LinkId) = {
+  def link0(i: AgentIndex, si: LocalSiteId[Ref], j: AgentIndex, sj: LocalSiteId[Ref])(implicit ev: EqualK[Ref]): (AgentsPattern[Ref], LinkId) = {
     require(hasAgent(i.value))
     require(hasAgent(j.value))
     require(isUnbound(i, si))
     require(isUnbound(j, sj))
-    (AgentsPattern(agents, bonds :+ Some((i, si, j, sj)), assocs, unbound.filter(u => u != ((i, si)) && u != ((j, sj)))), LinkId(bonds.size))
+    (AgentsPattern(agents, bonds :+ Some((i, si, j, sj)), assocs, unbound.filter(u => u =/= ((i, si)) && u =/= ((j, sj)))), LinkId(bonds.size))
   }
 
   def unlink(id: LinkId): AgentsPattern[Ref] = {
@@ -123,9 +125,9 @@ case class AgentsPattern[Ref[_]](
   @inline private def isUnbound(i: AgentIndex, s: LocalSiteId[Ref]): Boolean =
     unbound.contains((i, s))
 
-  @inline private def isNotBound(i: AgentIndex, s: LocalSiteId[Ref]): Boolean =
+  @inline private def isNotBound(i: AgentIndex, s: LocalSiteId[Ref])(implicit ev: EqualK[Ref]): Boolean =
     bonds.forall(_ match {
-      case Some((p, ps, q, qs)) => (p != i || ps != s) && (q != i || qs != s)
+      case Some((p, ps, q, qs)) => (p =/= i || ps =/= s) && (q =/= i || qs =/= s)
       case None => true
     })
 }
@@ -157,13 +159,13 @@ object AgentsPattern {
   def removeAgent[Ref[_]](i: AgentIndex): State[AgentsPattern[Ref], Unit] =
     State(s => (s.removeAgent(i), ()))
 
-  def requireUnbound0[Ref[_]](i: AgentIndex, site: LocalSiteId[Ref]): State[AgentsPattern[Ref], Unit] =
+  def requireUnbound0[Ref[_]](i: AgentIndex, site: LocalSiteId[Ref])(implicit ev: EqualK[Ref]): State[AgentsPattern[Ref], Unit] =
     State(s => (s.requireUnbound0(i, site), ()))
 
-  def requireUnbound[Ref[_]](i: AgentIndex, site: SiteLabel): State[AgentsPattern[Ref], Unit] =
+  def requireUnbound[Ref[_]](i: AgentIndex, site: SiteLabel)(implicit ev: EqualK[Ref]): State[AgentsPattern[Ref], Unit] =
     State(s => (s.requireUnbound(i, site), ()))
 
-  def addLink[Ref[_]](i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel): State[AgentsPattern[Ref], LinkId] =
+  def addLink[Ref[_]](i: AgentIndex, si: SiteLabel, j: AgentIndex, sj: SiteLabel)(implicit ev: EqualK[Ref]): State[AgentsPattern[Ref], LinkId] =
     State(_.link(i, si, j, sj))
 
   def removeLink[Ref[_]](id: LinkId): State[AgentsPattern[Ref], Unit] =

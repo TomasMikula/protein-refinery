@@ -20,7 +20,7 @@ final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref
 
   lazy val isAdmissible: Boolean = lhs.isAdmissible
 
-  lazy val rhs: AgentsPattern[Ref] = actions.foldLeft(lhs)((p, a) => p.modify(a))
+  def rhs(implicit ev: EqualK[Ref]): AgentsPattern[Ref] = actions.foldLeft(lhs)((p, a) => p.modify(a))
   def apply(lhs: AgentsPattern[Ref]): AgentsPattern[Ref] = ???
   def canConsume(ptrn: AgentsPattern[Ref]): Boolean = ???
   def canProduce(ptrn: AgentsPattern[Ref]): Boolean = ???

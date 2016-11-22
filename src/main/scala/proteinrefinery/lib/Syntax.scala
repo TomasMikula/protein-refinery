@@ -1,5 +1,6 @@
 package proteinrefinery.lib
 
+import nutcracker.util.EqualK
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
 
@@ -36,7 +37,7 @@ trait Syntax[Ref[_]] {
 
   implicit class BindingPartnerPatternOps[Var[_]](bp: BindingPartnerPattern[Var]) {
 
-    def binds(that: BindingPartnerPattern[Var]): Binding[Var] = bp bind that
+    def binds(that: BindingPartnerPattern[Var])(implicit ev: EqualK[Var]): Binding[Var] = bp bind that
 
   }
 
@@ -48,10 +49,12 @@ trait Syntax[Ref[_]] {
 
 
   // examples
-  'A@@'x binds 'B@@'y
-  'A('x~"p")
-  'A('x~"p")@@'z
-  'A('x~"p")@@'z binds 'B('y~"u")@@'w
+  private def examples(implicit ev: EqualK[Ref]) = {
+    'A@@'x binds 'B@@'y
+    'A('x~"p")
+    'A('x~"p")@@'z
+    'A('x~"p")@@'z binds 'B('y~"u")@@'w
+  }
 }
 
 object Syntax {

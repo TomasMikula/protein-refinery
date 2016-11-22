@@ -2,6 +2,7 @@ package proteinrefinery
 
 import scala.language.higherKinds
 import nutcracker._
+import nutcracker.util.EqualK
 import proteinrefinery.lib.{AgentIndex, ISite}
 
 import scalaz.Id._
@@ -9,7 +10,7 @@ import scalaz.syntax.monad._
 
 class Tests extends TestSuite {
 
-  def bindings[Ref[_]]: List[lib.Binding[Ref]] = {
+  def bindings[Ref[_]](implicit ev: EqualK[Ref]): List[lib.Binding[Ref]] = {
     val syntax = lib.Syntax[Ref]
     import syntax._
 
@@ -39,7 +40,7 @@ class Tests extends TestSuite {
     import r.lib._
 
     addNuggets(
-      rules = bindings[r.Ref].map(_.witness),
+      rules = bindings[r.Ref](RefEquality).map(_.witness),
       phosphoSites = phosphoTargets
     )
   }
