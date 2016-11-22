@@ -27,7 +27,7 @@ class Tests extends TestSuite {
     )
   }
 
-  def phosphoTargets[Ref[_]]: List[(lib.Protein, lib.Protein, lib.SiteLabel)] = {
+  def phosTargets[Ref[_]]: List[(lib.Protein, lib.Protein, lib.SiteLabel)] = {
     val syntax = lib.Syntax[Ref]
     import syntax._
 
@@ -41,7 +41,7 @@ class Tests extends TestSuite {
 
     addNuggets(
       rules = bindings[r.Ref](RefEquality).map(_.witness),
-      phosphoSites = phosphoTargets
+      phosphoSites = phosTargets
     )
   }
 

@@ -55,15 +55,15 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
 
   private def addFactBind(p: Protein, ps: SiteLabel, q: Protein, qs: SiteLabel): Prg[Unit] = {
     val rule = Binding(p, LocalSiteId[DRef](ps), q, LocalSiteId[DRef](qs)).witness
-    Lib.addRuleF(rule) >>= (_ => newFactF(FactRule, rule))
+    Lib.addRule(rule) >>= (_ => newFactF(FactRule, rule))
   }
 
   private def addFactKinase(pp: ProteinPattern[DRef]): Prg[Unit] = {
-    Lib.addKinaseActivityF(pp) >> newFactF(FactKinase, pp)
+    Lib.addKinaseActivity(pp) >> newFactF(FactKinase, pp)
   }
 
   private def addFactPhosSite(k: Protein, s: Protein, ss: SiteLabel): Prg[Unit] =
-    Lib.addPhosphoTargetF(k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
+    Lib.addPhosphoTarget(k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
 
   private def observeGoal[A](desc: String, ref: DRef[IncSet[DRef[A]]])(implicit t: GoalType[A], dom: Dom[A], show: Show[A]): Prg[Unit] =
     observe(ref).by(d => {
