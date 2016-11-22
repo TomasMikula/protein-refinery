@@ -33,6 +33,7 @@ trait Nuggets[M[_], Ref[_]] {
 
   def IncSets: nutcracker.IncSets[M, Ref]
   def PhosphoTargetOps: PhosphoTarget.Ops[M, Ref]
+  def RuleOps: Rule.Ops[M, Ref]
 
   import Propagation._
   import Tracking._
@@ -78,14 +79,14 @@ trait Nuggets[M[_], Ref[_]] {
   // derived queries
 
   def bindingsOfF(p: Protein)(f: Binding.Ref[Ref] => M[Unit]): M[Unit] =
-    rulesF(_ => OnceTrigger.Fire(ruleRef => Rule.linksAgentToC(ruleRef)(p).apply(f)))
+    rulesF(_ => OnceTrigger.Fire(ruleRef => RuleOps.linksAgentToC(ruleRef)(p).apply(f)))
   def bindingsOfC(p: Protein): ContU[M, Binding.Ref[Ref]] =
     ContU(f => bindingsOfF(p)(f))
   def bindingsOfS(p: Protein): M[Ref[DSet[Ref, Antichain[Binding[Ref]]]]] =
     DSet.collect(bindingsOfC(p))
 
   def phosphoTargetsF(f: PhosphoTarget.Ref[Ref] => M[Unit]): M[Unit] =
-    rulesF(_ => OnceTrigger.Fire(ruleRef => Rule.phosphorylationsC(ruleRef).apply(f)))
+    rulesF(_ => OnceTrigger.Fire(ruleRef => RuleOps.phosphorylationsC(ruleRef).apply(f)))
 
   def phosphoSitesF(kinase: Protein, substrate: Protein)(f: ISite[Ref] => M[Unit]): M[Unit] =
     phosphoTargetsF(ptr => observe(ptr).by(apt => {

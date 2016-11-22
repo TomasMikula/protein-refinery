@@ -182,23 +182,29 @@ object Rule {
     def dom: Dom.Aux[Rule[Var], Update, Delta] = domInstance
   }
 
-  def linksAgentToC[M[_], Var[_]](ref: Rule.Ref[Var])(p: Protein)(implicit P: Propagation[M, Var], M: Monad[M]): ContU[M, Binding.Ref[Var]] =
-    ContU(f => P.observe(ref).by(r => {
-      import scalaz.syntax.traverse._
-      val now = r.value.linksAgentTo(p).iterator.map(b => P.cell(Antichain(b)).flatMap(f)).toList.sequence_
-      val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
-      (Some(now), Some(onChange))
-    }))
-
-  def phosphorylationsC[M[_], Var[_]](ref: Rule.Ref[Var])(implicit P: Propagation[M, Var], M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
-    ContU(f => P.observe(ref).by(r => {
-      import scalaz.syntax.traverse._
-      val now = r.value.phosphorylations.iterator.map(p => P.cell(Antichain(p)).flatMap(f)).toList.sequence_
-      val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
-      (Some(now), Some(onChange))
-    }))
-
   implicit def showInstance[Var[_]]: Show[Rule[Var]] = new Show[Rule[Var]] {
     override def shows(r: Rule[Var]): String = r.toString
+  }
+
+  trait Ops[M[_], Var[_]] {
+    implicit val Propagation: Propagation[M, Var]
+
+    import Propagation._
+
+    def linksAgentToC(ref: Rule.Ref[Var])(p: Protein)(implicit M: Monad[M]): ContU[M, Binding.Ref[Var]] =
+      ContU(f => observe(ref).by(r => {
+        import scalaz.syntax.traverse._
+        val now = r.value.linksAgentTo(p).iterator.map(b => cell(Antichain(b)).flatMap(f)).toList.sequence_
+        val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
+        (Some(now), Some(onChange))
+      }))
+
+    def phosphorylationsC(ref: Rule.Ref[Var])(implicit M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
+      ContU(f => observe(ref).by(r => {
+        import scalaz.syntax.traverse._
+        val now = r.value.phosphorylations.iterator.map(p => cell(Antichain(p)).flatMap(f)).toList.sequence_
+        val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
+        (Some(now), Some(onChange))
+      }))
   }
 }

@@ -2,7 +2,7 @@ package proteinrefinery
 
 import nutcracker.util.EqualK
 import nutcracker.{Defer, IncSets, Propagation}
-import proteinrefinery.lib.{AgentsPattern, Assoc, NegativeInfluenceOnAssociation, NegativeInfluenceOnPhosphorylation, NegativeInfluenceOnRule, Nuggets, PhosphoTarget, Phosphorylation, PositiveInfluenceOnKinaseActivity, PositiveInfluenceOnPhosphorylatedStateSearch, PositiveInfluenceOnPhosphorylation, PositiveInfluenceOnRule, PositiveInfluenceOnState, Syntax}
+import proteinrefinery.lib.{AgentsPattern, Assoc, NegativeInfluenceOnAssociation, NegativeInfluenceOnPhosphorylation, NegativeInfluenceOnRule, Nuggets, PhosphoTarget, Phosphorylation, PositiveInfluenceOnKinaseActivity, PositiveInfluenceOnPhosphorylatedStateSearch, PositiveInfluenceOnPhosphorylation, PositiveInfluenceOnRule, PositiveInfluenceOnState, Rule, Syntax}
 import proteinrefinery.util.Tracking
 
 import scala.language.higherKinds
@@ -14,6 +14,7 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
   Phosphorylation.Search[M, Ref] with
   PhosphoTarget.Ops[M, Ref] with
   AgentsPattern.Ops[M, Ref] with
+  Rule.Ops[M, Ref] with
   PositiveInfluenceOnRule.Search[M, Ref] with
   PositiveInfluenceOnState.Search[M, Ref] with
   PositiveInfluenceOnPhosphorylatedStateSearch[M, Ref] with
@@ -32,8 +33,9 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
 
   def Nuggets: Nuggets[M, Ref] = this
   def AssocSearch: lib.Assoc.Search[M, Ref] = this
-  def PhosphoTargetOps: lib.PhosphoTarget.Ops[M,Ref] = this
-  def AgentsPatternOps: lib.AgentsPattern.Ops[M,Ref] = this
+  def PhosphoTargetOps: lib.PhosphoTarget.Ops[M, Ref] = this
+  def AgentsPatternOps: lib.AgentsPattern.Ops[M, Ref] = this
+  def RuleOps: lib.Rule.Ops[M, Ref] = this
   def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Ref] = this
   def NegativeInfluenceOnRuleSearch: NegativeInfluenceOnRule.Search[M, Ref] = this
   def IncSets: IncSets[M, Ref] = new IncSets[M, Ref]()(P)
