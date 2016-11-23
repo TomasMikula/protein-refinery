@@ -189,6 +189,8 @@ object Rule {
   trait Ops[M[_], Var[_]] {
     implicit val Propagation: Propagation[M, Var]
 
+    def Nuggets: Nuggets[M, Var]
+
     import Propagation._
 
     def linksAgentToC(ref: Rule.Ref[Var])(p: Protein)(implicit M: Monad[M]): ContU[M, Binding.Ref[Var]] =

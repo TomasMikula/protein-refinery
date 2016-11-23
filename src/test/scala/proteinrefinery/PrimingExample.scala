@@ -1,6 +1,7 @@
 package proteinrefinery
 
-import nutcracker._
+import nutcracker.{DRef, IncSet}
+import nutcracker.ops._
 import nutcracker.util.ContU
 import org.scalatest.FunSuite
 import proteinrefinery.util.Unification.Syntax._

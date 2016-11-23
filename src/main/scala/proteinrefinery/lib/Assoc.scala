@@ -1,7 +1,8 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker._
+import nutcracker.{Antichain, IncSet}
+import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, IsEqual}
 import proteinrefinery.Cost
 

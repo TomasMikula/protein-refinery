@@ -1,7 +1,9 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker._
+
+import nutcracker.{Antichain, IncSet, Propagation}
+import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 
 import scalaz.{Monad, Show}
