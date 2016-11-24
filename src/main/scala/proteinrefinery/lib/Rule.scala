@@ -2,11 +2,12 @@ package proteinrefinery.lib
 
 import nutcracker.{Antichain, Dom, Promise, Propagation, Trigger}
 import nutcracker.Dom.Status
+import nutcracker.ops._
 import nutcracker.syntax.dom._
 import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
-import proteinrefinery.util.Unification
+import proteinrefinery.util.{OnceTrigger, Unification}
 import proteinrefinery.util.Unification.Syntax._
 
 import scala.collection.mutable.ArrayBuffer
@@ -208,5 +209,10 @@ object Rule {
         val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
         (Some(now), Some(onChange))
       }))
+
+    def positiveInfluencersOfC(ref: Rule.Ref[Var]): ContU[M, Rule.Ref[Var]] = for {
+      r <- ref.asCont[M]
+      q <- Nuggets.rulesC(q => if(q.enables(r)) OnceTrigger.Fire(()) else OnceTrigger.Discard())
+    } yield q
   }
 }

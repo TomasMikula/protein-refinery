@@ -36,7 +36,7 @@ javacOptions ++= Seq(
 libraryDependencies ++= Seq(
   "com.github.tomasmikula" %% "nutcracker" % "0.2-SNAPSHOT",
   "org.typelevel" %% "algebra" % "0.5.1",
-  "org.scalaz" %% "scalaz-core" % "7.3.0-M6",
+  "org.scalaz" %% "scalaz-core" % "7.3.0-SNAPSHOT",
   "org.reactfx" % "reactfx" % "2.0-M5",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 )

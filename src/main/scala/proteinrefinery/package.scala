@@ -9,7 +9,7 @@ import proteinrefinery.util.{TrackLang, Tracker}
 import scalaz.~>
 import scalaz.Id._
 
-package object proteinrefinery extends ImplicitConversions with Ops {
+package object proteinrefinery extends ImplicitConversions {
   type DeferL[K[_], A] = DeferLang[Cost, K, A]
   type DeferS[K] = DeferStore[Cost, K]
 

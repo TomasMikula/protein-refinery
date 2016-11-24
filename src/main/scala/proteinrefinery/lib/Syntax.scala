@@ -27,6 +27,8 @@ trait Syntax[Ref[_]] {
 
     def @@ (s: SiteLabel): BindingPartnerPattern[Ref] =
       BindingPartnerPattern(p, LocalSiteId[Ref](s))
+
+    def phosphorylates(s: Protein): KinaseSubstratePair = KinaseSubstratePair(p, s)
   }
 
   implicit class ProteinPatternOps[Var[_]](p: ProteinPattern[Var]) {
@@ -39,6 +41,10 @@ trait Syntax[Ref[_]] {
 
     def binds(that: BindingPartnerPattern[Var])(implicit ev: EqualK[Var]): Binding[Var] = bp bind that
 
+  }
+
+  case class KinaseSubstratePair(kinase: Protein, substrate: Protein) {
+    def at[Var[_]](targetSite: SiteLabel): PhosphoTriple[Var] = PhosphoTriple(kinase, substrate, ISite[Var](targetSite))
   }
 
   implicit def symbolToProtein(sym: Symbol): Protein = Protein(sym)

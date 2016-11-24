@@ -3,6 +3,7 @@ package proteinrefinery.lib
 import scala.language.higherKinds
 import nutcracker.Antichain
 import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
+import nutcracker.util.ops._
 
 import scalaz.{Lens, Monad, Show, State, Store}
 import scalaz.syntax.equal._
@@ -49,6 +50,9 @@ object PhosphoTarget {
     } yield PhosphoTarget(Rule(lhs, List(action)), ki, si, targetSite)).eval(AgentsPattern.empty)
   }
 
+  def apply[Var[_]](pt: PhosphoTriple[Var]): PhosphoTarget[Var] =
+    apply(pt.kinase, pt.substrate, pt.targetSite)
+
   /** Lens to access the rule witnessing the PhosphoTarget.
     * Make sure that you only update the rule with a "compatible" rule, e.g. refined rule, so that
     * the kinase and substrate indices don't become invalid.
@@ -76,24 +80,12 @@ object PhosphoTarget {
     def AgentsPatternOps: AgentsPattern.Ops[M, Var]
 
     def define(kinase: Protein, substrate: Protein, targetSite: ISite[Var])(implicit M: Monad[M], E: EqualK[Var]): M[PhosphoTarget[Var]] = {
-      import AgentsPattern._
       import proteinrefinery.util.Identification.Syntax._
 
-      PhosphoTarget(kinase, substrate, targetSite)
-      val st = for {
-        ki <- addAgent(ProteinPattern[Var](kinase)).lift[M]
-        si <- addAgent(ProteinPattern[Var](substrate)).lift[M]
-        ai <- AgentsPatternOps.requireAssoc(ki, si, a => !(ISite(a.bindings.last.rightS) necessarilySame targetSite))
-        lhs <- State.get[AgentsPattern[Var]].lift[M]
-        action = Modify[Var](si, ProteinModifications.noModifications, ProteinModifications(targetSite -> SiteState("p")), Some(ki)) // XXX hardcoded phosphorylation as "p"
-      } yield PhosphoTarget(
-        Rule(lhs, List(action)),
-        ki,
-        si,
-        targetSite
-      )
-
-      st.eval(AgentsPattern.empty)
+      val pt = PhosphoTarget(kinase, substrate, targetSite)
+      pt.focus(witness[Var] andThen Rule.lhs[Var]).putsf(lhs => {
+        AgentsPatternOps.requireAssoc(pt.kinaseIndex, pt.substrateIndex, a => !(ISite(a.bindings.last.rightS) necessarilySame targetSite)).exec(lhs)
+      })
     }
   }
 

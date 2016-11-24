@@ -1,8 +1,9 @@
 package proteinrefinery
 
 import scala.language.higherKinds
-import nutcracker._
+import nutcracker.{Antichain, IncSet}
 import nutcracker.util.EqualK
+import nutcracker.util.ops._
 import proteinrefinery.lib.{AgentIndex, ISite}
 
 import scalaz.Id._
