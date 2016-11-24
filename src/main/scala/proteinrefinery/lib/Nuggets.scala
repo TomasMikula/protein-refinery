@@ -40,11 +40,11 @@ trait Nuggets[M[_], Ref[_]] {
 
   def addNuggets(
     rules: List[Rule[Ref]] = Nil,
-    phosphoSites: List[(Protein, Protein, SiteLabel)] = Nil
+    phosphoSites: List[PhosphoTriple[Ref]] = Nil
   ): M[Unit] = {
     import scalaz.syntax.traverse._
     val a = rules.traverse_(addRule(_) map (_ => ()))
-    val b = phosphoSites.traverse_(kss => addPhosphoTarget(kss._1, kss._2, kss._3))
+    val b = phosphoSites.traverse_(pt => addPhosphoTarget(pt))
     M.apply2(a, b)((_, _) => ())
   }
 
@@ -55,9 +55,9 @@ trait Nuggets[M[_], Ref[_]] {
     cell(Antichain(activeState)) >>= { track[λ[A[_] => Antichain[ProteinPattern[A]]]](_) }
 
   // derived programs for adding nuggets
-  def addPhosphoTarget(kinase: Protein, substrate: Protein, site: SiteLabel): M[Unit] =
+  def addPhosphoTarget(t: PhosphoTriple[Ref]): M[Unit] =
     for {
-      pt <- PhosphoTargetOps.define(kinase, substrate, ISite(site))
+      pt <- PhosphoTargetOps.define(t)
       _ <- addRule(pt.witness)
     } yield ()
 

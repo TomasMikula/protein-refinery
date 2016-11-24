@@ -6,7 +6,7 @@ import nutcracker.util.CoproductK.:++:
 import nutcracker.util.FreeK
 import nutcracker.{Antichain, DRef, Diff, Dom, IncSet, Propagation, PropagationLang}
 import org.reactfx.EventStreams
-import proteinrefinery.lib.{Binding, PhosphoTarget, Protein, ProteinPattern, SiteLabel}
+import proteinrefinery.lib.{Binding, ISite, PhosphoTarget, PhosphoTriple, Protein, ProteinPattern, SiteLabel}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.UIUpdateLang._
@@ -63,7 +63,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   }
 
   private def addFactPhosSite(k: Protein, s: Protein, ss: SiteLabel): Prg[Unit] =
-    Lib.addPhosphoTarget(k, s, ss) >> newFactF(FactPhosTarget, (k, s, ss))
+    Lib.addPhosphoTarget(PhosphoTriple(k, s, ISite(ss))) >> newFactF(FactPhosTarget, (k, s, ss))
 
   private def observeGoal[A](desc: String, ref: DRef[IncSet[DRef[A]]])(implicit t: GoalType[A], dom: Dom[A], show: Show[A]): Prg[Unit] =
     observe(ref).by(d => {

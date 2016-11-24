@@ -4,7 +4,7 @@ import scala.language.higherKinds
 import nutcracker.{Antichain, IncSet}
 import nutcracker.util.EqualK
 import nutcracker.util.ops._
-import proteinrefinery.lib.{AgentIndex, ISite}
+import proteinrefinery.lib.{AgentIndex, ISite, PhosphoTriple}
 
 import scalaz.Id._
 import scalaz.syntax.monad._
@@ -28,12 +28,12 @@ class Tests extends TestSuite {
     )
   }
 
-  def phosTargets[Ref[_]]: List[(lib.Protein, lib.Protein, lib.SiteLabel)] = {
+  def phosTargets[Ref[_]]: List[PhosphoTriple[Ref]] = {
     val syntax = lib.Syntax[Ref]
     import syntax._
 
-    List[(lib.Protein, lib.Protein, lib.SiteLabel)](
-      ('C, 'B, 's)
+    List[PhosphoTriple[Ref]](
+      'C phosphorylates 'B at 's
     )
   }
 

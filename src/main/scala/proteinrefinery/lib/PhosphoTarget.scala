@@ -87,6 +87,9 @@ object PhosphoTarget {
         AgentsPatternOps.requireAssoc(pt.kinaseIndex, pt.substrateIndex, a => !(ISite(a.bindings.last.rightS) necessarilySame targetSite)).exec(lhs)
       })
     }
+
+    def define(pt: PhosphoTriple[Var])(implicit M: Monad[M], E: EqualK[Var]): M[PhosphoTarget[Var]] =
+      define(pt.kinase, pt.substrate, pt.targetSite)
   }
 
 }

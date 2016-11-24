@@ -52,6 +52,7 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
   type Binding = lib.Binding[Ref]
   type CompetitiveBinding = lib.CompetitiveBinding[Ref]
   type Assoc = lib.Assoc[Ref]
+  type PhosphoTriple = lib.PhosphoTriple[Ref]
   type Phosphorylation = lib.Phosphorylation[Ref]
   type NegativeInfluenceOnAssociation = lib.NegativeInfluenceOnAssociation[Ref]
   type NegativeInfluenceOnPhosphorylation = lib.NegativeInfluenceOnPhosphorylation[Ref]

@@ -19,11 +19,11 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
     /* 05 */ (GSK @@ 'a) binds (β_Cat('S37~"p") @@ 'e)
   )
 
-  val phosphoTargets = List[(Protein, Protein, SiteLabel)](
-    (CK1, β_Cat, 'S45),
-    (GSK, β_Cat, 'T41),
-    (GSK, β_Cat, 'S37),
-    (GSK, β_Cat, 'S33)
+  val phosphoTargets = List[PhosphoTriple](
+    CK1 phosphorylates β_Cat at 'S45,
+    GSK phosphorylates β_Cat at 'T41,
+    GSK phosphorylates β_Cat at 'S37,
+    GSK phosphorylates β_Cat at 'S33
   )
 
   val initialNuggets: Prg[Unit] = Lib.addNuggets(

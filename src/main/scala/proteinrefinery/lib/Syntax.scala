@@ -13,6 +13,8 @@ trait Syntax[Ref[_]] {
     def apply(ss: (SiteLabel, SiteState)*): ProteinPattern[Ref] =
       ProteinPattern(Protein(sym), ProteinModifications.from(ss:_*))
 
+    def phosphorylates(s: Protein): KinaseSubstratePair = Protein(sym).phosphorylates(s)
+
     def @@ (s: SiteLabel): BindingPartnerPattern[Ref] =
       BindingPartnerPattern(Protein(sym), LocalSiteId[Ref](s))
 
