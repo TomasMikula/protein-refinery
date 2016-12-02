@@ -210,7 +210,7 @@ object Rule {
         (Some(now), Some(onChange))
       }))
 
-    def positiveInfluencersOfC(ref: Rule.Ref[Var]): ContU[M, Rule.Ref[Var]] = for {
+    def enablersOfC(ref: Rule.Ref[Var]): ContU[M, Rule.Ref[Var]] = for {
       r <- ref.asCont[M]
       q <- Nuggets.rulesC(q => if(q.enables(r)) OnceTrigger.Fire(()) else OnceTrigger.Discard())
     } yield q
