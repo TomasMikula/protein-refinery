@@ -4,11 +4,11 @@ import scala.language.higherKinds
 import nutcracker.Promise.Completed
 import nutcracker.{Dom, Join}
 import nutcracker.syntax.dom._
-import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
+import nutcracker.util.{DeepEqualK, EqualK, IsEqual, ShowK}
 import nutcracker.util.EqualK._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
-import proteinrefinery.util.{AutoUnificationBag, ShowK, Unification}
+import proteinrefinery.util.{AutoUnificationBag, Unification}
 
 import scalaz.{Equal, Show}
 import scalaz.syntax.equal._

@@ -34,7 +34,7 @@ package object proteinrefinery extends ImplicitConversions {
   def initialState[K](tr: Tracker[K]): State[K] = tr :*: PropagationStore.empty[K] :**: (DeferStore.empty[Cost, K]: DeferS[K])
   def emptyState[K]: State[K] = initialState(Tracker.empty[K])
 
-  def refinery(): Refinery = new Refinery {
+  def refinery(): Refinery { type M[A] = Prg[A]; type Ref[A] = DRef[A] } = new Refinery {
     type M[A] = Prg[A]
     type Ref[A] = DRef[A]
 

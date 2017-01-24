@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import nutcracker.util.{ContU, EqualK}
 import nutcracker.util.ContU._
-import nutcracker.{Antichain, DSet, IncSet, Propagation}
+import nutcracker.{Antichain, IncSet, Propagation}
 import proteinrefinery.util.DomType.AntichainDomType
 import proteinrefinery.util.OnceTrigger.Fire
 import proteinrefinery.util.{OnceTrigger, Tracking}
@@ -48,6 +48,15 @@ trait Nuggets[M[_], Ref[_]] {
     M.apply2(a, b)((_, _) => ())
   }
 
+  def addBinding(bnd: BindingData[Ref]): M[Binding[Ref]] =
+    addRule(bnd.witness) map (ref => Binding(ref, bnd.link))
+
+  def addBindings(bindings: List[BindingData[Ref]]): M[List[Binding[Ref]]] = {
+    import scalaz.syntax.traverse._
+
+    bindings traverse addBinding
+  }
+
   // basic programs for adding nuggets
   def addRule(r: Rule[Ref]): M[Rule.Ref[Ref]] =
     cell(Antichain(r)) >>! { track[λ[A[_] => Antichain[Rule[A]]]](_) }
@@ -78,12 +87,12 @@ trait Nuggets[M[_], Ref[_]] {
 
   // derived queries
 
-  def bindingsOf(p: Protein)(f: Binding.Ref[Ref] => M[Unit]): M[Unit] =
+  def bindingsOf(p: Protein)(f: Binding[Ref] => M[Unit]): M[Unit] =
     rules(_ => OnceTrigger.Fire(ruleRef => RuleOps.linksAgentToC(ruleRef)(p).apply(f)))
-  def bindingsOfC(p: Protein): ContU[M, Binding.Ref[Ref]] =
+  def bindingsOfC(p: Protein): ContU[M, Binding[Ref]] =
     ContU(f => bindingsOf(p)(f))
-  def bindingsOfS(p: Protein): M[Ref[DSet[Ref, Antichain[Binding[Ref]]]]] =
-    DSet.collect(bindingsOfC(p))
+  def bindingsOfS(p: Protein): M[Ref[IncSet[Binding[Ref]]]] =
+    IncSets.collect(bindingsOfC(p))
 
   def phosphoTargets(f: PhosphoTarget.Ref[Ref] => M[Unit]): M[Unit] =
     rules(_ => OnceTrigger.Fire(ruleRef => RuleOps.phosphorylationsC(ruleRef).apply(f)))

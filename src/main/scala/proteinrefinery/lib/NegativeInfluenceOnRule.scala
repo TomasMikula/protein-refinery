@@ -34,8 +34,7 @@ object NegativeInfluenceOnRule {
       // is via negative influence on one of the associations
       for {
         aRef <- AgentsPatternOps.forEachAssoc(r.lhs)
-        naRef <- NegativeInfluenceOnAssociationSearch.negativeInfluenceOnAssociationC(p, aRef)
-        na <- naRef.asCont[M]
+        na <- NegativeInfluenceOnAssociationSearch.negativeInfluenceOnAssociationC(p, aRef)
         nr = byNegativeInfluenceOnAssociation(na)
         nrRef <- Antichain.cellC(nr)
       } yield nrRef

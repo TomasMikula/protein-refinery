@@ -3,7 +3,7 @@ package proteinrefinery.lib
 import scala.language.higherKinds
 import nutcracker.{Antichain, Dom, IncSet, Propagation}
 import nutcracker.syntax.dom._
-import nutcracker.util.{ContU, DeepEqual, DeepEqualK, EqualK, IsEqual}
+import nutcracker.util.{ContU, DeepEqual, DeepEqualK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.util.{Unification, mapUnion}
 import proteinrefinery.util.Unification.Syntax._
@@ -13,6 +13,7 @@ import scalaz.Id.Id
 import scalaz.{Applicative, Equal, Monad, State, StateT}
 import scalaz.std.tuple._
 import scalaz.syntax.equal._
+import scalaz.syntax.monad._
 
 case class AgentsPattern[Ref[_]](
   agents: Vector[Option[ProteinPattern[Ref]]],
@@ -93,7 +94,10 @@ case class AgentsPattern[Ref[_]](
 
   def partition(that: AgentsPattern[Ref]): (Option[AgentsPattern[Ref]], Option[AgentsPattern[Ref]], Option[AgentsPattern[Ref]]) = ???
 
-  override def toString: String = {
+  override def toString: String =
+    show[FreeObjectOutput[String, Ref, ?]].showShallow(ShowK.fromToString[Ref])
+
+  def show[F[_]](implicit F: MonadObjectOutput[F, String, Ref]): F[Unit] = {
     val bondsByAgent = bonds.iterator.zipWithIndex.mapFilter({ case (l, i) => l.map((_, i)) }).flatMap[(AgentIndex, (LocalSiteId[Ref], Either[Unbound.type , LinkId]))]{
       case ((pi, ps, qi, qs), linkIdx) =>
         Iterator((pi, (ps, Right(LinkId(linkIdx)))), (qi, (qs, Right(LinkId(linkIdx)))))
@@ -104,8 +108,8 @@ case class AgentsPattern[Ref[_]](
     val linksByAgent = (bondsByAgent ++ nonBondsByAgent).toMultiMap[AgentIndex, (LocalSiteId[Ref], Either[Unbound.type , LinkId])]
 
     agents.iterator.zipWithIndex.mapFilter({ case (pp, i) => pp.map(pp =>
-      pp.toString(linksByAgent.getOrElse(AgentIndex(i), Nil).toMap)
-    )}).mkString(", ")
+      pp.showWithBonds[F](linksByAgent.getOrElse(AgentIndex(i), Nil).toMap)
+    )}).intersperse(F.write(", ")).foldRight[F[Unit]](F.point(()))((fu, acc) => fu >> acc)
   }
 
   private def reifyBond(b: (AgentIndex, LocalSiteId[Ref], AgentIndex, LocalSiteId[Ref])): (ProteinPattern[Ref], LocalSiteId[Ref], ProteinPattern[Ref], LocalSiteId[Ref]) = b match {
@@ -251,7 +255,7 @@ object AgentsPattern {
     def IncSets: nutcracker.IncSets[M, Ref]
     def AssocSearch: Assoc.Search[M, Ref]
 
-    def requireAssoc(i: AgentIndex, j: AgentIndex, predicate: Assoc[Ref] => Boolean)(implicit M: Monad[M]): StateT[M, AgentsPattern[Ref], AssocId] = {
+    def requireAssoc(i: AgentIndex, j: AgentIndex, predicate: Assoc[Ref] => Boolean)(implicit M: Monad[M], ev: EqualK[Ref]): StateT[M, AgentsPattern[Ref], AssocId] = {
       StateT(ap => {
         val assocC = Antichain.filterMap(AssocSearch.assocC(ap(i).protein, ap(j).protein)) { a =>
           if (predicate(a)) Some(a)
@@ -311,7 +315,9 @@ object Unbound {
 }
 
 sealed abstract class Action[Ref[_]]
-case class Link[Ref[_]](i1: AgentIndex, s1: LocalSiteId[Ref], i2: AgentIndex, s2: LocalSiteId[Ref]) extends Action[Ref]
+case class Link[Ref[_]](i1: AgentIndex, s1: LocalSiteId[Ref], i2: AgentIndex, s2: LocalSiteId[Ref]) extends Action[Ref] {
+  def flip: Link[Ref] = Link(i2, s2, i1, s1)
+}
 case class Unlink[Ref[_]](id: LinkId) extends Action[Ref]
 case class Modify[Ref[_]](i: AgentIndex, rm: ProteinModifications[Ref], add: ProteinModifications[Ref], enzyme: Option[AgentIndex]) extends Action[Ref]
 case class Replace[Ref[_]](from: AgentIndex, to: AgentIndex, insert: List[ProteinPattern[Ref]]) extends Action[Ref]

@@ -4,7 +4,7 @@ import nutcracker.{Antichain, Dom, Promise, Propagation, Trigger}
 import nutcracker.Dom.Status
 import nutcracker.ops._
 import nutcracker.syntax.dom._
-import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
+import nutcracker.util.{ContU, DeepEqualK, DeepShowK, Desc, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{OnceTrigger, Unification}
@@ -59,14 +59,14 @@ final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref
     buf.toSet
   }
 
-  def linksAgentTo(p: Protein): Set[Binding[Ref]] = {
-    val buf = ArrayBuffer[Binding[Ref]]()
+  def linksAgentTo(p: Protein): Set[Link[Ref]] = {
+    val buf = ArrayBuffer[Link[Ref]]()
     actions.foldLeft(())({
-      case ((), Link(i, si, j, sj)) =>
+      case ((), l @ Link(i, si, j, sj)) =>
         if(lhs(i).protein == p)
-          buf += Binding(this, i, j, si, sj)
+          buf += l
         if(lhs(j).protein == p)
-          buf += Binding(this, j, i, sj, si)
+          buf += l.flip
         ()
       case _ => ()
     })
@@ -128,7 +128,10 @@ final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref
   // TODO: should return a list of explanations instead of Boolean
   def enables(that: Rule[Ref]): Boolean = enables(that.lhs)
 
-  override def toString: String = s"$lhs << $actions"
+  override def toString: String = show[FreeObjectOutput[String, Ref, ?]].appendTo(new StringBuilder, ShowK.fromToString).result()
+
+  def show[F[_]](implicit F: MonadObjectOutput[F, String, Ref]): F[Unit] =
+    lhs.show[F] >> F.write(s" << $actions") // TODO: implement show for Action
 }
 
 object Rule {
@@ -147,6 +150,10 @@ object Rule {
   implicit val deepEqualKInstance: DeepEqualK[Rule, Rule] = new DeepEqualK[Rule, Rule] {
     def equal[Ptr1[_], Ptr2[_]](r1: Rule[Ptr1], r2: Rule[Ptr2]): IsEqual[Ptr1, Ptr2] =
       IsEqual(r1.lhs, r2.lhs) && IsEqual(r1.actions, r2.actions)
+  }
+
+  implicit val deepShowKInstance: DeepShowK[Rule] = new DeepShowK[Rule] {
+    def show[Ptr[_]](a: Rule[Ptr]): Desc[Ptr] = a.show[FreeObjectOutput[String, Ptr, ?]]
   }
 
   implicit def domInstance[Var[_]](implicit ev: EqualK[Var]): Dom.Aux[Rule[Var], Update[Var], Delta[Var]] = new Dom[Rule[Var]] {
@@ -191,13 +198,14 @@ object Rule {
     implicit val Propagation: Propagation[M, Var]
 
     def Nuggets: Nuggets[M, Var]
+    def AgentsPatternOps: AgentsPattern.Ops[M, Var]
 
     import Propagation._
 
-    def linksAgentToC(ref: Rule.Ref[Var])(p: Protein)(implicit M: Monad[M]): ContU[M, Binding.Ref[Var]] =
+    def linksAgentToC(ref: Rule.Ref[Var])(p: Protein)(implicit M: Monad[M]): ContU[M, Binding[Var]] =
       ContU(f => observe(ref).by(r => {
         import scalaz.syntax.traverse._
-        val now = r.value.linksAgentTo(p).iterator.map(b => cell(Antichain(b)).flatMap(f)).toList.sequence_
+        val now = r.value.linksAgentTo(p).iterator.map(l => f(Binding(ref, l))).toList.sequence_
         val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
         (Some(now), Some(onChange))
       }))
@@ -214,5 +222,8 @@ object Rule {
       r <- ref.asCont[M]
       q <- Nuggets.rulesC(q => if(q.enables(r)) OnceTrigger.Fire(()) else OnceTrigger.Discard())
     } yield q
+
+    def associationsOfC(ref: Rule.Ref[Var])(implicit M: Monad[M]): ContU[M, Assoc.Ref[Var]] =
+      ref.asCont[M] flatMap { r => AgentsPatternOps.forEachAssoc(r.lhs) }
   }
 }

@@ -11,8 +11,8 @@ sealed abstract class TrackLang[K[_], A] {
 }
 
 object TrackLang {
-  final case class Track[K[_], D[_[_]]](t: DomType[D], ref: DRef[D[DRef]]) extends TrackLang[K, Unit] { type Tracked[Ref[_]] = D[Ref] }
-  final case class Handle[K[_], D[_[_]]](t: DomType[D], f: DRef[D[DRef]] => K[Unit]) extends TrackLang[K, Unit] { type Tracked[Ref[_]] = D[Ref] }
+  case class Track[K[_], D[_[_]]](t: DomType[D], ref: DRef[D[DRef]]) extends TrackLang[K, Unit] { type Tracked[Ref[_]] = D[Ref] }
+  case class Handle[K[_], D[_[_]]](t: DomType[D], f: DRef[D[DRef]] => K[Unit]) extends TrackLang[K, Unit] { type Tracked[Ref[_]] = D[Ref] }
 
   def track[K[_], D[_[_]]](t: DomType[D], ref: DRef[D[DRef]]): TrackLang[K, Unit] = Track(t, ref)
   def handle[K[_], D[_[_]]](t: DomType[D], f: DRef[D[DRef]] => K[Unit]): TrackLang[K, Unit] = Handle(t, f)

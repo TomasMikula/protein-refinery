@@ -14,7 +14,7 @@ class PrimingExample extends FunSuite {
   val CK1    = Protein("CK1")
   val GSK    = Protein("GSK")
 
-  val bindings: List[Binding] = List[Binding](
+  val bindings: List[BindingData] = List[BindingData](
     (β_TrCP @@ 'x) binds (β_Cat('S33~"p", 'S37~"p") @@ 'y),
     (β_TrCP @@ 'x) binds (β_Cat('S33~"p", 'S37~"p", 'T41~"p", 'S45~"p") @@ 'y),
     (CK1 @@ 'a) binds (β_Cat @@ 'b),
@@ -43,9 +43,8 @@ class PrimingExample extends FunSuite {
     (d1, r, d2) = r1.value unify r2.value
     diff <- if(d2.isEmpty && d1.isDefined) ContU.point[Prg, Rule.Delta](d1.get) else ContU.noop[Prg, Rule.Delta]
     diffPatterns = breakDown(r1.value.lhs, diff, r2.value.lhs)
-    searches = diffPatterns.map(pp => Lib.positiveInfluenceOnRuleC(pp, r1.value))
-    inflRef <- ContU.sequence(searches)
-    infl <- inflRef.asCont[Prg]
+    searches = diffPatterns.map(pp => Lib.positiveInfluenceOnRuleC(pp, ref1))
+    infl <- ContU.sequence(searches)
   } yield (r2.value, infl)
 
   val watchForExplanationsViaPositiveInfluence: Prg[DRef[IncSet[(Rule, PositiveInfluenceOnRule)]]] =

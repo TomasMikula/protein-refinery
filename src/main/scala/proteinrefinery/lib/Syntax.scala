@@ -41,7 +41,7 @@ trait Syntax[Ref[_]] {
 
   implicit class BindingPartnerPatternOps[Var[_]](bp: BindingPartnerPattern[Var]) {
 
-    def binds(that: BindingPartnerPattern[Var])(implicit ev: EqualK[Var]): Binding[Var] = bp bind that
+    def binds(that: BindingPartnerPattern[Var])(implicit ev: EqualK[Var]): BindingData[Var] = bp bind that
 
   }
 

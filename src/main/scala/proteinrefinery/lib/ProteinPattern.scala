@@ -4,15 +4,16 @@ import scala.language.higherKinds
 import nutcracker.Promise.{Completed, Conflict, Empty}
 import nutcracker.{Antichain, Dom, Promise}
 import nutcracker.syntax.dom._
-import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
+import nutcracker.util.{DeepEqualK, DeepShowK, Desc, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
-import proteinrefinery.lib.SiteLabel._
 import proteinrefinery.lib.SiteState.SiteState
-import proteinrefinery.util.{Identification, ShowK, Unification}
+import proteinrefinery.util.{Identification, Unification}
+import proteinrefinery.util.syntax._
 
-import scalaz.{Semigroup, Show, \&/}
+import scalaz.{Semigroup, \&/}
 import scalaz.std.either._
 import scalaz.std.list._
+import scalaz.syntax.monad._
 import scalaz.syntax.show._
 
 case class ProteinPattern[Ref[_]](protein: Protein, mods: ProteinModifications[Ref]) {
@@ -30,15 +31,13 @@ case class ProteinPattern[Ref[_]](protein: Protein, mods: ProteinModifications[R
 
   def mentionedSites: Set[LocalSiteId[Ref]] = mods.mentionedSites
 
-  override def toString: String = toString(Map())
+  override def toString: String = show.showShallow(ShowK.fromToString)
 
-  def toString(bonds: Map[LocalSiteId[Ref], Either[Unbound.type, LinkId]]): String = {
-    implicit val ev: ShowK[Ref] = new ShowK[Ref] {
-      def shows[A](fa: Ref[A]): String = fa.toString
-    }
+  def show: Desc[Ref] = showWithBonds[FreeObjectOutput[String, Ref, ?]](Map())
 
+  def showWithBonds[M[_]](bonds: Map[LocalSiteId[Ref], Either[Unbound.type, LinkId]])(implicit M: MonadObjectOutput[M, String, Ref]): M[Unit] = {
     type LinkDesc = Either[Unbound.type, LinkId]
-    type LinkDom  = Promise[LinkDesc]
+    type LinkDom = Promise[LinkDesc]
     type SiteAttr = (LinkDom, SiteState)
 
     val bonds1: List[(ISite[Ref], SiteAttr)] =
@@ -62,22 +61,15 @@ case class ProteinPattern[Ref[_]](protein: Protein, mods: ProteinModifications[R
 
     val bag = mods1.addAll(bonds1)
 
-    def siteStr(s: (ISite[Ref], SiteAttr)): String = {
-      val (ISite(site, refs), (link, state)) = s
-      val siteDesc = site match {
-        case Completed(label) => label.shows
-        case Empty => refs.headOption match {
-          case Some(ref) => ev.shows(ref)
-          case None => "???"
-        }
-        case Conflict => "⊥"
-      }
-      val stateS = state match {
+    def siteStr(s: (ISite[Ref], SiteAttr)): M[Unit] = {
+      val (site, (link, state)) = s
+      val siteDesc = site.show[M]
+      val stateDesc = state match {
         case Empty => ""
-        case Completed(label) => "~" + label.value
+        case Completed(label) => "~" + label.shows
         case Conflict => "~⊥"
       }
-      val linkS = link match {
+      val linkStr = link match {
         case Empty => "?"
         case Completed(lnk) => lnk match {
           case Left(_) => ""
@@ -85,12 +77,21 @@ case class ProteinPattern[Ref[_]](protein: Protein, mods: ProteinModifications[R
         }
         case Conflict => "!⊥"
       }
-      siteDesc + stateS + linkS
+      for {
+        _ <- siteDesc
+        _ <- M.write(stateDesc)
+        u <- M.write(linkStr)
+      } yield u
     }
 
-    val str = bag.list.map(siteStr).mkString(",")
+    val sites = bag.list.iterator.map(siteStr).intersperse(M.write(","))
 
-    s"${protein}($str)"
+    for {
+      _ <- M.write(protein.shows)
+      _ <- M.write("(")
+      _ <- sites.foldRight(M.point(()))((m, acc) => m >> acc)
+      u <- M.write(")")
+    } yield u
   }
 }
 
@@ -150,7 +151,12 @@ object ProteinPattern {
         IsEqual[Ptr1, Ptr2].equal(pp1.protein, pp2.protein) && IsEqual(pp1.mods, pp2.mods)
     }
 
-  implicit def showInstance[Var[_]]: Show[ProteinPattern[Var]] = new Show[ProteinPattern[Var]] {
-    override def shows(pp: ProteinPattern[Var]) = pp.toString
-  }
+  implicit def deepShowKInstance: DeepShowK[ProteinPattern] =
+    new DeepShowK[ProteinPattern] {
+      def show[Ptr[_]](pp: ProteinPattern[Ptr]): Desc[Ptr] = pp.show
+    }
+
+  //  implicit def showInstance[Var[_]](implicit ev: ShowK[Var]): Show[ProteinPattern[Var]] = new Show[ProteinPattern[Var]] {
+  //    override def shows(pp: ProteinPattern[Var]) = pp.show
+  //  }
 }

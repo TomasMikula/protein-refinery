@@ -2,7 +2,7 @@ package proteinrefinery.util
 
 import scala.annotation.tailrec
 import scala.collection.mutable.{Map => MMap}
-import scalaz.\&/
+import scalaz.{Semigroup, \&/}
 
 package object syntax {
 
@@ -54,6 +54,42 @@ package object syntax {
         case Some(b) => Iterator.single(b)
         case None => Iterator.empty
       })
+    }
+
+    def intersperse(a: A): Iterator[A] = new Iterator[A] {
+      var nextIsSeparator: Boolean = false
+
+      def hasNext: Boolean = it.hasNext
+
+      def next(): A = {
+        if(nextIsSeparator) {
+          nextIsSeparator = false
+          a
+        } else {
+          nextIsSeparator = true
+          it.next()
+        }
+      }
+    }
+
+    def balancedReduce(implicit A: Semigroup[A]): Option[A] = {
+      @tailrec def append(l: List[A], lFactor: Int, a: A): List[A] = {
+        // |l| = lFactor * |a|
+        //   where
+        //     |l| is the total number of elements accumulated in (all elements of) l,
+        //     |a| number of elements accumulated in a
+        if (lFactor % 2 == 0) a :: l
+        else append(l.tail, lFactor / 2, A.append(l.head, a))
+      }
+
+      var l = List[A]()
+      var n = 0 // number of elements accumulated in l
+      while(it.hasNext) {
+        l = append(l, n, it.next)
+        n = n + 1
+      }
+
+      l.reduceLeftOption((acc, a) => A.append(a, acc))
     }
   }
 

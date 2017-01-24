@@ -1,21 +1,16 @@
 package proteinrefinery
 
 import scala.language.higherKinds
-import nutcracker.{Antichain, IncSet}
 import nutcracker.util.EqualK
-import nutcracker.util.ops._
-import proteinrefinery.lib.{AgentIndex, ISite, PhosphoTriple}
-
-import scalaz.Id._
-import scalaz.syntax.monad._
+import proteinrefinery.lib.{PhosphoTriple}
 
 class Tests extends TestSuite {
 
-  def bindings[Ref[_]](implicit ev: EqualK[Ref]): List[lib.Binding[Ref]] = {
+  def bindings[Ref[_]](implicit ev: EqualK[Ref]): List[lib.BindingData[Ref]] = {
     val syntax = lib.Syntax[Ref]
     import syntax._
 
-    List[lib.Binding[Ref]](
+    List[lib.BindingData[Ref]](
       /* 00 */ ('A @@ 'b) binds ('B @@ 'v),
       /* 01 */ ('A('z~"p") @@ 'c) binds ('C @@ 'a),
       /* 02 */ ('A @@ 'e) binds ('E @@ 'a),
@@ -37,13 +32,18 @@ class Tests extends TestSuite {
     )
   }
 
-  def initialNuggets(implicit r: Refinery): r.M[Unit] = {
+  def initPhospho(implicit r: Refinery): r.M[Unit] = {
     import r.lib._
 
     addNuggets(
-      rules = bindings[r.Ref](RefEquality).map(_.witness),
       phosphoSites = phosTargets
     )
+  }
+
+  def initBindings(implicit r: Refinery): r.M[List[r.lib.Binding]] = {
+    import r.lib._
+
+    addBindings(bindings[r.Ref](RefEquality))
   }
 
   test("Phosphorylation search") {
@@ -53,23 +53,44 @@ class Tests extends TestSuite {
 
     val problem = phosphorylations('C, 'B)
 
-    interpret(initialNuggets)
+    val bnds = interpret(initPhospho >> initBindings)
 
-    val solutions = interpret(problem)
+    val solutions = fetch(interpret(problem))
 
-    val expected: Id[IncSet[Id[lib.PhosphoTarget[Id]]]] = {
-      val bnds = bindings[Id]
-      IncSet(
-        lib.PhosphoTarget('C, 'B,  ISite('s)).focus(lib.PhosphoTarget.witness[Id] >=> lib.Rule.lhs[Id]).puts(lhs => {
-          lhs.addAssoc(AgentIndex(0), AgentIndex(1), IncSet(
-            Antichain(lib.Assoc(List(bnds(1).flip, bnds(0)))),          // linter:ignore UseHeadNotApply
-            Antichain(lib.Assoc(List(bnds(3), bnds(2).flip, bnds(0)))), // linter:ignore UseHeadNotApply
-            Antichain(lib.Assoc(List(bnds(8).flip, bnds(7), bnds(6).flip)))
-          ))._1
-        })
-      )
-    }
-    assertDeepEqual(expected)(solutions)
+    assertResult(1)(solutions.size)
+
+    val pt = fetch(solutions.head).value
+
+    assertEqual(Protein('C))(pt.kinase)
+    assertEqual(Protein('B))(pt.substrate)
+    assertEqual(ISite('s))(pt.targetSite)
+
+    val assocss = pt.witness.lhs.assocs
+
+    assertResult(1)(assocss.size)
+
+    val Some((i, j, asRef)) = assocss.head
+    val assocs = fetch(asRef).value.map(aRef => fetch(aRef).value)
+
+    assertDeepEqual(Set(
+      Assoc(List(bnds(1).flip, bnds(0))),          // linter:ignore UseHeadNotApply
+      Assoc(List(bnds(3), bnds(2).flip, bnds(0))), // linter:ignore UseHeadNotApply
+      Assoc(List(bnds(8).flip, bnds(7), bnds(6).flip))
+    ))(assocs)
+
+//    val expected: Id[IncSet[Id[lib.PhosphoTarget[Id]]]] = {
+//      val bnds = bindings[Id]
+//      IncSet(
+//        lib.PhosphoTarget('C, 'B,  ISite('s)).focus(lib.PhosphoTarget.witness[Id] >=> lib.Rule.lhs[Id]).puts(lhs => {
+//          lhs.addAssoc(AgentIndex(0), AgentIndex(1), IncSet(
+//            Antichain(lib.Assoc(List(bnds(1).flip, bnds(0)))),          // linter:ignore UseHeadNotApply
+//            Antichain(lib.Assoc(List(bnds(3), bnds(2).flip, bnds(0)))), // linter:ignore UseHeadNotApply
+//            Antichain(lib.Assoc(List(bnds(8).flip, bnds(7), bnds(6).flip)))
+//          ))._1
+//        })
+//      )
+//    }
+//    assertDeepEqual(expected)(solutions)
   }
 
   test("Negative influence on phosphorylation") {
@@ -83,7 +104,7 @@ class Tests extends TestSuite {
       niRef <- IncSets.relBind(phosRef)(negativeInfluenceOnPhosphorylation_r('D, _))
     } yield (phosRef, niRef)
 
-    interpret(initialNuggets)
+    val bnds = interpret(initPhospho >> initBindings)
     val (phossRef, nisRef) = interpret(problem)
 
     val phoss = fetch(phossRef)
@@ -94,7 +115,7 @@ class Tests extends TestSuite {
 
     assertEqual(Protein('C))(phos.kinase)
     assertEqual(Protein('B))(phos.substrate)
-    assertEqual(ISite[Ref]('s))(phos.targetSite)
+    assertEqual(ISite('s))(phos.targetSite)
 
     val paths = phos.witness.lhs.assocs
     assert(paths.size == 1)
@@ -104,14 +125,21 @@ class Tests extends TestSuite {
 
     assert(assocs.size == 3) // same 3 as in the previous test
 
-    val expected: Id[IncSet[Id[lib.NegativeInfluenceOnPhosphorylation[Id]]]] = {
-      val bnds = bindings[Id]
-      IncSet(
-        lib.NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(lib.CompetitiveBinding(bnds(3), bnds(4))),
-        lib.NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(lib.CompetitiveBinding(bnds(8).flip, bnds(5)))
-      )
-    }
+    val nis = fetch(nisRef).value.map(niRef => fetch(niRef).value)
 
-    assertDeepEqual(expected)(nisRef)
+    assertDeepEqual(Set(
+      lib.NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(lib.CompetitiveBinding(bnds(3), bnds(4))),
+      lib.NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(lib.CompetitiveBinding(bnds(8).flip, bnds(5)))
+    ))(nis)
+
+//    val expected: Id[IncSet[Id[lib.NegativeInfluenceOnPhosphorylation[Id]]]] = {
+//      val bnds = bindings[Id]
+//      IncSet(
+//        lib.NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(lib.CompetitiveBinding(bnds(3), bnds(4))),
+//        lib.NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(lib.CompetitiveBinding(bnds(8).flip, bnds(5)))
+//      )
+//    }
+//
+//    assertDeepEqualP(expected)(nisRef)
   }
 }

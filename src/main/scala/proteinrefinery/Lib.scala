@@ -2,7 +2,7 @@ package proteinrefinery
 
 import nutcracker.util.EqualK
 import nutcracker.{Defer, IncSets, Propagation}
-import proteinrefinery.lib.{AgentsPattern, Assoc, NegativeInfluenceOnAssociation, NegativeInfluenceOnPhosphorylation, NegativeInfluenceOnRule, Nuggets, PhosphoTarget, Phosphorylation, PositiveInfluenceOnKinaseActivity, PositiveInfluenceOnPhosphorylatedStateSearch, PositiveInfluenceOnPhosphorylation, PositiveInfluenceOnRule, PositiveInfluenceOnState, Rule, Syntax}
+import proteinrefinery.lib.{AgentsPattern, Assoc, NegativeInfluenceOnAssociation, NegativeInfluenceOnPhosphorylation, NegativeInfluenceOnRule, Nuggets, PhosphoTarget, Phosphorylation, PositiveInfluenceOfRuleOnRule, PositiveInfluenceOnKinaseActivity, PositiveInfluenceOnPhosphorylatedStateSearch, PositiveInfluenceOnRule, PositiveInfluenceOnState, Rule, Syntax}
 import proteinrefinery.util.Tracking
 
 import scala.language.higherKinds
@@ -16,10 +16,11 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
   AgentsPattern.Ops[M, Ref] with
   Rule.Ops[M, Ref] with
   PositiveInfluenceOnRule.Search[M, Ref] with
+  PositiveInfluenceOfRuleOnRule.Search[M, Ref] with
   PositiveInfluenceOnState.Search[M, Ref] with
   PositiveInfluenceOnPhosphorylatedStateSearch[M, Ref] with
   PositiveInfluenceOnKinaseActivity.Search[M, Ref] with
-  PositiveInfluenceOnPhosphorylation.Search[M, Ref] with
+//  PositiveInfluenceOnPhosphorylation.Search[M, Ref] with
   NegativeInfluenceOnAssociation.Search[M, Ref] with
   NegativeInfluenceOnPhosphorylation.Search[M, Ref] with
   NegativeInfluenceOnRule.Search[M, Ref] with
@@ -50,6 +51,7 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
   type AgentsPattern = lib.AgentsPattern[Ref]
   type Rule = lib.Rule[Ref]
   type Binding = lib.Binding[Ref]
+  type BindingData = lib.BindingData[Ref]
   type CompetitiveBinding = lib.CompetitiveBinding[Ref]
   type Assoc = lib.Assoc[Ref]
   type PhosphoTriple = lib.PhosphoTriple[Ref]
@@ -63,6 +65,14 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
   def SiteLabel(label: String): SiteLabel = lib.SiteLabel(label)
   object Site {
     def fromLabel(label: SiteLabel) = lib.Site.fromLabel(label)
+  }
+  object ISite {
+    def apply(site: lib.Site.Definite, refs: lib.Site.Ref[Ref]*): ISite = lib.ISite(site, refs:_*)
+    def apply(ref: lib.Site.Ref[Ref], refs: lib.Site.Ref[Ref]*): ISite = lib.ISite(ref, refs:_*)
+    def apply(s: lib.ProteinModifications.LocalSiteId[Ref]): ISite = s match {
+      case lib.ProteinModifications.DefiniteLabel(s) => ISite(s)
+      case lib.ProteinModifications.SiteRef(ref) => ISite(ref)
+    }
   }
   def SiteState(label: String): SiteState = lib.SiteState(label)
   def SiteWithState(label: SiteLabel, state: SiteState): SiteWithState = lib.SiteWithState(label, state)
@@ -84,6 +94,6 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
       lib.NegativeInfluenceOnPhosphorylation.byCompetitiveBinding(b)
   }
   object PositiveInfluenceOnRule {
-    def InLhs(agent: ProteinPattern, rule: Rule): PositiveInfluenceOnRule = lib.PositiveInfluenceOnRule.InLhs(agent, rule)
+    def InLhs(agent: ProteinPattern, rule: lib.Rule.Ref[Ref]): PositiveInfluenceOnRule = lib.PositiveInfluenceOnRule.InLhs(agent, rule)
   }
 }

@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Antichain
-import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
+import nutcracker.util.{DeepEqualK, DeepShowK, Desc, EqualK, IsEqual}
 import nutcracker.util.ops._
 
 import scalaz.{Lens, Monad, Show, State, Store}
@@ -67,7 +67,12 @@ object PhosphoTarget {
     override def shows(p: PhosphoTarget[Var]): String = p.toString
   }
 
-  implicit def deepEqualKInstance: DeepEqualK[PhosphoTarget, PhosphoTarget] =
+  implicit val deepShowKInstance: DeepShowK[PhosphoTarget] = new DeepShowK[PhosphoTarget] {
+    def show[Ptr[_]](a: PhosphoTarget[Ptr]): Desc[Ptr] =
+      Desc[Ptr, Protein](a.kinase) ++ (" phosphorylates " +: (Desc[Ptr, Protein](a.substrate) ++ (" at site " +: Desc(a.targetSite))))
+  }
+
+  implicit val deepEqualKInstance: DeepEqualK[PhosphoTarget, PhosphoTarget] =
     new DeepEqualK[PhosphoTarget, PhosphoTarget] {
       def equal[Ptr1[_], Ptr2[_]](a1: PhosphoTarget[Ptr1], a2: PhosphoTarget[Ptr2]): IsEqual[Ptr1, Ptr2] =
         if(a1.kinaseIndex === a2.kinaseIndex && a1.substrateIndex === a2.substrateIndex)

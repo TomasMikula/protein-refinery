@@ -19,7 +19,22 @@ class TestSuite extends FunSuite {
     Succeeded
   }
 
-  def assertDeepEqual[A1, A2, Ptr1[_], Ptr2[_]](expected: Ptr1[A1])(actual: Ptr2[A2])(implicit
+  def assertDeepEqual[A1, A2, Ptr1[_], Ptr2[_]](expected: A1)(actual: A2)(implicit
+    ev: DeepEqual[A1, A2, Ptr1, Ptr2],
+    eq2: HEqualK[Ptr2],
+    deref1: Ptr1 ~> Id,
+    deref2: Ptr2 ~> Id,
+    prettifier: Prettifier,
+    pos: source.Position
+  ): Assertion = {
+    if (!ev.deepEqual(expected, actual)(deref1, deref2)) {
+      val s = s"Expected: $expected, but got $actual"
+      throw new TestFailedException((_: StackDepthException) => Some(s), None, pos)
+    }
+    Succeeded
+  }
+
+  def assertDeepEqualP[A1, A2, Ptr1[_], Ptr2[_]](expected: Ptr1[A1])(actual: Ptr2[A2])(implicit
     ev: DeepEqual[A1, A2, Ptr1, Ptr2],
     eq2: HEqualK[Ptr2],
     deref1: Ptr1 ~> Id,

@@ -2,25 +2,26 @@ name := "protein-refinery"
 
 version := "0.2-SNAPSHOT"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.1"
 
 resolvers += "bintray/non" at "http://dl.bintray.com/non/maven"
 resolvers += Resolver.sonatypeRepo("releases")
 
 autoCompilerPlugins := true
-addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.2" cross CrossVersion.binary)
-addCompilerPlugin("com.milessabin" % "si2712fix-plugin" % "1.2.0" cross CrossVersion.full)
-addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.15")
+addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.3" cross CrossVersion.binary)
+addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
 scalastyleFailOnError := true
 
 scalacOptions ++= Seq(
+  "-language:higherKinds",
   "-Xlint",
   "-unchecked",
   "-deprecation",
   "-feature",
   "-Xfatal-warnings",
   "-Yno-adapted-args",
+  "-Ypartial-unification",
   "-Ywarn-numeric-widen",
   "-Ywarn-unused-import",
   "-Ywarn-value-discard",
@@ -35,38 +36,11 @@ javacOptions ++= Seq(
 
 libraryDependencies ++= Seq(
   "com.github.tomasmikula" %% "nutcracker" % "0.2-SNAPSHOT",
-  "org.typelevel" %% "algebra" % "0.5.1",
-  "org.scalaz" %% "scalaz-core" % "7.3.0-SNAPSHOT",
+  "org.typelevel" %% "algebra" % "0.6.0",
+  "org.scalaz" %% "scalaz-core" % "7.3.0-M8",
   "org.reactfx" % "reactfx" % "2.0-M5",
+  "org.scalacheck" %% "scalacheck" % "1.13.4",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 )
 
 fork := true
-
-// A configuration which is like 'compile' except it performs additional
-// static analysis. Execute static analysis via `lint:compile`
-val LintTarget = config("lint").extend(Compile)
-
-addMainSourcesToLintTarget 
-
-addSlowScalacSwitchesToLintTarget
-
-def addMainSourcesToLintTarget = {
-  inConfig(LintTarget) {
-    Defaults.compileSettings ++ Seq(
-      sources in LintTarget := {
-        val lintSources = (sources in LintTarget).value
-        lintSources ++ (sources in Compile).value
-      }
-    )
-  }
-}
-
-def addSlowScalacSwitchesToLintTarget = {
-  inConfig(LintTarget) {
-    scalacOptions in LintTarget ++= Seq(
-      "-Ywarn-unused-import",
-      "-Ywarn-dead-code"
-    )
-  }
-}

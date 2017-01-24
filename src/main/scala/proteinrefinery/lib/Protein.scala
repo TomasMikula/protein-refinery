@@ -1,8 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-
-import nutcracker.util.{DeepEqual, IsEqual}
+import nutcracker.util.{DeepEqual, DeepShow, Desc, IsEqual}
 
 import scalaz.{Equal, Semigroup, Show}
 
@@ -57,5 +56,9 @@ object Protein {
 
   implicit def showInstance: Show[Protein] = new Show[Protein] {
     override def shows(p: Protein): String = p.toString
+  }
+
+  implicit def deepShowInstance[Ptr[_]]: DeepShow[Protein, Ptr] = new DeepShow.FromFree[Protein, Ptr] {
+    def free(a: Protein): Desc[Ptr] = Desc.done(a.toString)
   }
 }

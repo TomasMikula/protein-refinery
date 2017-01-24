@@ -11,7 +11,7 @@ case class Phosphorylation[Ref[_]](
   assoc: Assoc[Ref],
   phosphoSite: SiteLabel
 ) {
-  def kinase: Protein = assoc.bindings.head.left
+//  def kinase: Protein = assoc.bindings.head.left
 
   override def toString = s"${assoc.bindings.head.left} phosphorylates ${assoc.bindings.last.right} at $phosphoSite (via $assoc)"
 }

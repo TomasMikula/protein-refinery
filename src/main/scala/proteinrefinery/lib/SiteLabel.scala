@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.util.{DeepEqual, IsEqual}
+import nutcracker.util.{DeepEqual, DeepShow, Desc, IsEqual}
 
 import scalaz.{Equal, Show}
 
@@ -22,6 +22,10 @@ object SiteLabel {
 
   implicit def showInstance: Show[SiteLabel] = new Show[SiteLabel] {
     override def shows(s: SiteLabel): String = s.name
+  }
+
+  implicit def deepShowInstance[Ptr[_]]: DeepShow[SiteLabel, Ptr] = new DeepShow.FromFree[SiteLabel, Ptr] {
+    def free(a: SiteLabel): Desc[Ptr] = Desc.done(a.name)
   }
 }
 

@@ -4,7 +4,7 @@ import scala.language.higherKinds
 import nutcracker.Dom.Status
 import nutcracker.{Dom, Promise}
 import nutcracker.Promise.{Complete, Completed, Conflict, Empty}
-import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
+import nutcracker.util.{DeepEqualK, DeepShowK, Desc, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.{DefiniteLabel, LocalSiteId, SiteRef}
 import proteinrefinery.util.{HomSet, Identification, Unification}
 import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
@@ -12,6 +12,7 @@ import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
 import scalaz.Isomorphism.<=>
 import scalaz.{Equal, Show, \&/}
 import scalaz.syntax.equal._
+import scalaz.syntax.show._
 
 object Site {
 
@@ -55,7 +56,19 @@ object Site {
 }
 
 /** Site together with a bag of site references. */
-case class ISite[Ref[_]] private(content: Site.Dom, refs: Set[Site.Ref[Ref]])
+case class ISite[Ref[_]] private(content: Site.Dom, refs: Set[Site.Ref[Ref]]) {
+
+  def show[M[_]](implicit M: MonadObjectOutput[M, String, Ref]): M[Unit] =
+    content match {
+      case Completed(label) => M.write(label.shows)
+      case Empty => refs.headOption match {
+        case Some(ref) => M.writeObject(ref)
+        case None => M.write("???")
+      }
+      case Conflict => M.write("⊥")
+    }
+
+}
 
 object ISite {
   type Update[Ref[_]] = Site.Update \&/ Set[Site.Ref[Ref]]
@@ -74,9 +87,18 @@ object ISite {
       a1.content === a2.content && a1.refs === a2.refs
   }
 
-  implicit def deepEqualKInstance: DeepEqualK[ISite, ISite] = new DeepEqualK[ISite, ISite] {
+  implicit val deepEqualKInstance: DeepEqualK[ISite, ISite] = new DeepEqualK[ISite, ISite] {
     def equal[Ptr1[_], Ptr2[_]](s1: ISite[Ptr1], s2: ISite[Ptr2]): IsEqual[Ptr1, Ptr2] =
       IsEqual(s1.content, s2.content) // ignore refs, their content is eventually reflected in the content
+  }
+
+  implicit def showInstance[Ref[_]](implicit ev: ShowK[Ref]): Show[ISite[Ref]] = new Show[ISite[Ref]] {
+    override def shows(s: ISite[Ref]): String = s.show[FreeObjectOutput[String, Ref, ?]].showShallow(ev)
+  }
+
+  implicit val deepShowKInstance: DeepShowK[ISite] = new DeepShowK[ISite] {
+    def show[Ptr[_]](s: ISite[Ptr]): Desc[Ptr] =
+      s.show[FreeObjectOutput[String, Ptr, ?]]
   }
 
   implicit def identificationInstance[Ref[_]]: Identification.Aux[ISite[Ref], Update[Ref], Delta[Ref]] = {

@@ -11,7 +11,7 @@ import nutcracker.util.KMap
 import org.reactfx.collection.LiveArrayList
 import org.reactfx.value.{Val, Var}
 import org.reactfx.{EventSource, EventStream, EventStreams}
-import proteinrefinery.lib.{Protein, ProteinModifications, ProteinPattern, Rule, SiteLabel, SiteState}
+import proteinrefinery.lib.{ISite, PhosphoTarget, Protein, ProteinModifications, ProteinPattern, Rule, SiteLabel, SiteState}
 import proteinrefinery.ui.FactType.{FactKinase, FactPhosTarget, FactRule}
 import proteinrefinery.ui.util.syntax._
 
@@ -27,7 +27,7 @@ class KBWidget {
 
   private val dialogHolder = new StackPane()
   private val rules = new ListView[Rule[DRef]]
-  private val phosSites = new ListView[(Protein, Protein, SiteLabel)]
+  private val phosSites = new ListView[(Protein, Protein, ISite[DRef])]
   private val kinases = new ListView[ProteinPattern[DRef]]
 
   val node: Node = new ScrollPane(
@@ -50,7 +50,7 @@ class KBWidget {
 
   private val factHandlers: KMap[FactType, ? => Unit] = KMap[FactType, ? => Unit]()
     .put(FactRule)(ruleAdded)
-    .put(FactPhosTarget)({ case (k, s, ss) => phosTargetAdded(k, s, ss) })
+    .put(FactPhosTarget)(pt => phosTargetAdded(pt.kinase, pt.substrate, pt.targetSite))
     .put(FactKinase)(kinaseAdded)
 
   def requests: EventStream[UIRequest] = _requests
@@ -61,7 +61,7 @@ class KBWidget {
 
   private def ruleAdded(r: Rule[DRef]): Unit = rules.getItems.add(r).ignoreResult()
 
-  private def phosTargetAdded(k: Protein, s: Protein, ss: SiteLabel): Unit = phosSites.getItems.add((k, s, ss)).ignoreResult()
+  private def phosTargetAdded(k: Protein, s: Protein, ss: ISite[DRef]): Unit = phosSites.getItems.add((k, s, ss)).ignoreResult()
 
   private def kinaseAdded(pp: ProteinPattern[DRef]): Unit = kinases.getItems.add(pp).ignoreResult()
 
@@ -77,7 +77,7 @@ trait FactType[A] { self: Singleton => }
 object FactType {
   object FactRule extends FactType[Rule[DRef]]
   object FactKinase extends FactType[ProteinPattern[DRef]]
-  object FactPhosTarget extends FactType[(Protein, Protein, SiteLabel)]
+  object FactPhosTarget extends FactType[PhosphoTarget[DRef]]
 }
 
 class BindFactInput extends InputForm[(Protein, SiteLabel, Protein, SiteLabel)] {
@@ -129,7 +129,7 @@ class KinaseActivityInput extends InputForm[ProteinPattern[DRef]] {
     new HBox(new Label("Protein"), protein),
     new Label("State conditions:"),
     siteGrid,
-    new Button("+") <| { _.onAction(addSiteRow) }
+    new Button("+") <| { _.onAction(addSiteRow _) }
   )
 
   val input: Val[ProteinPattern[DRef]] = {

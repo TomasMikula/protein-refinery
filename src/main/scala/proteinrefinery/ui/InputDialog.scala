@@ -30,7 +30,7 @@ object InputDialog {
     def hideDialog(): Unit = dialogHolder.getChildren.clear()
     hideDialog()
     dialogHolder.getChildren.add(
-      new InputDialog(form)(a => { hideDialog(); onSubmit(a) }, hideDialog).node
+      new InputDialog(form)(a => { hideDialog(); onSubmit(a) }, hideDialog _).node
     ).ignoreResult
   }
 }
