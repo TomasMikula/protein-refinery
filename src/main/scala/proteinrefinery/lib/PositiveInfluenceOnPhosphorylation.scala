@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-//import nutcracker.Antichain
+//import nutcracker.Discrete
 import nutcracker.util.{ContU, EqualK}
 
 import scalaz.Monad
@@ -13,7 +13,7 @@ sealed trait PositiveInfluenceOnPhosphorylation[Ref[_]] {
 
 //object PositiveInfluenceOnPhosphorylation {
 //
-//  type Ref[Var[_]] = Var[Antichain[PositiveInfluenceOnPhosphorylation[Var]]]
+//  type Ref[Var[_]] = Var[Discrete[PositiveInfluenceOnPhosphorylation[Var]]]
 //
 //  // Constructors
 //
@@ -47,10 +47,10 @@ sealed trait PositiveInfluenceOnPhosphorylation[Ref[_]] {
 ////      val immediate: List[ContU[M, Ref[Var]]] = {
 ////        val isKinase = if (ph.kinase == p) List(IsKinase(ph)) else Nil
 ////        val inScaffold = if (ph.assoc.bindings.tail.exists(_.left == p)) List(InScaffold(ProteinPattern(p), ph)) else Nil
-////        (isKinase ++ inScaffold).map(Antichain.cellC[M, Var, PositiveInfluenceOnPhosphorylation[Var]](_))
+////        (isKinase ++ inScaffold).map(Discrete.cellC[M, Var, PositiveInfluenceOnPhosphorylation[Var]](_))
 ////      }
 ////
-////      val indirect: ContU[M, Ref[Var]] = Antichain.map(positiveInfluenceOnKinaseActivityC(p, ph.kinase))(infl => ActivatesKinase(infl, ph))
+////      val indirect: ContU[M, Ref[Var]] = Discrete.map(positiveInfluenceOnKinaseActivityC(p, ph.kinase))(infl => ActivatesKinase(infl, ph))
 ////
 ////      ContU.sequence(indirect :: immediate)
 ////    }

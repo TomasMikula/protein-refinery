@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Antichain, IncSet}
+import nutcracker.{Discrete, IncSet}
 import nutcracker.util.ContU
 
 import scalaz.{Monad, Show}
@@ -18,7 +18,7 @@ case class Phosphorylation[Ref[_]](
 
 object Phosphorylation {
 
-  type Ref[Var[_]] = Var[Antichain[Phosphorylation[Var]]]
+  type Ref[Var[_]] = Var[Discrete[Phosphorylation[Var]]]
 
   trait Search[M[_], Var[_]] {
     implicit def Propagation: nutcracker.Propagation[M, Var]

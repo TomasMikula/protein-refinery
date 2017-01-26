@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 
-import nutcracker.{Antichain, IncSet, Propagation}
+import nutcracker.{Discrete, IncSet, Propagation}
 import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 
@@ -11,7 +11,7 @@ import scalaz.{Monad, Show}
 sealed trait NegativeInfluenceOnRule[Ref[_]]
 
 object NegativeInfluenceOnRule {
-  type Ref[Var[_]] = Var[Antichain[NegativeInfluenceOnRule[Var]]]
+  type Ref[Var[_]] = Var[Discrete[NegativeInfluenceOnRule[Var]]]
 
   case class ByNegativeInfluenceOnAssociation[Var[_]](value: NegativeInfluenceOnAssociation[Var]) extends NegativeInfluenceOnRule[Var]
   def        byNegativeInfluenceOnAssociation[Var[_]](value: NegativeInfluenceOnAssociation[Var]):        NegativeInfluenceOnRule[Var] = ByNegativeInfluenceOnAssociation(value)
@@ -36,7 +36,7 @@ object NegativeInfluenceOnRule {
         aRef <- AgentsPatternOps.forEachAssoc(r.lhs)
         na <- NegativeInfluenceOnAssociationSearch.negativeInfluenceOnAssociationC(p, aRef)
         nr = byNegativeInfluenceOnAssociation(na)
-        nrRef <- Antichain.cellC(nr)
+        nrRef <- Discrete.cellC(nr)
       } yield nrRef
   }
 

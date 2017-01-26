@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Antichain, IncSet}
+import nutcracker.{Discrete, IncSet}
 import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 import nutcracker.util.EqualK._
@@ -18,7 +18,7 @@ case class Assoc[Ref[_]](bindings: List[Binding[Ref]]) extends AnyVal {
 
 object Assoc {
 
-  type Ref[Var[_]] = Var[Antichain[Assoc[Var]]]
+  type Ref[Var[_]] = Var[Discrete[Assoc[Var]]]
 
   trait Search[M[_], Var[_]] {
     implicit def Defer: nutcracker.Defer[M, Cost]
@@ -28,24 +28,24 @@ object Assoc {
 
     def Nuggets: proteinrefinery.lib.Nuggets[M, Var]
 
-    def assoc(p: Protein, q: Protein)(implicit M: Monad[M], ev: EqualK[Var]): M[Var[IncSet[Var[Antichain[Assoc[Var]]]]]] =
+    def assoc(p: Protein, q: Protein)(implicit M: Monad[M], ev: EqualK[Var]): M[Var[IncSet[Var[Discrete[Assoc[Var]]]]]] =
       IncSets.collect(assocC(p, q))
 
-    def assocC(p: Protein, q: Protein)(implicit M: Monad[M], ev: EqualK[Var]): ContU[M, Var[Antichain[Assoc[Var]]]] =
+    def assocC(p: Protein, q: Protein)(implicit M: Monad[M], ev: EqualK[Var]): ContU[M, Var[Discrete[Assoc[Var]]]] =
       assocC0(Nil, p, q, Nil)
 
-    private def assocC0(leftTail: List[Binding[Var]], p: Protein, q: Protein, rightTail: List[Binding[Var]])(implicit M: Monad[M], ev: EqualK[Var]): ContU[M, Var[Antichain[Assoc[Var]]]] =
+    private def assocC0(leftTail: List[Binding[Var]], p: Protein, q: Protein, rightTail: List[Binding[Var]])(implicit M: Monad[M], ev: EqualK[Var]): ContU[M, Var[Discrete[Assoc[Var]]]] =
       for {
         b <- Nuggets.bindingsOfC(p)
         br <- b.witness.asCont[M]
         aref <- {
-          if (leftTail.nonEmpty && b.leftS === leftTail.head.rightS) ContU.noop[M, Var[Antichain[Assoc[Var]]]] // linter:ignore DuplicateIfBranches
-          else if (leftTail.any(_ === b) || rightTail.any(_ === b)) ContU.noop[M, Var[Antichain[Assoc[Var]]]]
+          if (leftTail.nonEmpty && b.leftS === leftTail.head.rightS) ContU.noop[M, Var[Discrete[Assoc[Var]]]] // linter:ignore DuplicateIfBranches
+          else if (leftTail.any(_ === b) || rightTail.any(_ === b)) ContU.noop[M, Var[Discrete[Assoc[Var]]]]
           else {
             val indirect0 = assocC0(b :: leftTail, b.getRight(br), q, rightTail)
             val indirect = Defer.deferC(Cost.complexity(10), indirect0)
             if (b.getRight(br) === q) {
-              val direct = ContU.liftM(Propagation.cell(Antichain(Assoc(leftTail reverse_::: b :: rightTail))))
+              val direct = ContU.liftM(Propagation.cell(Discrete(Assoc(leftTail reverse_::: b :: rightTail))))
               ContU.sequence(direct, indirect)
             } else
               indirect

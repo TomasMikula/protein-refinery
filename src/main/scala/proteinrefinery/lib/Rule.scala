@@ -1,6 +1,6 @@
 package proteinrefinery.lib
 
-import nutcracker.{Antichain, Dom, Promise, Propagation, Trigger}
+import nutcracker.{Discrete, Dom, Promise, Propagation, Trigger}
 import nutcracker.Dom.Status
 import nutcracker.ops._
 import nutcracker.syntax.dom._
@@ -145,7 +145,7 @@ object Rule {
   def lhs[Var[_]]: Lens[Rule[Var], AgentsPattern[Var]] =
     Lens(r => Store(lhs => Rule(lhs, r.actions), r.lhs))
 
-  type Ref[Var[_]] = Var[Antichain[Rule[Var]]]
+  type Ref[Var[_]] = Var[Discrete[Rule[Var]]]
 
   implicit val deepEqualKInstance: DeepEqualK[Rule, Rule] = new DeepEqualK[Rule, Rule] {
     def equal[Ptr1[_], Ptr2[_]](r1: Rule[Ptr1], r2: Rule[Ptr2]): IsEqual[Ptr1, Ptr2] =
@@ -206,15 +206,15 @@ object Rule {
       ContU(f => observe(ref).by(r => {
         import scalaz.syntax.traverse._
         val now = r.value.linksAgentTo(p).iterator.map(l => f(Binding(ref, l))).toList.sequence_
-        val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
+        val onChange: (Discrete[Rule[Var]], Discrete.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
         (Some(now), Some(onChange))
       }))
 
     def phosphorylationsC(ref: Rule.Ref[Var])(implicit M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
       ContU(f => observe(ref).by(r => {
         import scalaz.syntax.traverse._
-        val now = r.value.phosphorylations.iterator.map(p => cell(Antichain(p)).flatMap(f)).toList.sequence_
-        val onChange: (Antichain[Rule[Var]], Antichain.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
+        val now = r.value.phosphorylations.iterator.map(p => cell(Discrete(p)).flatMap(f)).toList.sequence_
+        val onChange: (Discrete[Rule[Var]], Discrete.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
         (Some(now), Some(onChange))
       }))
 

@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Antichain, IncSet, Propagation}
+import nutcracker.{Discrete, IncSet, Propagation}
 import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 import proteinrefinery.util.Tracking
@@ -12,7 +12,7 @@ sealed trait NegativeInfluenceOnAssociation[Ref[_]]
 
 object NegativeInfluenceOnAssociation {
 
-  type Ref[Var[_]] = Var[Antichain[NegativeInfluenceOnAssociation[Var]]]
+  type Ref[Var[_]] = Var[Discrete[NegativeInfluenceOnAssociation[Var]]]
 
   // Constructors
 

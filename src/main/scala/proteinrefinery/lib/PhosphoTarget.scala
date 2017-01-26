@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.Antichain
+import nutcracker.Discrete
 import nutcracker.util.{DeepEqualK, DeepShowK, Desc, EqualK, IsEqual}
 import nutcracker.util.ops._
 
@@ -61,7 +61,7 @@ object PhosphoTarget {
     Lens(pt => Store(r => PhosphoTarget(r, pt.kinaseIndex, pt.substrateIndex, pt.targetSite), pt.witness))
 
 
-  type Ref[Var[_]] = Var[Antichain[PhosphoTarget[Var]]]
+  type Ref[Var[_]] = Var[Discrete[PhosphoTarget[Var]]]
 
   implicit def showInstance[Var[_]]: Show[PhosphoTarget[Var]] = new Show[PhosphoTarget[Var]] {
     override def shows(p: PhosphoTarget[Var]): String = p.toString

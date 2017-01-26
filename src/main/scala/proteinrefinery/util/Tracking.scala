@@ -2,7 +2,7 @@ package proteinrefinery.util
 
 import scala.language.higherKinds
 
-import nutcracker.{Alternator, Antichain, Dom, DomSet, Propagation, Revocable, Trigger}
+import nutcracker.{Alternator, Discrete, Dom, DomSet, Propagation, Revocable, Trigger}
 import scalaz.Monad
 import scalaz.syntax.monad._
 
@@ -58,7 +58,7 @@ trait DomType[D[_[_]]] { self: Singleton =>
 object DomType {
   type Aux[D[_[_]], U, Δ] = DomType[D] { type Update = U; type Delta = Δ }
 
-  trait AntichainDomType[A[_[_]]] extends DomType[λ[α[_] => Antichain[A[α]]]] { self: Singleton =>
+  trait DiscreteDomType[A[_[_]]] extends DomType[λ[α[_] => Discrete[A[α]]]] { self: Singleton =>
   }
 }
 

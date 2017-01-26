@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.Antichain
+import nutcracker.Discrete
 import nutcracker.util.{ContU, EqualK}
 
 import scalaz.Monad
@@ -13,7 +13,7 @@ sealed trait PositiveInfluenceOnKinaseActivity[Ref[_]] {
 
 object PositiveInfluenceOnKinaseActivity {
 
-  type Ref[Var[_]] = Var[Antichain[PositiveInfluenceOnKinaseActivity[Var]]]
+  type Ref[Var[_]] = Var[Discrete[PositiveInfluenceOnKinaseActivity[Var]]]
 
   // Constructors
 
@@ -31,7 +31,7 @@ object PositiveInfluenceOnKinaseActivity {
 
     def positiveInfluenceOnKinaseActivityC(agent: Protein, kinase: Protein)(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] = for {
       ppref <- Nuggets.kinaseActivityC(kinase)
-      res <- Antichain.map(Antichain.mapC(ppref)(pp => positiveInfluenceOnStateC(agent, pp)))(positiveInfluenceOnActiveState(_))
+      res <- Discrete.map(Discrete.mapC(ppref)(pp => positiveInfluenceOnStateC(agent, pp)))(positiveInfluenceOnActiveState(_))
     } yield res
 
   }

@@ -5,7 +5,7 @@ import nutcracker.PropagationLang._
 import nutcracker.Trigger._
 import nutcracker.util.CoproductK.:++:
 import nutcracker.util.{DeepShow, FreeK}
-import nutcracker.{Antichain, DRef, Diff, Dom, IncSet, Propagation, PropagationLang, PropagationStore}
+import nutcracker.{Discrete, DRef, Diff, Dom, IncSet, Propagation, PropagationLang, PropagationStore}
 import org.reactfx.EventStreams
 import proteinrefinery.lib.{BindingData, ISite, PhosphoTarget, PhosphoTriple, Protein, ProteinPattern, SiteLabel}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
@@ -51,7 +51,7 @@ class Controller(val kbWidget: KBWidget, val goalWidget: GoalWidget) {
   private def addGoalPhos(kinase: Protein, substrate: Protein): Prg[Unit] =
     Lib.phosphorylations(kinase, substrate) >>= { observeGoal(s"Phosphorylation of $substrate by $kinase", _) }
 
-  private def addGoalPhosNegInfl(agent: Protein, phosGoal: DRef[IncSet[DRef[Antichain[PhosphoTarget[DRef]]]]], phosDesc: String): Prg[Unit] =
+  private def addGoalPhosNegInfl(agent: Protein, phosGoal: DRef[IncSet[DRef[Discrete[PhosphoTarget[DRef]]]]], phosDesc: String): Prg[Unit] =
     IncSets.relBind(phosGoal)(phRef => Lib.negativeInfluenceOnPhosphorylation_r(agent, phRef)) >>= {
       observeGoal(s"Negative influence of $agent on $phosDesc", _)
     }

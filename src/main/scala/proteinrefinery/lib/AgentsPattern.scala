@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Antichain, Dom, IncSet, Propagation}
+import nutcracker.{Discrete, Dom, IncSet, Propagation}
 import nutcracker.syntax.dom._
 import nutcracker.util.{ContU, DeepEqual, DeepEqualK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
@@ -78,7 +78,7 @@ case class AgentsPattern[Ref[_]](
     AgentsPattern(agents, bonds.updated(id.value, None), assocs, (i, si) :: (j, sj) :: unbound)
   }
 
-  def addAssoc(i: AgentIndex, j: AgentIndex, assocRef: Ref[IncSet[Ref[Antichain[Assoc[Ref]]]]]): (AgentsPattern[Ref], AssocId) = {
+  def addAssoc(i: AgentIndex, j: AgentIndex, assocRef: Ref[IncSet[Ref[Discrete[Assoc[Ref]]]]]): (AgentsPattern[Ref], AssocId) = {
     val assoc = (i, j, assocRef)
     (AgentsPattern[Ref](agents, bonds, assocs :+ Some(assoc), unbound), AssocId(assocs.size))
   }
@@ -257,7 +257,7 @@ object AgentsPattern {
 
     def requireAssoc(i: AgentIndex, j: AgentIndex, predicate: Assoc[Ref] => Boolean)(implicit M: Monad[M], ev: EqualK[Ref]): StateT[M, AgentsPattern[Ref], AssocId] = {
       StateT(ap => {
-        val assocC = Antichain.filterMap(AssocSearch.assocC(ap(i).protein, ap(j).protein)) { a =>
+        val assocC = Discrete.filterMap(AssocSearch.assocC(ap(i).protein, ap(j).protein)) { a =>
           if (predicate(a)) Some(a)
           else None
         }

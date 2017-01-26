@@ -7,7 +7,7 @@ import javafx.scene.layout.{Background, BackgroundFill, CornerRadii, GridPane, R
 import javafx.scene.paint.Color
 
 import nutcracker.util.KMap
-import nutcracker.{Antichain, DRef, Dom, IncSet}
+import nutcracker.{Discrete, DRef, Dom, IncSet}
 import org.reactfx.value.Val
 import org.reactfx.{EventSource, EventStream}
 import proteinrefinery.lib.{Assoc, NegativeInfluenceOnPhosphorylation, PhosphoTarget, Protein}
@@ -89,9 +89,9 @@ object GoalWidget {
 
 trait GoalType[A] { self: Singleton => }
 object GoalType {
-  implicit object GoalAssoc extends GoalType[Antichain[Assoc[DRef]]]
-  implicit object GoalPhos extends GoalType[Antichain[PhosphoTarget[DRef]]]
-  implicit object GoalPhosNegInfl extends GoalType[Antichain[NegativeInfluenceOnPhosphorylation[DRef]]]
+  implicit object GoalAssoc extends GoalType[Discrete[Assoc[DRef]]]
+  implicit object GoalPhos extends GoalType[Discrete[PhosphoTarget[DRef]]]
+  implicit object GoalPhosNegInfl extends GoalType[Discrete[NegativeInfluenceOnPhosphorylation[DRef]]]
 }
 
 class AssocGoalInput extends InputForm[(Protein, Protein)] {
@@ -126,8 +126,8 @@ class PhosGoalInput extends InputForm[(Protein, Protein)] {
     .map2[String, String, (Protein, Protein)]((p1, p2) => (Protein(p1), Protein(p2)))
 }
 
-class PhosNegInflInput(phosGoals: List[GoalView[Antichain[PhosphoTarget[DRef]]]]) extends InputForm[(Protein, GoalView[Antichain[PhosphoTarget[DRef]]])] {
-  private case class GVWrapper(goalView: GoalView[Antichain[PhosphoTarget[DRef]]]) {
+class PhosNegInflInput(phosGoals: List[GoalView[Discrete[PhosphoTarget[DRef]]]]) extends InputForm[(Protein, GoalView[Discrete[PhosphoTarget[DRef]]])] {
+  private case class GVWrapper(goalView: GoalView[Discrete[PhosphoTarget[DRef]]]) {
     override def toString = goalView.desc
   }
 
@@ -143,7 +143,7 @@ class PhosNegInflInput(phosGoals: List[GoalView[Antichain[PhosphoTarget[DRef]]]]
     _.addRow(1, new Label("Phosphorylation"), goalSelection)
   }
 
-  val input: Val[(Protein, GoalView[Antichain[PhosphoTarget[DRef]]])] = (agentInput.textProperty() |@| goalSelection.getSelectionModel.selectedItemProperty()).tuple
+  val input: Val[(Protein, GoalView[Discrete[PhosphoTarget[DRef]]])] = (agentInput.textProperty() |@| goalSelection.getSelectionModel.selectedItemProperty()).tuple
     .filter2[String, GVWrapper]((a, gv) => !a.isEmpty && gv != null)
-    .map2[String, GVWrapper, (Protein, GoalView[Antichain[PhosphoTarget[DRef]]])]((a, gv) => (Protein(a), gv.goalView))
+    .map2[String, GVWrapper, (Protein, GoalView[Discrete[PhosphoTarget[DRef]]])]((a, gv) => (Protein(a), gv.goalView))
 }

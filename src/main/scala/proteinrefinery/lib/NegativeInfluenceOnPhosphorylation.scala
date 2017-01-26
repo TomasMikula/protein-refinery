@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 
-import nutcracker.{Antichain, IncSet, Propagation}
+import nutcracker.{Discrete, IncSet, Propagation}
 import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 
@@ -12,7 +12,7 @@ sealed trait NegativeInfluenceOnPhosphorylation[Ref[_]]
 
 object NegativeInfluenceOnPhosphorylation {
 
-  type Ref[Var[_]] = Var[Antichain[NegativeInfluenceOnPhosphorylation[Var]]]
+  type Ref[Var[_]] = Var[Discrete[NegativeInfluenceOnPhosphorylation[Var]]]
 
   // Constructors
 
@@ -39,7 +39,7 @@ object NegativeInfluenceOnPhosphorylation {
     }
 
     def negativeInfluenceOnPhosphorylationC(p: Protein, ph: PhosphoTarget[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
-      Antichain.map(NegativeInfluenceOnRuleSearch.negativeInfluenceOnRuleC(p, ph.witness))(byNegativeInfluenceOnRule)
+      Discrete.map(NegativeInfluenceOnRuleSearch.negativeInfluenceOnRuleC(p, ph.witness))(byNegativeInfluenceOnRule)
 
     def negativeInfluenceOnPhosphorylationC_r(p: Protein, ptRef: PhosphoTarget.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
       ptRef.asCont[M] flatMap (negativeInfluenceOnPhosphorylationC(p, _))

@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Antichain, IncSet}
+import nutcracker.{Discrete, IncSet}
 import nutcracker.util.{ContU, DeepShowK, Desc, EqualK}
 import nutcracker.util.EqualK._
 import proteinrefinery.util.OnceTrigger
@@ -15,7 +15,7 @@ sealed trait PositiveInfluenceOnRule[Ref[_]] {
 }
 
 object PositiveInfluenceOnRule {
-  type Ref[Var[_]] = Var[Antichain[PositiveInfluenceOnRule[Var]]]
+  type Ref[Var[_]] = Var[Discrete[PositiveInfluenceOnRule[Var]]]
 
   // Constructors
 
@@ -88,10 +88,10 @@ object PositiveInfluenceOnRule {
 //        if (avoid.contains(q)) OnceTrigger.Discard()
 //        else if (q enables r) OnceTrigger.Fire(())
 //        else OnceTrigger.Sleep()
-//      ).flatMap(qRef => qRef.asCont[M].flatMap(q => Antichain.map(positiveInfluenceOnRuleC0(agent, test, q, q :: avoid))(posInfl => Indirect(posInfl, r))))
+//      ).flatMap(qRef => qRef.asCont[M].flatMap(q => Discrete.map(positiveInfluenceOnRuleC0(agent, test, q, q :: avoid))(posInfl => Indirect(posInfl, r))))
 //
 //      inLhs match {
-//        case Some(inLhs) => ContU.sequence(Antichain.cellC[M, Var, PositiveInfluenceOnRule[Var]](inLhs), indirect)
+//        case Some(inLhs) => ContU.sequence(Discrete.cellC[M, Var, PositiveInfluenceOnRule[Var]](inLhs), indirect)
 //        case None => indirect
 //      }
     }

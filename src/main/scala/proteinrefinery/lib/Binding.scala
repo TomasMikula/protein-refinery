@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Antichain, RelPSource}
+import nutcracker.{Discrete, RelPSource}
 import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
@@ -26,10 +26,10 @@ sealed trait Binding[Ref[_]] {
   def qs: LocalSiteId[Ref]
 
   /** first binding partner */
-  def p: RelPSource[Ref, Antichain[Protein]] = protein(pi)
+  def p: RelPSource[Ref, Discrete[Protein]] = protein(pi)
 
   /** second binding partner */
-  def q: RelPSource[Ref, Antichain[Protein]] = protein(qi)
+  def q: RelPSource[Ref, Discrete[Protein]] = protein(qi)
 
   /** Alias for [[p]]. */
   def left = p
@@ -47,8 +47,8 @@ sealed trait Binding[Ref[_]] {
   /** Alias for [[qs]]. */
   def rightS = qs
 
-  def pPattern: RelPSource[Ref, Antichain[BindingPartnerPattern[Ref]]] = partner(pi, ps) // BindingPartnerPattern(witness.lhs(pi), ps)
-  def qPattern: RelPSource[Ref, Antichain[BindingPartnerPattern[Ref]]] = partner(qi, qs) // BindingPartnerPattern(witness.lhs(qi), qs)
+  def pPattern: RelPSource[Ref, Discrete[BindingPartnerPattern[Ref]]] = partner(pi, ps) // BindingPartnerPattern(witness.lhs(pi), ps)
+  def qPattern: RelPSource[Ref, Discrete[BindingPartnerPattern[Ref]]] = partner(qi, qs) // BindingPartnerPattern(witness.lhs(qi), qs)
   def leftPattern = pPattern
   def rightPattern = qPattern
 
@@ -59,17 +59,17 @@ sealed trait Binding[Ref[_]] {
 
   override def toString = s"$p>$ps - $qs<$q"
 
-  private def protein(i: AgentIndex): RelPSource[Ref, Antichain[Protein]] =
-    RelPSource.lift(witness).map(r => Antichain(r.value.lhs(i).protein)).deltas(x => x)
+  private def protein(i: AgentIndex): RelPSource[Ref, Discrete[Protein]] =
+    RelPSource.lift(witness).map(r => Discrete(r.value.lhs(i).protein)).deltas(x => x)
 
-  private def partner(i: AgentIndex, si: LocalSiteId[Ref]): RelPSource[Ref, Antichain[BindingPartnerPattern[Ref]]] =
-    RelPSource.lift(witness).map(r => Antichain(BindingPartnerPattern(r.value.lhs(i), si))).deltas(x => x)
+  private def partner(i: AgentIndex, si: LocalSiteId[Ref]): RelPSource[Ref, Discrete[BindingPartnerPattern[Ref]]] =
+    RelPSource.lift(witness).map(r => Discrete(BindingPartnerPattern(r.value.lhs(i), si))).deltas(x => x)
 }
 
 object Binding {
   private case class Binding0[Var[_]](witness: Rule.Ref[Var], pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId[Var], qs: LocalSiteId[Var]) extends Binding[Var]
 
-  type Ref[Var[_]] = Var[Antichain[Binding[Var]]]
+  type Ref[Var[_]] = Var[Discrete[Binding[Var]]]
 
   def apply[Var[_]](witness: Rule.Ref[Var], pi: AgentIndex, qi: AgentIndex, ps: LocalSiteId[Var], qs: LocalSiteId[Var]): Binding[Var] =
     Binding0(witness, pi, qi, ps, qs)

@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Antichain, Propagation}
+import nutcracker.{Discrete, Propagation}
 import nutcracker.ops._
 import nutcracker.util.{ContU, DeepShowK, Desc, EqualK}
 import nutcracker.util.EqualK._
@@ -15,7 +15,7 @@ sealed trait PositiveInfluenceOfRuleOnRule[Ref[_]] {
 }
 
 object PositiveInfluenceOfRuleOnRule {
-  type Ref[Var[_]] = Var[Antichain[PositiveInfluenceOfRuleOnRule[Var]]]
+  type Ref[Var[_]] = Var[Discrete[PositiveInfluenceOfRuleOnRule[Var]]]
 
   case class Enables[Var[_]](enabler: Rule.Ref[Var], enablee: Enablee[Var]) extends PositiveInfluenceOfRuleOnRule[Var] {
     def target = enablee.target

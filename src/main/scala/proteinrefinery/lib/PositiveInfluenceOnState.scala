@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 
-import nutcracker.Antichain
+import nutcracker.Discrete
 import nutcracker.util.{ContU, EqualK}
 import proteinrefinery.util.OnceTrigger
 
@@ -15,7 +15,7 @@ sealed trait PositiveInfluenceOnState[Ref[_]] {
 
 object PositiveInfluenceOnState {
 
-  type Ref[Var[_]] = Var[Antichain[PositiveInfluenceOnState[Var]]]
+  type Ref[Var[_]] = Var[Discrete[PositiveInfluenceOnState[Var]]]
 
   // Constructors
 
@@ -39,7 +39,7 @@ object PositiveInfluenceOnState {
       for {
         rRef <- Nuggets.rulesC(r => if (r enables ap) OnceTrigger.Fire(()) else OnceTrigger.Sleep())
         infl <- positiveInfluenceOnRuleC(agent, rRef)
-        res <- Antichain.cellC[M, Var, PositiveInfluenceOnState[Var]](ByRule(infl, target))
+        res <- Discrete.cellC[M, Var, PositiveInfluenceOnState[Var]](ByRule(infl, target))
       } yield res
     }
 

@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Promise.{Completed, Conflict, Empty}
-import nutcracker.{Antichain, Dom, Promise}
+import nutcracker.{Discrete, Dom, Promise}
 import nutcracker.syntax.dom._
 import nutcracker.util.{DeepEqualK, DeepShowK, Desc, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
@@ -99,7 +99,7 @@ object ProteinPattern {
   type Update[Var[_]] = ProteinModifications.Update[Var]
   type Delta[Var[_]] = Protein.Delta \&/ ProteinModifications.Delta[Var]
 
-  type Ref[Var[_]] = Var[Antichain[ProteinPattern[Var]]]
+  type Ref[Var[_]] = Var[Discrete[ProteinPattern[Var]]]
 
   def apply[Var[_]](p: Protein): ProteinPattern[Var] =
     ProteinPattern(p, ProteinModifications.noModifications)

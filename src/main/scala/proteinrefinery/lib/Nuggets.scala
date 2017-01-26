@@ -2,8 +2,8 @@ package proteinrefinery.lib
 
 import nutcracker.util.{ContU, EqualK}
 import nutcracker.util.ContU._
-import nutcracker.{Antichain, IncSet, Propagation}
-import proteinrefinery.util.DomType.AntichainDomType
+import nutcracker.{Discrete, IncSet, Propagation}
+import proteinrefinery.util.DomType.DiscreteDomType
 import proteinrefinery.util.OnceTrigger.Fire
 import proteinrefinery.util.{OnceTrigger, Tracking}
 
@@ -16,8 +16,8 @@ import scalaz.syntax.monad._
 object Nuggets {
 
   private object DomTypes {
-    implicit object Rules extends AntichainDomType[Rule]
-    implicit object Kinases extends AntichainDomType[ProteinPattern]
+    implicit object Rules extends DiscreteDomType[Rule]
+    implicit object Kinases extends DiscreteDomType[ProteinPattern]
   }
 
 }
@@ -59,9 +59,9 @@ trait Nuggets[M[_], Ref[_]] {
 
   // basic programs for adding nuggets
   def addRule(r: Rule[Ref]): M[Rule.Ref[Ref]] =
-    cell(Antichain(r)) >>! { track[λ[A[_] => Antichain[Rule[A]]]](_) }
+    cell(Discrete(r)) >>! { track[λ[A[_] => Discrete[Rule[A]]]](_) }
   def addKinaseActivity(activeState: ProteinPattern[Ref]): M[Unit] =
-    cell(Antichain(activeState)) >>= { track[λ[A[_] => Antichain[ProteinPattern[A]]]](_) }
+    cell(Discrete(activeState)) >>= { track[λ[A[_] => Discrete[ProteinPattern[A]]]](_) }
 
   // derived programs for adding nuggets
   def addPhosphoTarget(t: PhosphoTriple[Ref]): M[Unit] =
@@ -72,9 +72,9 @@ trait Nuggets[M[_], Ref[_]] {
 
   // basic programs for querying nuggets
   def rules(f: Rule[Ref] => OnceTrigger[Rule.Ref[Ref] => M[Unit]]): M[Unit] =
-    thresholdQuery[λ[Var[_] => Antichain[Rule[Var]]]](DomTypes.Rules)(r => f(r.value))
+    thresholdQuery[λ[Var[_] => Discrete[Rule[Var]]]](DomTypes.Rules)(r => f(r.value))
   def kinaseActivity(p: Protein)(f: ProteinPattern.Ref[Ref] => M[Unit]): M[Unit] =
-    thresholdQuery[λ[Var[_] => Antichain[ProteinPattern[Var]]]](DomTypes.Kinases)(pp =>
+    thresholdQuery[λ[Var[_] => Discrete[ProteinPattern[Var]]]](DomTypes.Kinases)(pp =>
       if(pp.value.protein === p) OnceTrigger.Fire(f)
       else OnceTrigger.Discard()
     )
