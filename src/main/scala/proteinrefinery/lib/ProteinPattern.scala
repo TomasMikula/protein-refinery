@@ -29,6 +29,9 @@ case class ProteinPattern[Ref[_]](protein: Protein, mods: ProteinModifications[R
   def addModification(site: ISite[Ref], state: SiteState): ProteinPattern[Ref] =
     ProteinPattern(protein, mods.addModification(site, state))
 
+  def modify(rmMods: ProteinModifications[Ref], addMods: ProteinModifications[Ref]): ProteinPattern[Ref] =
+    ProteinPattern(protein, this.mods minus rmMods combine addMods)
+
   def mentionedSites: Set[LocalSiteId[Ref]] = mods.mentionedSites
 
   override def toString: String = show.showShallow(ShowK.fromToString)

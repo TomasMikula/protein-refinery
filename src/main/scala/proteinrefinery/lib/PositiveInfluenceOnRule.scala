@@ -26,8 +26,8 @@ object PositiveInfluenceOnRule {
 
   implicit val deepShowK: DeepShowK[PositiveInfluenceOnRule] = new DeepShowK[PositiveInfluenceOnRule] {
     def show[Ptr[_]](a: PositiveInfluenceOnRule[Ptr]): Desc[Ptr] = a match {
-      case InLhs(agent, rule) => Desc(agent) ++ ("↗" +: Desc.ref(rule))
-      case Indirect(agent, infl) => Desc(agent) ++ ("↗" +: Desc(infl))
+      case InLhs(agent, rule) => Desc.nest(Desc(agent)) ::: " occurs in LHS of " :: Desc.nest(Desc.ref(rule))
+      case Indirect(agent, infl) => Desc.nest(Desc(agent)) ::: " occurs in LHS of " :: Desc.nest(Desc(infl))
     }
   }
 

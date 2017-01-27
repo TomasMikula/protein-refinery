@@ -17,14 +17,17 @@ import scalaz.std.list._
 import scalaz.syntax.equal._
 import scalaz.syntax.monad._
 
-final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref]]) {
+final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref]])(implicit ev: EqualK[Ref]) {
 
   lazy val isAdmissible: Boolean = lhs.isAdmissible
 
-  def rhs(implicit ev: EqualK[Ref]): AgentsPattern[Ref] = actions.foldLeft(lhs)((p, a) => p.modify(a))
+  def rhs: AgentsPattern[Ref] = actions.foldLeft(lhs)((p, a) => p.modify(a))
   def apply(lhs: AgentsPattern[Ref]): AgentsPattern[Ref] = ???
   def canConsume(ptrn: AgentsPattern[Ref]): Boolean = ???
   def canProduce(ptrn: AgentsPattern[Ref]): Boolean = ???
+
+  private def setLhs(lhs: AgentsPattern[Ref]): Rule[Ref] =
+    Rule(lhs, actions)
 
   def mentionedSitesOf(p: Protein): Set[LocalSiteId[Ref]] = {
     val buf = ArrayBuffer[LocalSiteId[Ref]]()
@@ -128,10 +131,10 @@ final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref
   // TODO: should return a list of explanations instead of Boolean
   def enables(that: Rule[Ref]): Boolean = enables(that.lhs)
 
-  override def toString: String = show[FreeObjectOutput[String, Ref, ?]].appendTo(new StringBuilder, ShowK.fromToString).result()
+  override def toString: String = show[FreeObjectOutput[String, Ref, ?]].showShallow(ShowK.fromToString)
 
   def show[F[_]](implicit F: MonadObjectOutput[F, String, Ref]): F[Unit] =
-    lhs.show[F] >> F.write(s" << $actions") // TODO: implement show for Action
+    lhs.show[F] >> F.write(" -> ") >> rhs.show[F]
 }
 
 object Rule {
@@ -143,7 +146,7 @@ object Rule {
     * e.g. only by refinements.
     */
   def lhs[Var[_]]: Lens[Rule[Var], AgentsPattern[Var]] =
-    Lens(r => Store(lhs => Rule(lhs, r.actions), r.lhs))
+    Lens(r => Store(lhs => r.setLhs(lhs), r.lhs))
 
   type Ref[Var[_]] = Var[Discrete[Rule[Var]]]
 

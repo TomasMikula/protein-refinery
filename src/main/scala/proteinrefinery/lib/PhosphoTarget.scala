@@ -40,7 +40,7 @@ object PhosphoTarget {
   ): PhosphoTarget[Var] =
     PhosphoTarget0(witness, kinaseIndex, substrateIndex, targetSite)
 
-  def apply[Var[_]](kinase: Protein, substrate: Protein, targetSite: ISite[Var]): PhosphoTarget[Var] = {
+  def apply[Var[_]](kinase: Protein, substrate: Protein, targetSite: ISite[Var])(implicit ev: EqualK[Var]): PhosphoTarget[Var] = {
     import AgentsPattern._
     (for {
       ki <- addAgent(ProteinPattern[Var](kinase))
@@ -50,7 +50,7 @@ object PhosphoTarget {
     } yield PhosphoTarget(Rule(lhs, List(action)), ki, si, targetSite)).eval(AgentsPattern.empty)
   }
 
-  def apply[Var[_]](pt: PhosphoTriple[Var]): PhosphoTarget[Var] =
+  def apply[Var[_]](pt: PhosphoTriple[Var])(implicit ev: EqualK[Var]): PhosphoTarget[Var] =
     apply(pt.kinase, pt.substrate, pt.targetSite)
 
   /** Lens to access the rule witnessing the PhosphoTarget.

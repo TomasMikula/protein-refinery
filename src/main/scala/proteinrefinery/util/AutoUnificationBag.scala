@@ -89,6 +89,15 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
     })
   }
 
+  def remove(a: A)(implicit I: Identification[A]): AutoUnificationBag[A] =
+    new AutoUnificationBag(elems.filterNot(I.necessarilySame(_, a)))
+
+  def removeAll[F[_]](fa: F[A])(implicit I: Identification[A], F: Foldable[F]): AutoUnificationBag[A] =
+    fa.foldLeft(this)(_ remove _)
+
+  def diff(that: AutoUnificationBag[A])(implicit I: Identification[A]): AutoUnificationBag[A] =
+    removeAll(that.elems)
+
   def list: List[A] =
     elems
 

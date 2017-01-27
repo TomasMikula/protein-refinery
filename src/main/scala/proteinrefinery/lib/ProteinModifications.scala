@@ -29,10 +29,11 @@ final case class ProteinModifications[Ref[_]] private(mods: AutoUnificationBag[S
     ProteinModifications(mods)
   }
 
-  def combine(that: ProteinModifications[Ref]): ProteinModifications[Ref] = {
-    val mods = this.mods union that.mods
-    ProteinModifications(mods)
-  }
+  def combine(that: ProteinModifications[Ref]): ProteinModifications[Ref] =
+    ProteinModifications(this.mods union that.mods)
+
+  def minus(that: ProteinModifications[Ref]): ProteinModifications[Ref] =
+    ProteinModifications(this.mods diff that.mods)
 
   def refineBy(that: ProteinModifications[Ref])(implicit ev: EqualK[Ref]): (ProteinModifications[Ref], ProteinModifications.Delta[Ref]) = {
     val (mods, delta) = this.mods.addAll1(that.mods)

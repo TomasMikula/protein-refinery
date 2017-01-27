@@ -54,7 +54,7 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
     val solutionsRef = interpret(Lib.positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(4).witness))
     val solutions = fetch(solutionsRef)
 //    val solutions = solutionRefs.toList.map(ref => proteinrefinery.fetch(ref)(s))
-    assertResult(1, Desc(solutions).showAutoLabeled(fetch, implicitly[ShowK[refinery.Ref]])())(solutions.size)
+    assertResult(1, Desc(solutions).printTree(fetch, implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
     val sol = solutions.head
     assertResult(PositiveInfluenceOnRule.InLhs(β_Cat('S45~"p", 'T41~"p"), bnds(4).witness))(sol)
   }
@@ -67,7 +67,7 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
     val solutionsRef = interpret(Lib.positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(5).witness))
     val solutions = fetch(solutionsRef)
 //    val solutions = solutionRefs.toList.map(ref => proteinrefinery.fetch(ref)(s))
-    assertResult(1)(solutions.size)
+    assertResult(1, Desc(solutions).printTree(fetch, implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
     val sol = solutions.head
     assertResult(???)(sol)
   }

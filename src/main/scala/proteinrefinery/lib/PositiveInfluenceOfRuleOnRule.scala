@@ -69,8 +69,8 @@ object PositiveInfluenceOfRuleOnRule {
 
   implicit val deepShowK: DeepShowK[PositiveInfluenceOfRuleOnRule] = new DeepShowK[PositiveInfluenceOfRuleOnRule] {
     def show[Ptr[_]](a: PositiveInfluenceOfRuleOnRule[Ptr]): Desc[Ptr] = a match {
-      case Enables(enabler, enablee) => Desc.ref(enabler) ++ (" enables " +: Desc(enablee))
-      case InAssoc(rule, enablee) => Desc.ref(rule) ++ (" facilitates association in " +: Desc(enablee))
+      case Enables(enabler, enablee) => Desc.ref(enabler) ::: " enables " :: Desc.nest(Desc(enablee))
+      case InAssoc(rule, enablee) => Desc.nest(Desc.ref(rule)) ::: " facilitates association in " :: Desc.nest(Desc(enablee))
     }
   }
 

@@ -36,7 +36,7 @@ case class AgentsPattern[Ref[_]](
     case Link(i, si, j, sj) => link0(i, si, j, sj)._1
     case Unlink(id) => unlink(id)
     case Modify(i, rmMods, addMods, enzyme) =>
-      ???
+      modifyAgent(i, rmMods, addMods)
     case Replace(from, to, insert) =>
       ???
   }
@@ -76,6 +76,16 @@ case class AgentsPattern[Ref[_]](
     require(hasBond(id.value))
     val Some((i, si, j, sj)) = bonds(id.value)
     AgentsPattern(agents, bonds.updated(id.value, None), assocs, (i, si) :: (j, sj) :: unbound)
+  }
+
+  def modifyAgent(i: AgentIndex, rmMods: ProteinModifications[Ref], addMods: ProteinModifications[Ref]): AgentsPattern[Ref] = {
+    require(hasAgent(i.value))
+    updateAgent(i, _.modify(rmMods, addMods))
+  }
+
+  def updateAgent(i: AgentIndex, f: ProteinPattern[Ref] => ProteinPattern[Ref]): AgentsPattern[Ref] = {
+    val ag = f(agents(i.value).get)
+    AgentsPattern(agents.updated(i.value, Some(ag)), bonds, assocs, unbound)
   }
 
   def addAssoc(i: AgentIndex, j: AgentIndex, assocRef: Ref[IncSet[Ref[Discrete[Assoc[Ref]]]]]): (AgentsPattern[Ref], AssocId) = {
