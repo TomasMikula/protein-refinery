@@ -1,8 +1,7 @@
 package proteinrefinery.util
 
 import scala.annotation.tailrec
-import scala.collection.mutable.{Map => MMap}
-import scalaz.{Semigroup, \&/}
+import scalaz.\&/
 
 package object syntax {
 
@@ -29,76 +28,6 @@ package object syntax {
         Some(go(i, Nil, l))
       }
     }
-  }
-
-  implicit class IteratorOps[A](it: Iterator[A]) {
-    def toMultiMap[K, V](implicit ev: A =:= (K, V)): Map[K, List[V]] = {
-      val builder = MMap[K, List[V]]()
-      while(it.hasNext) {
-        val (k, v) = ev(it.next())
-        builder.update(k, v :: builder.getOrElse(k, Nil))
-      }
-      builder.toMap
-    }
-
-    def collectToList[B](f: A => Option[B]): List[B] = {
-      var buf = List.newBuilder[B]
-      while(it.hasNext) {
-        f(it.next()).foreach(buf += _)
-      }
-      buf.result()
-    }
-
-    def mapFilter[B](f: A => Option[B]): Iterator[B] = {
-      it.flatMap(a => f(a) match {
-        case Some(b) => Iterator.single(b)
-        case None => Iterator.empty
-      })
-    }
-
-    def intersperse(a: A): Iterator[A] = new Iterator[A] {
-      var nextIsSeparator: Boolean = false
-
-      def hasNext: Boolean = it.hasNext
-
-      def next(): A = {
-        if(nextIsSeparator) {
-          nextIsSeparator = false
-          a
-        } else {
-          nextIsSeparator = true
-          it.next()
-        }
-      }
-    }
-
-    def balancedReduce(implicit A: Semigroup[A]): Option[A] = {
-      @tailrec def append(l: List[A], lFactor: Int, a: A): List[A] = {
-        // |l| = lFactor * |a|
-        //   where
-        //     |l| is the total number of elements accumulated in (all elements of) l,
-        //     |a| number of elements accumulated in a
-        if (lFactor % 2 == 0) a :: l
-        else append(l.tail, lFactor / 2, A.append(l.head, a))
-      }
-
-      var l = List[A]()
-      var n = 0 // number of elements accumulated in l
-      while(it.hasNext) {
-        l = append(l, n, it.next)
-        n = n + 1
-      }
-
-      l.reduceLeftOption((acc, a) => A.append(a, acc))
-    }
-  }
-
-  implicit class IterableOps[A](col: Iterable[A]) {
-    def toMultiMap[K, V](implicit ev: A =:= (K, V)): Map[K, List[V]] =
-      col.iterator.toMultiMap
-
-    def collectToList[B](f: A => Option[B]): List[B] =
-      col.iterator.collectToList(f)
   }
 
   implicit class MapOps[K, V](self: Map[K, V]) {

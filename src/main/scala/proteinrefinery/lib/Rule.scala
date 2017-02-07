@@ -4,7 +4,7 @@ import nutcracker.{Discrete, Dom, Promise, Propagation, Trigger}
 import nutcracker.Dom.Status
 import nutcracker.ops._
 import nutcracker.syntax.dom._
-import nutcracker.util.{ContU, DeepEqualK, DeepShowK, Desc, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
+import nutcracker.util.{ContU, DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{OnceTrigger, Unification}
@@ -133,8 +133,11 @@ final case class Rule[Ref[_]] (lhs: AgentsPattern[Ref], actions: List[Action[Ref
 
   override def toString: String = show[FreeObjectOutput[String, Ref, ?]].showShallow(ShowK.fromToString)
 
-  def show[F[_]](implicit F: MonadObjectOutput[F, String, Ref]): F[Unit] =
-    lhs.show[F] >> F.write(" -> ") >> rhs.show[F]
+  def show[F[_]](implicit F: MonadObjectOutput[F, String, Ref]): F[Unit] = {
+    val r = lhs.show[F] >> F.write(" -> ") >> rhs.show[F]
+    if(lhs.assocs.nonEmpty) F.nest(r) >> lhs.showAssocs[F]
+    else                           r
+  }
 }
 
 object Rule {
@@ -156,7 +159,8 @@ object Rule {
   }
 
   implicit val deepShowKInstance: DeepShowK[Rule] = new DeepShowK[Rule] {
-    def show[Ptr[_]](a: Rule[Ptr]): Desc[Ptr] = a.show[FreeObjectOutput[String, Ptr, ?]]
+    def show[Ptr[_], M[_]](a: Rule[Ptr])(implicit M: MonadObjectOutput[M, String, Ptr]): M[Unit] =
+      a.show[M]
   }
 
   implicit def domInstance[Var[_]](implicit ev: EqualK[Var]): Dom.Aux[Rule[Var], Update[Var], Delta[Var]] = new Dom[Rule[Var]] {

@@ -4,7 +4,7 @@ import scala.language.higherKinds
 import nutcracker.Promise.Completed
 import nutcracker.{Dom, Join}
 import nutcracker.syntax.dom._
-import nutcracker.util.{DeepEqualK, EqualK, IsEqual, ShowK}
+import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, IsEqual, MonadObjectOutput, ShowK}
 import nutcracker.util.EqualK._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
@@ -97,7 +97,7 @@ object ProteinModifications {
       }
     }
 
-    implicit def deepEqualKInstance: DeepEqualK[LocalSiteId, LocalSiteId] =
+    implicit val deepEqualKInstance: DeepEqualK[LocalSiteId, LocalSiteId] =
       new DeepEqualK[LocalSiteId, LocalSiteId] {
         def equal[Ref1[_], Ref2[_]](a1: LocalSiteId[Ref1], a2: LocalSiteId[Ref2]): IsEqual[Ref1, Ref2] = (a1, a2) match {
           case (DefiniteLabel(l1), DefiniteLabel(l2)) => IsEqual(l1, l2)
@@ -112,6 +112,14 @@ object ProteinModifications {
         case DefiniteLabel(s) => s.shows
         case SiteRef(ref) => s"<site#${ev.shows(ref)}>"
       }
+    }
+
+    implicit val deepShowKInstance: DeepShowK[LocalSiteId] = new DeepShowK[LocalSiteId] {
+      def show[Ptr[_], M[_]](a: LocalSiteId[Ptr])(implicit M: MonadObjectOutput[M, String, Ptr]): M[Unit] =
+        a match {
+          case DefiniteLabel(s) => M(s)
+          case SiteRef(ref) => M.writeObject(ref)
+        }
     }
   }
 

@@ -3,8 +3,9 @@ package proteinrefinery.lib
 import scala.language.higherKinds
 import nutcracker.{Discrete, Propagation}
 import nutcracker.ops._
-import nutcracker.util.{ContU, DeepShowK, Desc, EqualK}
+import nutcracker.util.{ContU, DeepShowK, EqualK, MonadObjectOutput}
 import nutcracker.util.EqualK._
+import nutcracker.util.ops.tell._
 
 import scalaz.Monad
 import scalaz.syntax.equal._
@@ -59,19 +60,20 @@ object PositiveInfluenceOfRuleOnRule {
     }
 
     implicit val deepShowK: DeepShowK[Enablee] = new DeepShowK[Enablee] {
-      def show[Ptr[_]](a: Enablee[Ptr]): Desc[Ptr] = a match {
-        case Singleton(target) => Desc.ref(target)
-        case Indirect(infl) => Desc(infl)
-        case InAssoc(rule, assoc, enablee) => Desc.ref(rule) ++ (" facilitates association in " +: Desc(enablee))
+      def show[Ptr[_], M[_]](a: Enablee[Ptr])(implicit M: MonadObjectOutput[M, String, Ptr]): M[Unit] = a match {
+        case Singleton(target) => M.writeObject(target)
+        case Indirect(infl) => M(infl)
+        case InAssoc(rule, assoc, enablee) => tell"${M.writeObject(rule)} facilitates association in ${M.nest(M(enablee))}"
       }
     }
   }
 
   implicit val deepShowK: DeepShowK[PositiveInfluenceOfRuleOnRule] = new DeepShowK[PositiveInfluenceOfRuleOnRule] {
-    def show[Ptr[_]](a: PositiveInfluenceOfRuleOnRule[Ptr]): Desc[Ptr] = a match {
-      case Enables(enabler, enablee) => Desc.ref(enabler) ::: " enables " :: Desc.nest(Desc(enablee))
-      case InAssoc(rule, enablee) => Desc.nest(Desc.ref(rule)) ::: " facilitates association in " :: Desc.nest(Desc(enablee))
-    }
+    def show[Ptr[_], M[_]](a: PositiveInfluenceOfRuleOnRule[Ptr])(implicit M: MonadObjectOutput[M, String, Ptr]): M[Unit] =
+      a match {
+        case Enables(enabler, enablee) => tell"${M.writeObject(enabler)} enables ${M.nest(M(enablee))}"
+        case InAssoc(rule, enablee) => tell"${M.writeObject(rule)} facilitates association in ${M.nest(M(enablee))}"
+      }
   }
 
   trait Search[M[_], Var[_]] {

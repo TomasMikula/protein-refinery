@@ -24,10 +24,6 @@ package object proteinrefinery extends ImplicitConversions {
   val interpreterF = interpreter.freeInstance
   def propStore[K]: Lens[State[K], PropagationStore[K]] = implicitly[Lens[State[K], PropagationStore[K]]]
   def fetch[D](ref: DRef[D])(s: State[PU]): D = propStore[PU].get(s).fetch(ref)
-  def fetchDSet[D](ref: DRef[DSet[DRef, D]])(s: State[PU]): Set[D] = {
-    val dset = fetch(ref)(s)
-    dset.refined.map(fetch(_)(s))
-  }
   def fetchIncSet[D](ref: DRef[IncSet[D]])(s: State[PU]): Set[D] = {
     fetch(ref)(s).value
   }

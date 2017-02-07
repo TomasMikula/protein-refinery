@@ -1,13 +1,13 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Discrete, Dom, IncSet, Propagation}
+import nutcracker.{Discrete, Dom, IncRefSet, Propagation}
 import nutcracker.syntax.dom._
 import nutcracker.util.{ContU, DeepEqual, DeepEqualK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
+import nutcracker.util.ops._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.util.{Unification, mapUnion}
 import proteinrefinery.util.Unification.Syntax._
-import proteinrefinery.util.syntax._
 
 import scalaz.Id.Id
 import scalaz.{Applicative, Equal, Monad, State, StateT}
@@ -18,7 +18,7 @@ import scalaz.syntax.monad._
 case class AgentsPattern[Ref[_]](
   agents: Vector[Option[ProteinPattern[Ref]]],
   bonds: Vector[Option[(AgentIndex, LocalSiteId[Ref], AgentIndex, LocalSiteId[Ref])]],
-  assocs: Vector[Option[(AgentIndex, AgentIndex, Ref[IncSet[Assoc.Ref[Ref]]])]],
+  assocs: Vector[Option[(AgentIndex, AgentIndex, Ref[IncRefSet[Ref, Discrete[Assoc[Ref]]]])]],
   unbound: List[(AgentIndex, LocalSiteId[Ref])]
 ) {
   import AgentsPattern._
@@ -88,7 +88,7 @@ case class AgentsPattern[Ref[_]](
     AgentsPattern(agents.updated(i.value, Some(ag)), bonds, assocs, unbound)
   }
 
-  def addAssoc(i: AgentIndex, j: AgentIndex, assocRef: Ref[IncSet[Ref[Discrete[Assoc[Ref]]]]]): (AgentsPattern[Ref], AssocId) = {
+  def addAssoc(i: AgentIndex, j: AgentIndex, assocRef: Ref[IncRefSet[Ref, Discrete[Assoc[Ref]]]]): (AgentsPattern[Ref], AssocId) = {
     val assoc = (i, j, assocRef)
     (AgentsPattern[Ref](agents, bonds, assocs :+ Some(assoc), unbound), AssocId(assocs.size))
   }
@@ -120,6 +120,16 @@ case class AgentsPattern[Ref[_]](
     agents.iterator.zipWithIndex.mapFilter({ case (pp, i) => pp.map(pp =>
       pp.showWithBonds[F](linksByAgent.getOrElse(AgentIndex(i), Nil).toMap)
     )}).intersperse(F.write(", ")).foldRight[F[Unit]](F.point(()))((fu, acc) => fu >> acc)
+  }
+
+  def showAssocs[F[_]](implicit F: MonadObjectOutput[F, String, Ref]): F[Unit] = {
+    assocs.iterator.mapFilter(identity).map(ijs => {
+      val (i, j, sols) = ijs
+      for {
+        _ <- F.write(s"agent ${i.value} has to be associated with agent ${j.value}, with solutions: ")
+        u <- F.writeObject(sols)
+      } yield u
+    }).sequence_
   }
 
   private def reifyBond(b: (AgentIndex, LocalSiteId[Ref], AgentIndex, LocalSiteId[Ref])): (ProteinPattern[Ref], LocalSiteId[Ref], ProteinPattern[Ref], LocalSiteId[Ref]) = b match {
@@ -262,7 +272,7 @@ object AgentsPattern {
   trait Ops[M[_], Ref[_]] {
     implicit def Propagation: Propagation[M, Ref]
 
-    def IncSets: nutcracker.IncSets[M, Ref]
+    def IncRefSets: nutcracker.IncRefSets[M, Ref]
     def AssocSearch: Assoc.Search[M, Ref]
 
     def requireAssoc(i: AgentIndex, j: AgentIndex, predicate: Assoc[Ref] => Boolean)(implicit M: Monad[M], ev: EqualK[Ref]): StateT[M, AgentsPattern[Ref], AssocId] = {
@@ -271,7 +281,7 @@ object AgentsPattern {
           if (predicate(a)) Some(a)
           else None
         }
-        val assocS = IncSets.collect(assocC)
+        val assocS = IncRefSets.collect(assocC)
         M.map(assocS)(ref => ap.addAssoc(i, j, ref))
       })
     }
@@ -281,7 +291,7 @@ object AgentsPattern {
         case Some((_, _, asr)) => Vector(asr)
         case None => Vector()
       }
-      ContU.sequence(as.map(asr => IncSets.forEach(asr)))
+      ContU.sequence(as.map(asr => IncRefSets.forEach(asr)))
     }
   }
 }

@@ -2,8 +2,9 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.{Discrete, IncSet}
-import nutcracker.util.{ContU, DeepShowK, Desc, EqualK}
+import nutcracker.util.{ContU, DeepShowK, EqualK, MonadObjectOutput}
 import nutcracker.util.EqualK._
+import nutcracker.util.ops.tell._
 import proteinrefinery.util.OnceTrigger
 
 import scalaz.Monad
@@ -25,10 +26,11 @@ object PositiveInfluenceOnRule {
   }
 
   implicit val deepShowK: DeepShowK[PositiveInfluenceOnRule] = new DeepShowK[PositiveInfluenceOnRule] {
-    def show[Ptr[_]](a: PositiveInfluenceOnRule[Ptr]): Desc[Ptr] = a match {
-      case InLhs(agent, rule) => Desc.nest(Desc(agent)) ::: " occurs in LHS of " :: Desc.nest(Desc.ref(rule))
-      case Indirect(agent, infl) => Desc.nest(Desc(agent)) ::: " occurs in LHS of " :: Desc.nest(Desc(infl))
-    }
+    def show[Ptr[_], M[_]](a: PositiveInfluenceOnRule[Ptr])(implicit M: MonadObjectOutput[M, String, Ptr]): M[Unit] =
+      a match {
+        case InLhs(agent, rule) => tell"${M.nest(M(agent))} occurs in LHS of ${M.nest(M.writeObject(rule))}"
+        case Indirect(agent, infl) => tell"${M.nest(M(agent))} occurs in LHS of ${M.nest(M(infl))}"
+      }
   }
 
 

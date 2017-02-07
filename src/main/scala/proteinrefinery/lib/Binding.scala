@@ -2,7 +2,8 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.{Discrete, RelPSource}
-import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
+import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
+import nutcracker.util.ops.tell._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 
 import scalaz.Equal
@@ -57,7 +58,15 @@ sealed trait Binding[Ref[_]] {
 
   def flip: Binding[Ref] = Binding(witness, qi, pi, qs, ps)
 
-  override def toString = s"$p>$ps - $qs<$q"
+  override def toString = show[FreeObjectOutput[String, Ref, ?]].showShallow(ShowK.fromToString)
+
+  def show[M[_]](implicit M: MonadObjectOutput[M, String, Ref]): M[Unit] = {
+    val p_ = M.writeSubObject(witness)(r => r.value.lhs(pi).protein)
+    val q_ = M.writeSubObject(witness)(r => r.value.lhs(qi).protein)
+    val ps_ = M(ps)
+    val qs_ = M(qs)
+    tell"${p_}>${ps_} - ${qs_}<${q_}"
+  }
 
   private def protein(i: AgentIndex): RelPSource[Ref, Discrete[Protein]] =
     RelPSource.lift(witness).map(r => Discrete(r.value.lhs(i).protein)).deltas(x => x)
@@ -91,6 +100,11 @@ object Binding {
       b1.qi === b2.qi &&
       b1.ps === b2.ps &&
       b1.qs === b2.qs
+  }
+
+  implicit val deepShowKInstance: DeepShowK[Binding] = new DeepShowK[Binding] {
+    def show[Ptr[_], M[_]](a: Binding[Ptr])(implicit M: MonadObjectOutput[M, String, Ptr]): M[Unit] =
+      a.show[M]
   }
 }
 

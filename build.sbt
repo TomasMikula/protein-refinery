@@ -43,4 +43,6 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 )
 
+testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oF") // show full stack traces
+
 fork := true

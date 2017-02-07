@@ -4,7 +4,7 @@ import scala.language.higherKinds
 import nutcracker.Dom.Status
 import nutcracker.{Dom, Promise}
 import nutcracker.Promise.{Complete, Completed, Conflict, Empty}
-import nutcracker.util.{DeepEqualK, DeepShowK, Desc, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
+import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.{DefiniteLabel, LocalSiteId, SiteRef}
 import proteinrefinery.util.{HomSet, Identification, Unification}
 import proteinrefinery.util.HomSet.{Morphisms, Terminal, TerminalOr}
@@ -97,8 +97,8 @@ object ISite {
   }
 
   implicit val deepShowKInstance: DeepShowK[ISite] = new DeepShowK[ISite] {
-    def show[Ptr[_]](s: ISite[Ptr]): Desc[Ptr] =
-      s.show[FreeObjectOutput[String, Ptr, ?]]
+    def show[Ptr[_], M[_]](s: ISite[Ptr])(implicit M: MonadObjectOutput[M, String, Ptr]): M[Unit] =
+      s.show[M]
   }
 
   implicit def identificationInstance[Ref[_]]: Identification.Aux[ISite[Ref], Update[Ref], Delta[Ref]] = {

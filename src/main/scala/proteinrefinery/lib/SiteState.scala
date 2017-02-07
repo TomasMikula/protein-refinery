@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Promise
-import nutcracker.util.{DeepEqual, DeepShow, Desc, IsEqual}
+import nutcracker.util.{DeepEqual, DeepShow, IsEqual, MonadObjectOutput}
 import proteinrefinery.util.{HomSet, Unification}
 
 import scalaz.{Equal, Show}
@@ -26,8 +26,9 @@ object StateLabel {
       def equal(a1: StateLabel, a2: StateLabel): IsEqual[Ptr1, Ptr2] = IsEqual(equalInstance.equal(a1, a2))
     }
 
-  implicit def deepShowInstance[Ptr[_]]: DeepShow[StateLabel,Ptr] = new DeepShow.FromFree[StateLabel, Ptr] {
-    def free(a: StateLabel): Desc[Ptr] = Desc.done(a.value)
+  implicit def deepShowInstance[Ptr[_]]: DeepShow[StateLabel,Ptr] = new DeepShow.FromSerialize[StateLabel, Ptr] {
+    def serialize[M[_]](a: StateLabel)(implicit ev: MonadObjectOutput[M, String, Ptr]): M[Unit] =
+      ev.write(a.value)
   }
 }
 

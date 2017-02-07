@@ -3,7 +3,7 @@ package proteinrefinery.lib
 import scala.language.higherKinds
 import nutcracker.{Discrete, IncSet}
 import nutcracker.ops._
-import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
+import nutcracker.util.{ContU, DeepEqualK, DeepShow, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import nutcracker.util.EqualK._
 import proteinrefinery.Cost
 
@@ -13,7 +13,10 @@ import scalaz.syntax.equal._
 import scalaz.syntax.foldable._
 
 case class Assoc[Ref[_]](bindings: List[Binding[Ref]]) extends AnyVal {
-  override def toString = bindings.mkString(" ; ")
+  override def toString = show[FreeObjectOutput[String, Ref, ?]].showShallow(ShowK.fromToString)
+
+  def show[M[_]](implicit M: MonadObjectOutput[M, String, Ref]): M[Unit] =
+    DeepShow.join(bindings.map(M(_)))(" ; ")
 }
 
 object Assoc {
@@ -61,6 +64,11 @@ object Assoc {
   implicit val deepEqualKInstance: DeepEqualK[Assoc, Assoc] = new DeepEqualK[Assoc, Assoc] {
     def equal[Ptr1[_], Ptr2[_]](a1: Assoc[Ptr1], a2: Assoc[Ptr2]): IsEqual[Ptr1, Ptr2] =
       IsEqual(a1.bindings, a2.bindings)
+  }
+
+  implicit val deepShowKInstance: DeepShowK[Assoc] = new DeepShowK[Assoc] {
+    def show[Ptr[_], M[_]](a: Assoc[Ptr])(implicit M: MonadObjectOutput[M, String, Ptr]): M[Unit] =
+      a.show[M]
   }
 
   implicit def showInstance[Var[_]]: Show[Assoc[Var]] = new Show[Assoc[Var]] {

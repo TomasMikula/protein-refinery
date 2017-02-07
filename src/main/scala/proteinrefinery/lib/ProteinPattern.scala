@@ -3,12 +3,12 @@ package proteinrefinery.lib
 import scala.language.higherKinds
 import nutcracker.Promise.{Completed, Conflict, Empty}
 import nutcracker.{Discrete, Dom, Promise}
+import nutcracker.util.ops.iterator._
 import nutcracker.syntax.dom._
-import nutcracker.util.{DeepEqualK, DeepShowK, Desc, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
+import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{Identification, Unification}
-import proteinrefinery.util.syntax._
 
 import scalaz.{Semigroup, \&/}
 import scalaz.std.either._
@@ -34,9 +34,9 @@ case class ProteinPattern[Ref[_]](protein: Protein, mods: ProteinModifications[R
 
   def mentionedSites: Set[LocalSiteId[Ref]] = mods.mentionedSites
 
-  override def toString: String = show.showShallow(ShowK.fromToString)
+  override def toString: String = show[FreeObjectOutput[String, Ref, ?]].showShallow(ShowK.fromToString)
 
-  def show: Desc[Ref] = showWithBonds[FreeObjectOutput[String, Ref, ?]](Map())
+  def show[M[_]](implicit M: MonadObjectOutput[M, String, Ref]): M[Unit] = showWithBonds[M](Map())
 
   def showWithBonds[M[_]](bonds: Map[LocalSiteId[Ref], Either[Unbound.type, LinkId]])(implicit M: MonadObjectOutput[M, String, Ref]): M[Unit] = {
     type LinkDesc = Either[Unbound.type, LinkId]
@@ -156,10 +156,7 @@ object ProteinPattern {
 
   implicit def deepShowKInstance: DeepShowK[ProteinPattern] =
     new DeepShowK[ProteinPattern] {
-      def show[Ptr[_]](pp: ProteinPattern[Ptr]): Desc[Ptr] = pp.show
+      def show[Ptr[_], M[_]](pp: ProteinPattern[Ptr])(implicit M: MonadObjectOutput[M, String, Ptr]): M[Unit] =
+        pp.show[M]
     }
-
-  //  implicit def showInstance[Var[_]](implicit ev: ShowK[Var]): Show[ProteinPattern[Var]] = new Show[ProteinPattern[Var]] {
-  //    override def shows(pp: ProteinPattern[Var]) = pp.show
-  //  }
 }

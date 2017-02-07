@@ -2,11 +2,12 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Discrete
-import nutcracker.util.{DeepEqualK, DeepShowK, Desc, EqualK, IsEqual}
+import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, IsEqual, MonadObjectOutput}
 import nutcracker.util.ops._
 
 import scalaz.{Lens, Monad, Show, State, Store}
 import scalaz.syntax.equal._
+import scalaz.syntax.monad._
 
 sealed trait PhosphoTarget[Ref[_]] {
   def witness: Rule[Ref]
@@ -68,8 +69,8 @@ object PhosphoTarget {
   }
 
   implicit val deepShowKInstance: DeepShowK[PhosphoTarget] = new DeepShowK[PhosphoTarget] {
-    def show[Ptr[_]](a: PhosphoTarget[Ptr]): Desc[Ptr] =
-      Desc[Ptr, Protein](a.kinase) ++ (" phosphorylates " +: (Desc[Ptr, Protein](a.substrate) ++ (" at site " +: Desc(a.targetSite))))
+    def show[Ptr[_], M[_]](a: PhosphoTarget[Ptr])(implicit M: MonadObjectOutput[M, String, Ptr]): M[Unit] =
+      M(a.kinase) >> M.write(" phosphorylates ") >> M(a.substrate) >> M.write(" at site ") >> M(a.targetSite)
   }
 
   implicit val deepEqualKInstance: DeepEqualK[PhosphoTarget, PhosphoTarget] =
