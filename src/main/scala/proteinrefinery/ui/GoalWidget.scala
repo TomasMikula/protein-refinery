@@ -6,8 +6,8 @@ import javafx.scene.control.{ComboBox, Label, Menu, MenuBar, MenuItem, ScrollPan
 import javafx.scene.layout.{Background, BackgroundFill, CornerRadii, GridPane, Region, StackPane, VBox}
 import javafx.scene.paint.Color
 
-import nutcracker.util.KMap
-import nutcracker.{Discrete, DRef, Dom, IncSet}
+import nutcracker.util.HHKMap
+import nutcracker.{Discrete, Dom, IncSet}
 import org.reactfx.value.Val
 import org.reactfx.{EventSource, EventStream}
 import proteinrefinery.lib.{Assoc, NegativeInfluenceOnPhosphorylation, PhosphoTarget, Protein}
@@ -15,16 +15,16 @@ import proteinrefinery.ui.util.syntax._
 
 import scalaz.Show
 
-class GoalWidget {
+class GoalWidget[Ref[_]] {
   import GoalType._
 
-  private var goals: KMap[GoalType, λ[A => List[GoalView[A]]]] = KMap[GoalType, λ[A => List[GoalView[A]]]]()
+  private var goals: HHKMap[GoalType, λ[`A[_[_]]` => List[GoalView[Ref, A]]]] = HHKMap[GoalType, λ[`A[_[_]]` => List[GoalView[Ref, A]]]]()
 
   private val newGoalMenu = new Menu("Add goal") <| { _.getItems.addAll(
     new MenuItem("Association") <| { _.onAction(() => showDialog(new AssocGoalInput)(pq => ReqGoalAssoc(pq._1, pq._2))) },
     new MenuItem("Phosphorylation") <| { _.onAction(() => showDialog(new PhosGoalInput)(ks => ReqGoalPhos(ks._1, ks._2))) },
     new MenuItem("Negative influence on phosphorylation") <| { _.onAction(() =>
-      showDialog(new PhosNegInflInput(goals.get(GoalPhos).getOrElse(Nil)))(pgv => ReqGoalPhosNegInfl(pgv._1, pgv._2.ref, pgv._2.desc))
+      showDialog(new PhosNegInflInput[Ref](goals.get[λ[`Ref[_]`=> Discrete[PhosphoTarget[Ref]]]](GoalPhos).getOrElse(Nil)))(pgv => ReqGoalPhosNegInfl(pgv._1, pgv._2.ref, pgv._2.desc))
     ) }
   ).ignoreResult }
 
@@ -48,50 +48,52 @@ class GoalWidget {
     _.setFitToWidth(true)
   }
 
-  private val _requests = new EventSource[UIRequest]
+  private val _requests = new EventSource[UIRequest[Ref]]
 
-  def requests: EventStream[UIRequest] = _requests
+  def requests: EventStream[UIRequest[Ref]] = _requests
 
-  def addView[A](view: GoalView[A]): Unit = {
+  def addView[A[_[_]]](view: GoalView[Ref, A]): Unit = {
     goals = goals.put(view.goalType)(view :: goals.getOrElse(view.goalType)(Nil))
     goalBox.getChildren.add(view.node)
     ()
   }
 
-  def addSolution[A](t: GoalType[A], ref: DRef[IncSet[DRef[A]]], sref: DRef[A], sol: A)(implicit
-    dom: Dom[A],
-    show: Show[A]
+  def addSolution[A[_[_]]](t: GoalType[A], ref: Ref[IncSet[Ref[A[Ref]]]], sref: Ref[A[Ref]], sol: A[Ref])(implicit
+    dom: Dom[A[Ref]],
+    show: Show[A[Ref]]
   ): Unit = {
     withGoalView(t, ref)(_.addSolution(sref, sol))
   }
 
-  def updateSolution[A](t: GoalType[A], ref: DRef[IncSet[DRef[A]]], sref: DRef[A], sol: A)(implicit
-    dom: Dom[A],
-    show: Show[A]
+  def updateSolution[A[_[_]]](t: GoalType[A], ref: Ref[IncSet[Ref[A[Ref]]]], sref: Ref[A[Ref]], sol: A[Ref])(implicit
+    dom: Dom[A[Ref]],
+    show: Show[A[Ref]]
   ): Unit = {
     withGoalView(t, ref)(_.updateSolution(sref, sol))
   }
 
-  private def withGoalView[A](t: GoalType[A], ref: DRef[IncSet[DRef[A]]])(f: GoalView[A] => Unit): Unit =
+  private def withGoalView[A[_[_]]](t: GoalType[A], ref: Ref[IncSet[Ref[A[Ref]]]])(f: GoalView[Ref, A] => Unit): Unit =
     goals.getOrElse(t)(Nil).find(_.ref == ref).foreach(f)
 
-  private def showDialog[A](form: InputForm[A])(req: A => UIRequest): Unit =
+  private def showDialog[A](form: InputForm[A])(req: A => UIRequest[Ref]): Unit =
     InputDialog.show(dialogHolder, form)(a => _requests.push(req(a)))
 
 }
 
 object GoalWidget {
-  def apply(): GoalWidget = new GoalWidget
+  def apply[Ref[_]](): GoalWidget[Ref] = new GoalWidget
 
   private def setBackgroundColor(node: Region, color: Color): Unit =
     node.setBackground(new Background(new BackgroundFill(color, CornerRadii.EMPTY, Insets.EMPTY)))
 }
 
-trait GoalType[A] { self: Singleton => }
+trait GoalType[A[_[_]]] { self: Singleton =>
+  type Data[Ref[_]] = A[Ref]
+}
 object GoalType {
-  implicit object GoalAssoc extends GoalType[Discrete[Assoc[DRef]]]
-  implicit object GoalPhos extends GoalType[Discrete[PhosphoTarget[DRef]]]
-  implicit object GoalPhosNegInfl extends GoalType[Discrete[NegativeInfluenceOnPhosphorylation[DRef]]]
+  implicit object GoalAssoc extends GoalType[λ[`Ref[_]`=> Discrete[Assoc[Ref]]]]
+  implicit object GoalPhos extends GoalType[λ[`Ref[_]`=> Discrete[PhosphoTarget[Ref]]]]
+  implicit object GoalPhosNegInfl extends GoalType[λ[`Ref[_]`=> Discrete[NegativeInfluenceOnPhosphorylation[Ref]]]]
 }
 
 class AssocGoalInput extends InputForm[(Protein, Protein)] {
@@ -126,8 +128,8 @@ class PhosGoalInput extends InputForm[(Protein, Protein)] {
     .map2[String, String, (Protein, Protein)]((p1, p2) => (Protein(p1), Protein(p2)))
 }
 
-class PhosNegInflInput(phosGoals: List[GoalView[Discrete[PhosphoTarget[DRef]]]]) extends InputForm[(Protein, GoalView[Discrete[PhosphoTarget[DRef]]])] {
-  private case class GVWrapper(goalView: GoalView[Discrete[PhosphoTarget[DRef]]]) {
+class PhosNegInflInput[Ref[_]](phosGoals: List[GoalView[Ref, λ[`Var[_]` => Discrete[PhosphoTarget[Var]]]]]) extends InputForm[(Protein, GoalView[Ref, λ[`Var[_]` => Discrete[PhosphoTarget[Var]]]])] {
+  private case class GVWrapper(goalView: GoalView[Ref, λ[`Var[_]` => Discrete[PhosphoTarget[Var]]]]) {
     override def toString = goalView.desc
   }
 
@@ -143,7 +145,8 @@ class PhosNegInflInput(phosGoals: List[GoalView[Discrete[PhosphoTarget[DRef]]]])
     _.addRow(1, new Label("Phosphorylation"), goalSelection)
   }
 
-  val input: Val[(Protein, GoalView[Discrete[PhosphoTarget[DRef]]])] = (agentInput.textProperty() |@| goalSelection.getSelectionModel.selectedItemProperty()).tuple
-    .filter2[String, GVWrapper]((a, gv) => !a.isEmpty && gv != null)
-    .map2[String, GVWrapper, (Protein, GoalView[Discrete[PhosphoTarget[DRef]]])]((a, gv) => (Protein(a), gv.goalView))
+  val input: Val[(Protein, GoalView[Ref, λ[`Var[_]` => Discrete[PhosphoTarget[Var]]]])] =
+    (agentInput.textProperty() |@| goalSelection.getSelectionModel.selectedItemProperty()).tuple
+      .filter2[String, GVWrapper]((a, gv) => !a.isEmpty && gv != null)
+      .map2[String, GVWrapper, (Protein, GoalView[Ref, λ[`Var[_]` => Discrete[PhosphoTarget[Var]]]])]((a, gv) => (Protein(a), gv.goalView))
 }

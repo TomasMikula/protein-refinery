@@ -12,8 +12,9 @@ object UI extends App {
 class UIApp extends Application {
 
   def start(stage: Stage): Unit = {
-    val kbWidget = KBWidget()
-    val goalWidget = GoalWidget()
+    import nutcracker.PropagationStore.module.Ref
+    val kbWidget = KBWidget[Ref]()
+    val goalWidget = GoalWidget[Ref]()
     val controller = Controller(kbWidget, goalWidget)
     val content = new SplitPane(kbWidget.node, goalWidget.node)
 

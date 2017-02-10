@@ -1,6 +1,5 @@
 package proteinrefinery
 
-import nutcracker.DRef
 import org.scalatest.{Assertion, FunSuite}
 import proteinrefinery.lib.Site._
 import proteinrefinery.util.Identification.Syntax._
@@ -8,7 +7,9 @@ import proteinrefinery.util.Identification.Syntax._
 import scalaz.Equal
 
 class ProteinModificationsTests extends FunSuite {
-  val lib = new Lib[Prg, DRef]
+  val refinery = proteinrefinery.refinery()
+  import refinery._
+
   import lib._
 
   private def assertEqual[A: Equal](a1: A, a2: A): Assertion =

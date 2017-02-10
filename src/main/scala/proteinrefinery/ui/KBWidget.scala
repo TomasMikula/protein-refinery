@@ -6,8 +6,7 @@ import javafx.scene.Node
 import javafx.scene.control.{Button, Label, ListView, Menu, MenuBar, MenuItem, ScrollPane, TextField, TitledPane}
 import javafx.scene.layout.{GridPane, HBox, StackPane, VBox}
 
-import nutcracker.DRef
-import nutcracker.util.KMap
+import nutcracker.util.HHKMap
 import org.reactfx.collection.LiveArrayList
 import org.reactfx.value.{Val, Var}
 import org.reactfx.{EventSource, EventStream, EventStreams}
@@ -17,18 +16,18 @@ import proteinrefinery.ui.util.syntax._
 
 import scalaz.Show
 
-class KBWidget {
+class KBWidget[Ref[_]] {
 
   private val newFactMenu = new Menu("Add fact") <| { _.getItems.addAll(
     new MenuItem("Bind") <| { _.onAction(() => showDialog(new BindFactInput){ case (p, ps, q, qs) => ReqAssertBind(p, ps, q, qs) }) },
-    new MenuItem("Kinase activity") <| { _.onAction(() => showDialog(new KinaseActivityInput)(pp => ReqAssertKinaseActivity(pp))) },
+    new MenuItem("Kinase activity") <| { _.onAction(() => showDialog(new KinaseActivityInput[Ref])(pp => ReqAssertKinaseActivity(pp))) },
     new MenuItem("Phosphorylatable site") <| { _.onAction(() => showDialog(new PhosSiteFactInput){ case (k, s, ss) => ReqAssertPhosSite(k, s, ss) }) }
   ).ignoreResult }
 
   private val dialogHolder = new StackPane()
-  private val rules = new ListView[Rule[DRef]]
-  private val phosSites = new ListView[(Protein, Protein, ISite[DRef])]
-  private val kinases = new ListView[ProteinPattern[DRef]]
+  private val rules = new ListView[Rule[Ref]]
+  private val phosSites = new ListView[(Protein, Protein, ISite[Ref])]
+  private val kinases = new ListView[ProteinPattern[Ref]]
 
   val node: Node = new ScrollPane(
     new VBox(
@@ -46,38 +45,41 @@ class KBWidget {
     _.setFitToWidth(true)
   }
 
-  private val _requests = new EventSource[UIRequest]
+  private val _requests = new EventSource[UIRequest[Ref]]
 
-  private val factHandlers: KMap[FactType, ? => Unit] = KMap[FactType, ? => Unit]()
-    .put(FactRule)(ruleAdded)
-    .put(FactPhosTarget)(pt => phosTargetAdded(pt.kinase, pt.substrate, pt.targetSite))
-    .put(FactKinase)(kinaseAdded)
+  private val factHandlers: HHKMap[FactType, λ[`A[_[_]]` => A[Ref] => Unit]] =
+    HHKMap[FactType, λ[`A[_[_]]` => A[Ref] => Unit]]()
+      .put(FactRule)(ruleAdded)
+      .put(FactPhosTarget)(pt => phosTargetAdded(pt.kinase, pt.substrate, pt.targetSite))
+      .put(FactKinase)(kinaseAdded)
 
-  def requests: EventStream[UIRequest] = _requests
+  def requests: EventStream[UIRequest[Ref]] = _requests
 
-  def factAdded[A](t: FactType[A], fact: A)(implicit A: Show[A]): Unit = {
+  def factAdded[A[_[_]]](t: FactType[A], fact: A[Ref])(implicit A: Show[A[Ref]]): Unit = {
     factHandlers.getOrElse(t)(a => sys.error(s"Unexpected fact type: $t"))(fact)
   }
 
-  private def ruleAdded(r: Rule[DRef]): Unit = rules.getItems.add(r).ignoreResult()
+  private def ruleAdded(r: Rule[Ref]): Unit = rules.getItems.add(r).ignoreResult()
 
-  private def phosTargetAdded(k: Protein, s: Protein, ss: ISite[DRef]): Unit = phosSites.getItems.add((k, s, ss)).ignoreResult()
+  private def phosTargetAdded(k: Protein, s: Protein, ss: ISite[Ref]): Unit = phosSites.getItems.add((k, s, ss)).ignoreResult()
 
-  private def kinaseAdded(pp: ProteinPattern[DRef]): Unit = kinases.getItems.add(pp).ignoreResult()
+  private def kinaseAdded(pp: ProteinPattern[Ref]): Unit = kinases.getItems.add(pp).ignoreResult()
 
-  private def showDialog[A](form: InputForm[A])(req: A => UIRequest): Unit =
+  private def showDialog[A](form: InputForm[A])(req: A => UIRequest[Ref]): Unit =
     InputDialog.show(dialogHolder, form)(a => _requests.push(req(a)))
 }
 
 object KBWidget {
-  def apply(): KBWidget = new KBWidget
+  def apply[Ref[_]](): KBWidget[Ref] = new KBWidget
 }
 
-trait FactType[A] { self: Singleton => }
+trait FactType[A[_[_]]] { self: Singleton =>
+  type Data[Ref[_]] = A[Ref]
+}
 object FactType {
-  object FactRule extends FactType[Rule[DRef]]
-  object FactKinase extends FactType[ProteinPattern[DRef]]
-  object FactPhosTarget extends FactType[PhosphoTarget[DRef]]
+  object FactRule extends FactType[Rule]
+  object FactKinase extends FactType[ProteinPattern]
+  object FactPhosTarget extends FactType[PhosphoTarget]
 }
 
 class BindFactInput extends InputForm[(Protein, SiteLabel, Protein, SiteLabel)] {
@@ -115,7 +117,7 @@ class PhosSiteFactInput extends InputForm[(Protein, Protein, SiteLabel)] {
     .map3[String, String, String, (Protein, Protein, SiteLabel)]((k, s, ss) => (Protein(k), Protein(s), SiteLabel(ss)))
 }
 
-class KinaseActivityInput extends InputForm[ProteinPattern[DRef]] {
+class KinaseActivityInput[Ref[_]] extends InputForm[ProteinPattern[Ref]] {
   private val protein = new TextField()
   private val siteStates = new LiveArrayList[(TextField, TextField)]
   private val siteGrid = new GridPane() <| {
@@ -132,11 +134,11 @@ class KinaseActivityInput extends InputForm[ProteinPattern[DRef]] {
     new Button("+") <| { _.onAction(addSiteRow _) }
   )
 
-  val input: Val[ProteinPattern[DRef]] = {
+  val input: Val[ProteinPattern[Ref]] = {
     val p = protein.textProperty().map1(s => if(s.nonEmpty) Protein(s) else null)
-    val mods: Var[ProteinModifications[DRef]] = Var.newSimpleVar(ProteinModifications.noModifications)
+    val mods: Var[ProteinModifications[Ref]] = Var.newSimpleVar(ProteinModifications.noModifications)
     EventStreams.merge(siteFields, j((tf: TextField) => EventStreams.valuesOf(tf.textProperty()))).forEach(mod => {
-      var m: ProteinModifications[DRef] = ProteinModifications.noModifications
+      var m: ProteinModifications[Ref] = ProteinModifications.noModifications
       val it = siteStates.iterator()
       while(it.hasNext) {
         val (siteField, stateField)  = it.next()

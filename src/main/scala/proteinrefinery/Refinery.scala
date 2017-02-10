@@ -1,6 +1,6 @@
 package proteinrefinery
 
-import nutcracker.util.HEqualK
+import nutcracker.util.{HEqualK, ShowK}
 import proteinrefinery.lib.{PhosphoTarget, PhosphoTriple, Rule}
 
 import scala.language.higherKinds
@@ -13,6 +13,7 @@ trait Refinery {
   type Ref[_]
 
   implicit val refEquality: HEqualK[Ref]
+  implicit val refShow: ShowK[Ref]
 
   implicit val fetch: Ref ~> Id
 

@@ -1,13 +1,13 @@
 package proteinrefinery.ui
 
-import nutcracker.{DRef, IncSet}
+import nutcracker.IncSet
 
 import scalaz.Show
 
-abstract class Goal {
+abstract class Goal[Ref[_]] {
   type A
 
-  def ref: DRef[IncSet[A]]
+  def ref: Ref[IncSet[A]]
   def value: IncSet[A]
   def show: Show[A]
 }

@@ -4,6 +4,7 @@ import nutcracker.util.{Desc, ShowK}
 import org.scalatest.FunSuite
 
 class PositiveInfluenceOnRuleTest extends FunSuite {
+  val refinery = proteinrefinery.refinery()
   import proteinrefinery.Lib._
 
   val β_TrCP = Protein("β-TrCP")
@@ -40,7 +41,6 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
     val bnds = interpret(initPhospho >> initBindings)
     val solutionsRef = interpret(Lib.positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(3).witness))
     val solutions = fetch(solutionsRef)
-//    val solutions = solutionRefs.toList.map(ref => proteinrefinery.fetch(ref)(s))
     assertResult(1)(solutions.size)
     val sol = solutions.head
     assertResult(PositiveInfluenceOnRule.InLhs(β_Cat('S45~"p", 'T41~"p"), bnds(3).witness))(sol)

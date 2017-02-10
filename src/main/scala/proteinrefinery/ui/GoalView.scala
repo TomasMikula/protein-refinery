@@ -5,26 +5,26 @@ import javafx.scene.control.TitledPane
 import javafx.scene.layout.VBox
 import javafx.scene.text.Text
 
-import nutcracker.{DRef, IncSet}
+import nutcracker.IncSet
 import proteinrefinery.ui.util.syntax._
 
 import scalaz.Show
 
-class GoalView[A](val goalType: GoalType[A], val desc: String, val ref: DRef[IncSet[DRef[A]]]) {
+class GoalView[Ref[_], A[_[_]]](val goalType: GoalType[A], val desc: String, val ref: Ref[IncSet[Ref[A[Ref]]]]) {
 
   private val solutionNodes = new VBox()
 
-  private var nodesBySolution = Map[DRef[A], Text]()
+  private var nodesBySolution = Map[Ref[A[Ref]], Text]()
 
   val node = new TitledPane(desc, solutionNodes)
 
-  def addSolution(ref: DRef[A], a: A)(implicit A: Show[A]): Unit = {
+  def addSolution(ref: Ref[A[Ref]], a: A[Ref])(implicit A: Show[A[Ref]]): Unit = {
     val node = new Text(A.shows(a))
     solutionNodes.getChildren().add(node)
     nodesBySolution = nodesBySolution.updated(ref, node)
   }
 
-  def updateSolution(ref: DRef[A], a: A)(implicit A: Show[A]): Unit = {
+  def updateSolution(ref: Ref[A[Ref]], a: A[Ref])(implicit A: Show[A[Ref]]): Unit = {
     val node = nodesBySolution(ref)
     node.setText(A.shows(a))
   }
@@ -35,7 +35,7 @@ class GoalView[A](val goalType: GoalType[A], val desc: String, val ref: DRef[Inc
 
 object GoalView {
 
-  def init[A](gt: GoalType[A], desc: String, ref: DRef[IncSet[DRef[A]]]): GoalView[A] =
-    new GoalView[A](gt, desc, ref)
+  def init[Ref[_], A[_[_]]](gt: GoalType[A], desc: String, ref: Ref[IncSet[Ref[A[Ref]]]]): GoalView[Ref, A] =
+    new GoalView[Ref, A](gt, desc, ref)
 
 }
