@@ -220,7 +220,7 @@ object Rule {
     def phosphorylationsC(ref: Rule.Ref[Var])(implicit M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
       ContU(f => observe(ref).by(r => {
         import scalaz.syntax.traverse._
-        val now = r.value.phosphorylations.iterator.map(p => cell(Discrete(p)).flatMap(f)).toList.sequence_
+        val now = r.value.phosphorylations.iterator.map(p => newCell(Discrete(p)).flatMap(f)).toList.sequence_
         val onChange: (Discrete[Rule[Var]], Discrete.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
         (Some(now), Some(onChange))
       }))

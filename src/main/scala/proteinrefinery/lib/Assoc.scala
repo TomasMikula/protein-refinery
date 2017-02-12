@@ -48,7 +48,7 @@ object Assoc {
             val indirect0 = assocC0(b :: leftTail, b.getRight(br), q, rightTail)
             val indirect = Defer.deferC(Cost.complexity(10), indirect0)
             if (b.getRight(br) === q) {
-              val direct = ContU.liftM(Propagation.cell(Discrete(Assoc(leftTail reverse_::: b :: rightTail))))
+              val direct = ContU.liftM(Propagation.newCell(Discrete(Assoc(leftTail reverse_::: b :: rightTail))))
               ContU.sequence(direct, indirect)
             } else
               indirect

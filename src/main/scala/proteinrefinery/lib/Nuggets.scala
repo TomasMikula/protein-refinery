@@ -59,9 +59,9 @@ trait Nuggets[M[_], Ref[_]] {
 
   // basic programs for adding nuggets
   def addRule(r: Rule[Ref]): M[Rule.Ref[Ref]] =
-    cell(Discrete(r)) >>! { track[λ[A[_] => Discrete[Rule[A]]]](_) }
+    newCell(Discrete(r)) >>! { track[λ[A[_] => Discrete[Rule[A]]]](_) }
   def addKinaseActivity(activeState: ProteinPattern[Ref]): M[Unit] =
-    cell(Discrete(activeState)) >>= { track[λ[A[_] => Discrete[ProteinPattern[A]]]](_) }
+    newCell(Discrete(activeState)) >>= { track[λ[A[_] => Discrete[ProteinPattern[A]]]](_) }
 
   // derived programs for adding nuggets
   def addPhosphoTarget(t: PhosphoTriple[Ref]): M[Unit] =
