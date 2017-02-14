@@ -175,8 +175,8 @@ object Rule {
       }
     }
 
-    def combineDeltas(d1: Delta, d2: Delta): Delta =
-      Dom[AgentsPattern[Var]].combineDeltas(d1, d2)
+    def appendDeltas(d1: Delta, d2: Delta): Delta =
+      Dom[AgentsPattern[Var]].appendDeltas(d1, d2)
 
     def assess(r: Rule[Var]): Status[Update] =
       Dom[AgentsPattern[Var]].assess(r.lhs)

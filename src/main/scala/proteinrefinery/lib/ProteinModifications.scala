@@ -140,7 +140,7 @@ object ProteinModifications {
         delta.ifNonEmpty.map((mods, _))
       }
 
-      override def combineDeltas(d1: Delta, d2: Delta): Delta = d1 append d2
+      override def appendDeltas(d1: Delta, d2: Delta): Delta = d1 append d2
     }
 
   implicit def equalInstance[Ref[_]](implicit ev: EqualK[Ref]): Equal[ProteinModifications[Ref]] = new Equal[ProteinModifications[Ref]] {

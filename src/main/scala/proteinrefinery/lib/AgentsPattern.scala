@@ -210,10 +210,10 @@ object AgentsPattern {
     def update(ap: AgentsPattern[Ref], u: Update): Option[(AgentsPattern[Ref], Delta)] =
       ap.updateAgent(u._1, u._2)
 
-    def combineDeltas(d1: Delta, d2: Delta): Delta = {
+    def appendDeltas(d1: Delta, d2: Delta): Delta = {
       val newAgents = d1.newAgents ++ d2.newAgents
       val deltas = mapUnion[AgentIndex, ProteinPattern.Delta[Ref], Id](d1.agentDeltas, d2.agentDeltas)((δ1, δ2) => {
-        Dom[ProteinPattern[Ref]].combineDeltas(δ1, δ2)
+        Dom[ProteinPattern[Ref]].appendDeltas(δ1, δ2)
       })
       Delta(newAgents, deltas)
     }

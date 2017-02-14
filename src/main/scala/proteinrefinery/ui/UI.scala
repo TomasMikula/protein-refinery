@@ -12,7 +12,7 @@ object UI extends App {
 class UIApp extends Application {
 
   def start(stage: Stage): Unit = {
-    import nutcracker.PropagationStore.module.Ref
+    import nutcracker.Propagation.module.Ref
     val kbWidget = KBWidget[Ref]()
     val goalWidget = GoalWidget[Ref]()
     val controller = Controller(kbWidget, goalWidget)

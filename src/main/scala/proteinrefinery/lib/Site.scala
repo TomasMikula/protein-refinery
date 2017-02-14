@@ -130,7 +130,7 @@ object ISite {
               else Some((res, res diff d))
             }
 
-            def combineDeltas(d1: Delta, d2: Delta): Delta = d1 union d2
+            def appendDeltas(d1: Delta, d2: Delta): Delta = d1 union d2
 
             def assess(d: Set[A]): Status[Update] = Dom.Refined
           }

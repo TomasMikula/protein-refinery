@@ -129,7 +129,7 @@ class AutoUnificationBag[A] private(private[util] val elems: List[A]) // extends
     new AutoUnificationMap[K, V](elems.map(f))
 
   private def combineDeltasO[Δ](d1: Option[Δ], d2: Option[Δ])(implicit I: Identification[A]{ type Delta = Δ }): Option[Δ] = (d1, d2) match {
-    case (Some(d1), Some(d2)) => Some(I.unification.dom.combineDeltas(d1, d2))
+    case (Some(d1), Some(d2)) => Some(I.unification.dom.appendDeltas(d1, d2))
     case (None, d2) => d2
     case _ => d1
   }
@@ -209,15 +209,15 @@ object AutoUnificationBag {
         (value, children.flatMap({ case (child, delta) => child match {
           case -\/(PreExisting(a)) => List((a, delta))
           case \/-(node) =>
-            node.flatten._2.map({ case (a, d) => (a, combineDeltasOpt(d, delta)) })
+            node.flatten._2.map({ case (a, d) => (a, appendDeltasOpt(d, delta)) })
         }}))
     }
     private[Delta] case class PreExisting[A](value: A)
 
     def empty[A, Δ] = new Delta[A, Δ](Nil)
 
-    private def combineDeltasOpt[A, U, Δ](d1: Option[Δ], d2: Option[Δ])(implicit dom: Dom.Aux[A, U, Δ]): Option[Δ] = (d1, d2) match {
-      case (Some(d1), Some(d2)) => Some(dom.combineDeltas(d1, d2))
+    private def appendDeltasOpt[A, U, Δ](d1: Option[Δ], d2: Option[Δ])(implicit dom: Dom.Aux[A, U, Δ]): Option[Δ] = (d1, d2) match {
+      case (Some(d1), Some(d2)) => Some(dom.appendDeltas(d1, d2))
       case (None, d2) => d2
       case _ => d1
     }

@@ -120,7 +120,7 @@ object ProteinPattern {
       override def deltaSemigroup: Semigroup[Delta] =
         \&/.TheseSemigroup(Protein.deltaSemigroup, ProteinModifications.domInstance.deltaSemigroup)
 
-      def combineDeltas(d1: Delta, d2: Delta): Delta = deltaSemigroup.append(d1, d2)
+      def appendDeltas(d1: Delta, d2: Delta): Delta = deltaSemigroup.append(d1, d2)
 
       def assess(d: ProteinPattern[Var]): Dom.Status[Update] = d.mods.assess
     }
