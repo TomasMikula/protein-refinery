@@ -1,9 +1,10 @@
 package proteinrefinery.util
 
 import scala.language.higherKinds
+import nutcracker.{Alternator, Discrete, Dom, DomSet, Propagation, Revocable, TriggerF}
 
-import nutcracker.{Alternator, Discrete, Dom, DomSet, Propagation, Revocable, Trigger}
-import scalaz.Monad
+import scalaz.{Monad, ~>}
+import scalaz.Id._
 import scalaz.syntax.monad._
 
 trait Tracking[M[_], Ref[_]] {
@@ -15,11 +16,11 @@ trait Tracking[M[_], Ref[_]] {
     P: Propagation[M, Ref],
     dom: Dom[D[Ref]]
   ): M[Unit] =
-    handle[D](t)(ref => P.valTrigger(ref)(d => f(d) match {
-      case OnceTrigger.Sleep() => Trigger.sleep[M]
-      case OnceTrigger.Discard() => Trigger.discard[M]
-      case OnceTrigger.Fire(h) => Trigger.fire[M](h(ref))
-    }))
+    handle[D](t)(ref => P.observe(ref).by(λ[Id ~> λ[α => D[Ref] => TriggerF[M, α]]](α => d => f(d) match {
+      case OnceTrigger.Sleep() => TriggerF.Sleep(α)
+      case OnceTrigger.Discard() => TriggerF.Discard()
+      case OnceTrigger.Fire(h) => TriggerF.Fire(h(ref))
+    })))
 
   def dynamicQuery[D[_[_]], Q](t: DomType[D])(qref: Ref[Q])(rel: QueryRel[Q, D[Ref]])(implicit
     P: Propagation[M, Ref],

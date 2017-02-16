@@ -75,8 +75,8 @@ class Controller(val kbWidget: KBWidget[Prop.Ref], val goalWidget: GoalWidget[Pr
   private def observeGoal[A[_[_]]](desc: String, ref: Ref[IncSet[Ref[A[Ref]]]])(implicit t: GoalType[A], dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
     observe(ref).by(d => {
       val now = initGoal(t, ref, desc)
-      val onChange = (d: IncSet[Ref[A[Ref]]], δ: Diff[Set[Ref[A[Ref]]]]) => fireReload(updateGoal[A](t, ref, δ))
-      (Some(now), Some(onChange))
+      val onChange = (d: IncSet[Ref[A[Ref]]], δ: Diff[Set[Ref[A[Ref]]]]) => updateGoal[A](t, ref, δ)
+      fireReload(now map (_ => continually(onChange)))
     })
 
   private def updateGoal[A[_[_]]](t: GoalType[A], gref: Ref[IncSet[Ref[A[Ref]]]], δ: Diff[Set[Ref[A[Ref]]]])(implicit dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
@@ -85,8 +85,8 @@ class Controller(val kbWidget: KBWidget[Prop.Ref], val goalWidget: GoalWidget[Pr
   private def observeSolution[A[_[_]]](t: GoalType[A], gref: Ref[IncSet[Ref[A[Ref]]]], sref: Ref[A[Ref]])(implicit dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
     observe(sref).by(a => {
       val now = addSolution[A](t, gref, sref, a)
-      val onChange = (a: A[Ref], δ: dom.Delta) => fireReload(updateSolution[A](t, gref, sref, a))
-      (Some(now), Some(onChange))
+      val onChange = (a: A[Ref], δ: dom.Delta) => updateSolution[A](t, gref, sref, a)
+      fireReload(now map (_ => continually(onChange)))
     })
 }
 

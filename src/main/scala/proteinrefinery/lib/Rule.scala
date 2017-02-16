@@ -213,16 +213,14 @@ object Rule {
       ContU(f => observe(ref).by(r => {
         import scalaz.syntax.traverse._
         val now = r.value.linksAgentTo(p).iterator.map(l => f(Binding(ref, l))).toList.sequence_
-        val onChange: (Discrete[Rule[Var]], Discrete.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
-        (Some(now), Some(onChange))
+        Trigger.fireReload(now map (_ => (d, δ) => ???))
       }))
 
     def phosphorylationsC(ref: Rule.Ref[Var])(implicit M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
       ContU(f => observe(ref).by(r => {
         import scalaz.syntax.traverse._
         val now = r.value.phosphorylations.iterator.map(p => newCell(Discrete(p)).flatMap(f)).toList.sequence_
-        val onChange: (Discrete[Rule[Var]], Discrete.Delta[Rule[Var]]) => Trigger[M[Unit]] = (d, δ) => sys.error("Unreachable code")
-        (Some(now), Some(onChange))
+        Trigger.fireReload(now map (_ => (d, δ) => ???))
       }))
 
     def enablersOfC(ref: Rule.Ref[Var]): ContU[M, Rule.Ref[Var]] = for {
