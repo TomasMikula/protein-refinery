@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Promise.{Completed, Conflict, Empty}
-import nutcracker.{Discrete, Dom, Promise}
+import nutcracker.{Discrete, Dom, Promise, UpdateResult}
 import nutcracker.util.ops.iterator._
 import nutcracker.syntax.dom._
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
@@ -112,9 +112,9 @@ object ProteinPattern {
       type Update = ProteinPattern.Update[Var]
       type Delta = ProteinPattern.Delta[Var]
 
-      def update(d: ProteinPattern[Var], u: Update): Option[(ProteinPattern[Var], Delta)] = {
+      def update[P <: ProteinPattern[Var]](d: P, u: Update): UpdateResult[ProteinPattern[Var], IDelta, P] = {
         val ProteinPattern(p, mods) = d
-        Dom[ProteinModifications[Var]].update(mods, u).map({ case (mods, delta) => (ProteinPattern(p, mods), \&/.That(delta)) })
+        mods.update(u).map(mods => ProteinPattern(p, mods), delta => \&/.That(delta))
       }
 
       override def deltaSemigroup: Semigroup[Delta] =

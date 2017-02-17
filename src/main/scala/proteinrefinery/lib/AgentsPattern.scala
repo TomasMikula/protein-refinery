@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Discrete, Dom, IncRefSet, Propagation}
+import nutcracker.{Discrete, Dom, IncRefSet, Propagation, UpdateResult}
 import nutcracker.syntax.dom._
 import nutcracker.util.{ContU, DeepEqual, DeepEqualK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import nutcracker.util.ops._
@@ -46,11 +46,11 @@ case class AgentsPattern[Ref[_]](
 
   def removeAgent(i: AgentIndex): AgentsPattern[Ref] = ???
 
-  def updateAgent(i: AgentIndex, u: ProteinPattern.Update[Ref])(implicit ev: EqualK[Ref]): Option[(AgentsPattern[Ref], AgentsPattern.Delta[Ref])] =
-    (this(i): ProteinPattern[Ref]).update(u) match {
-      case Some((pp, δ)) => Some((copy(agents = agents.updated(i.value, Some(pp))), Delta.update(i, δ)))
-      case None => None
-    }
+  def updateAgent[A <: AgentsPattern[Ref]](i: AgentIndex, u: ProteinPattern.Update[Ref])(implicit ev: EqualK[Ref]): UpdateResult[AgentsPattern[Ref], AgentsPattern.IDelta[Ref, ?, ?], A] =
+    (this(i): ProteinPattern[Ref]).update(u).map(
+      pp => copy(agents = agents.updated(i.value, Some(pp))),
+      δ  => Delta.update(i, δ)
+    )
 
   def requireUnbound(i: AgentIndex, s: SiteLabel)(implicit ev: EqualK[Ref]): AgentsPattern[Ref] =
     requireUnbound0(i, LocalSiteId(s))
@@ -174,6 +174,8 @@ object AgentsPattern {
       Delta(Map(i -> a), Map())
   }
 
+  type IDelta[Ref[_], D1, D2] = Delta[Ref]
+
   def empty[Ref[_]]: AgentsPattern[Ref] =
     AgentsPattern(Vector.empty, Vector.empty, Vector.empty, Nil)
 
@@ -207,7 +209,7 @@ object AgentsPattern {
     type Update = AgentsPattern.Update[Ref]
     type Delta = AgentsPattern.Delta[Ref]
 
-    def update(ap: AgentsPattern[Ref], u: Update): Option[(AgentsPattern[Ref], Delta)] =
+    def update[A <: AgentsPattern[Ref]](ap: A, u: Update): UpdateResult[AgentsPattern[Ref], IDelta, A] =
       ap.updateAgent(u._1, u._2)
 
     def appendDeltas(d1: Delta, d2: Delta): Delta = {

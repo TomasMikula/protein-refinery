@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Dom.Status
-import nutcracker.{Dom, Promise}
+import nutcracker.{Dom, Promise, UpdateResult}
 import nutcracker.Promise.{Complete, Completed, Conflict, Empty}
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.{DefiniteLabel, LocalSiteId, SiteRef}
@@ -124,10 +124,10 @@ object ISite {
             type Update = Set[A] // what to add
             type Delta = Set[A] // diff
 
-            def update(d: Set[A], u: Update): Option[(Set[A], Delta)] = {
+            def update[S <: Set[A]](d: S, u: Update): UpdateResult[Set[A], IDelta, S] = {
               val res = d union u
-              if(res.size == d.size) None
-              else Some((res, res diff d))
+              if(res.size == d.size) UpdateResult()
+              else UpdateResult(res, res diff d)
             }
 
             def appendDeltas(d1: Delta, d2: Delta): Delta = d1 union d2

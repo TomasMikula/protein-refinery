@@ -1,6 +1,6 @@
 package proteinrefinery.lib
 
-import nutcracker.{Discrete, Dom, Promise, Propagation, Trigger}
+import nutcracker.{Discrete, Dom, Promise, Propagation, Trigger, UpdateResult}
 import nutcracker.Dom.Status
 import nutcracker.ops._
 import nutcracker.syntax.dom._
@@ -167,12 +167,12 @@ object Rule {
     type Update = Rule.Update[Var]
     type Delta = Rule.Delta[Var]
 
-    def update(r: Rule[Var], u: Update): Option[(Rule[Var], Delta)] = {
+    def update[R <: Rule[Var]](r: R, u: Update): UpdateResult[Rule[Var], IDelta, R] = {
       val Rule(lhs, actions) = r
-      lhs.update(u) match {
-        case Some((lhs, δ)) => Some((Rule(lhs, actions), δ))
-        case None => None
-      }
+      lhs.update(u).map(
+        lhs => Rule(lhs, actions),
+        δ   => δ
+      )
     }
 
     def appendDeltas(d1: Delta, d2: Delta): Delta =

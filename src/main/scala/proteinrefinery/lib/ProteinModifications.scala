@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Promise.Completed
-import nutcracker.{Dom, Join}
+import nutcracker.{Dom, Join, UpdateResult}
 import nutcracker.syntax.dom._
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, IsEqual, MonadObjectOutput, ShowK}
 import nutcracker.util.EqualK._
@@ -135,9 +135,10 @@ object ProteinModifications {
         if(d.isAdmissible) Dom.Refined
         else Dom.Failed
 
-      override def update(d: ProteinModifications[Ref], u: Update): Option[(ProteinModifications[Ref], Delta)] = {
+      override def update[P <: ProteinModifications[Ref]](d: P, u: Update): UpdateResult[ProteinModifications[Ref], IDelta, P] = {
         val (mods, delta) = d refineBy u.value
-        delta.ifNonEmpty.map((mods, _))
+        if(delta.isEmpty) UpdateResult()
+        else UpdateResult(mods, delta)
       }
 
       override def appendDeltas(d1: Delta, d2: Delta): Delta = d1 append d2
