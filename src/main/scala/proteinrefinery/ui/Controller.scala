@@ -1,6 +1,5 @@
 package proteinrefinery.ui
 
-import monocle.Lens
 import nutcracker.PropagationLang._
 import nutcracker.Trigger._
 import nutcracker.util.CoproductK.:++:
@@ -15,7 +14,7 @@ import proteinrefinery.ui.util.syntax._
 
 import scala.language.higherKinds
 import scalaz.Id._
-import scalaz.{Show, ~>}
+import scalaz.{Lens, Show, ~>}
 
 class Controller(val kbWidget: KBWidget[Prop.Ref], val goalWidget: GoalWidget[Prop.Ref]) {
   import Controller._
@@ -28,8 +27,8 @@ class Controller(val kbWidget: KBWidget[Prop.Ref], val goalWidget: GoalWidget[Pr
   import UIUpdate._
 
   val interpreter = (UIUpdateInterpreter(kbWidget, goalWidget) :>>: proteinrefinery.interpreter).freeInstance
-  var state = proteinrefinery.emptyState[Prg[Unit]]
-  val fetch = λ[Ref ~> Id](ref => Prop.fetch(implicitly[Lens[proteinrefinery.State[Prg[Unit]], Prop.State[Prg[Unit]]]].get(state))(ref))
+  var state = proteinrefinery.emptyState[Prg]
+  val fetch = λ[Ref ~> Id](ref => Prop.fetch(implicitly[Lens[proteinrefinery.State[Prg], Prop.State[Prg]]].get(state))(ref))
 
   EventStreams.merge(kbWidget.requests, goalWidget.requests).forEach(_ match {
     case ReqGoalAssoc(p, q) => exec(addGoalAssoc(p, q))
