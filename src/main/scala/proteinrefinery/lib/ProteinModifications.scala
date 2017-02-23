@@ -2,7 +2,7 @@ package proteinrefinery.lib
 
 import scala.language.higherKinds
 import nutcracker.Promise.Completed
-import nutcracker.{Dom, Join, UpdateResult}
+import nutcracker.{Dom, UpdateResult}
 import nutcracker.syntax.dom._
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, IsEqual, MonadObjectOutput, ShowK}
 import nutcracker.util.EqualK._
@@ -14,6 +14,7 @@ import scalaz.{Equal, Show}
 import scalaz.syntax.equal._
 
 final case class ProteinModifications[Ref[_]] private(mods: AutoUnificationBag[SiteWithState[Ref]]) {
+  import ProteinModifications._
 
   lazy val isAdmissible: Boolean = !mods.list.exists(_.isFailed)
 
@@ -63,7 +64,9 @@ final case class ProteinModifications[Ref[_]] private(mods: AutoUnificationBag[S
 }
 
 object ProteinModifications {
-  type Update[Ref[_]] = Join[ProteinModifications[Ref]]
+  final case class Join[Ref[_]](value: ProteinModifications[Ref]) extends AnyVal
+
+  type Update[Ref[_]] = Join[Ref]
   type Delta[Ref[_]] = AutoUnificationBag.Delta[SiteWithState[Ref], SiteWithState.Delta[Ref]]
 
   def from[Ref[_]](mods: (SiteLabel, SiteState)*): ProteinModifications[Ref] = {
@@ -131,9 +134,8 @@ object ProteinModifications {
       type Update = ProteinModifications.Update[Ref]
       type Delta = ProteinModifications.Delta[Ref]
 
-      override def assess(d: ProteinModifications[Ref]): Dom.Status[Update] =
-        if(d.isAdmissible) Dom.Refined
-        else Dom.Failed
+      override def isFailed(d: ProteinModifications[Ref]): Boolean =
+        !d.isAdmissible
 
       override def update[P <: ProteinModifications[Ref]](d: P, u: Update): UpdateResult[ProteinModifications[Ref], IDelta, P] = {
         val (mods, delta) = d refineBy u.value

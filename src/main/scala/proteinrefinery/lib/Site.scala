@@ -1,9 +1,8 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.Dom.Status
 import nutcracker.{Dom, Promise, UpdateResult}
-import nutcracker.Promise.{Complete, Completed, Conflict, Empty}
+import nutcracker.Promise.{Completed, Conflict, Empty}
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.{DefiniteLabel, LocalSiteId, SiteRef}
 import proteinrefinery.util.{HomSet, Identification, Unification}
@@ -43,7 +42,7 @@ object Site {
       case (Conflict, _) => Morphisms(Nil)
       case (Completed(a), Completed(b)) => if (a == b) Morphisms(List(Nil)) else Morphisms(Nil)
       case (Empty, Empty) => Morphisms(List(Nil))
-      case (Empty, Completed(a)) => Morphisms(List(List(Complete(a))))
+      case (Empty, Completed(a)) => Morphisms(List(List(Completed(a))))
       case (Completed(_), Empty) => Morphisms(Nil)
     }
   }
@@ -132,7 +131,7 @@ object ISite {
 
             def appendDeltas(d1: Delta, d2: Delta): Delta = d1 union d2
 
-            def assess(d: Set[A]): Status[Update] = Dom.Refined
+            override def isFailed(d: Set[A]): Boolean = false
           }
 
           @inline private def diff(s1: Set[A], s2: Set[A]): Option[Set[A]] = {

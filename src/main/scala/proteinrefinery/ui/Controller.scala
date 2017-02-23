@@ -1,10 +1,9 @@
 package proteinrefinery.ui
 
-import nutcracker.PropagationLang._
 import nutcracker.Trigger._
 import nutcracker.util.CoproductK.:++:
 import nutcracker.util.{DeepShow, FreeK}
-import nutcracker.{Diff, Discrete, Dom, IncSet, Propagation}
+import nutcracker.{Discrete, Dom, IncSet, Propagation}
 import nutcracker.Propagation.{module => Prop}
 import org.reactfx.EventStreams
 import proteinrefinery.lib.{Assoc, BindingData, ISite, NegativeInfluenceOnPhosphorylation, PhosphoTarget, PhosphoTriple, Protein, ProteinPattern, SiteLabel}
@@ -20,7 +19,7 @@ class Controller(val kbWidget: KBWidget[Prop.Ref], val goalWidget: GoalWidget[Pr
   import Controller._
   import Prop._
 
-  val Propagation: Propagation[Prg, Ref] = Prop.propagation[DSL]
+  val Propagation: Propagation[Prg, Ref] = Prop.freePropagation[DSL]
   val UIUpdate: UIUpdate[Prg, Ref] = UIUpdateLang.freeUIUpdate[Ref, DSL]
   val IncSets: nutcracker.IncSets[Prg, Ref] = new nutcracker.IncSets[Prg, Ref]()(Propagation)
   import Propagation._
@@ -74,11 +73,11 @@ class Controller(val kbWidget: KBWidget[Prop.Ref], val goalWidget: GoalWidget[Pr
   private def observeGoal[A[_[_]]](desc: String, ref: Ref[IncSet[Ref[A[Ref]]]])(implicit t: GoalType[A], dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
     observe(ref).by(d => {
       val now = initGoal(t, ref, desc)
-      val onChange = (d: IncSet[Ref[A[Ref]]], δ: Diff[Set[Ref[A[Ref]]]]) => updateGoal[A](t, ref, δ)
+      val onChange = (d: IncSet[Ref[A[Ref]]], δ: IncSet.Delta[Ref[A[Ref]]]) => updateGoal[A](t, ref, δ)
       fireReload(now map (_ => continually(onChange)))
     })
 
-  private def updateGoal[A[_[_]]](t: GoalType[A], gref: Ref[IncSet[Ref[A[Ref]]]], δ: Diff[Set[Ref[A[Ref]]]])(implicit dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
+  private def updateGoal[A[_[_]]](t: GoalType[A], gref: Ref[IncSet[Ref[A[Ref]]]], δ: IncSet.Delta[Ref[A[Ref]]])(implicit dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
     FreeK.sequence_(δ.value.iterator.map(observeSolution[A](t, gref, _)).toList)
 
   private def observeSolution[A[_[_]]](t: GoalType[A], gref: Ref[IncSet[Ref[A[Ref]]]], sref: Ref[A[Ref]])(implicit dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =

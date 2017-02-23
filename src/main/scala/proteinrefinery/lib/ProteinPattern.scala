@@ -122,7 +122,7 @@ object ProteinPattern {
 
       def appendDeltas(d1: Delta, d2: Delta): Delta = deltaSemigroup.append(d1, d2)
 
-      def assess(d: ProteinPattern[Var]): Dom.Status[Update] = d.mods.assess
+      override def isFailed(d: ProteinPattern[Var]): Boolean = d.mods.isFailed
     }
 
   implicit def unificationInstance[Var[_]](implicit ev: EqualK[Var]): Unification.Aux[ProteinPattern[Var], Update[Var], Delta[Var]] =

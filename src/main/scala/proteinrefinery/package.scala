@@ -28,7 +28,7 @@ package object proteinrefinery extends ImplicitConversions {
   def fetchIncSet[D](ref: Ref[IncSet[D]])(s: State[Prg]): Set[D] = {
     fetch(ref)(s).value
   }
-  def initialState[K[_]](tr: Tracker[Ref, K]): State[K] = tr :*: empty[K] :**: (DeferStore.empty[Cost, K]: DeferS[K])
+  def initialState[K[_]](tr: Tracker[Ref, K]): State[K] = tr :*: empty[K] :*: (DeferStore.empty[Cost, K]: DeferS[K])
   def emptyState[K[_]]: State[K] = initialState(Tracker.empty[Ref, K])
 
   def refinery(): Refinery { type M[A] = Prg[A]; type Ref[A] = Prop.Ref[A] } = new Refinery {

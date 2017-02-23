@@ -1,7 +1,6 @@
 package proteinrefinery.lib
 
 import nutcracker.{Discrete, Dom, Promise, Propagation, Trigger, UpdateResult}
-import nutcracker.Dom.Status
 import nutcracker.ops._
 import nutcracker.syntax.dom._
 import nutcracker.util.{ContU, DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
@@ -178,8 +177,8 @@ object Rule {
     def appendDeltas(d1: Delta, d2: Delta): Delta =
       Dom[AgentsPattern[Var]].appendDeltas(d1, d2)
 
-    def assess(r: Rule[Var]): Status[Update] =
-      Dom[AgentsPattern[Var]].assess(r.lhs)
+    override def isFailed(r: Rule[Var]): Boolean =
+      r.lhs.isFailed
   }
 
   implicit def unificationInstance[Var[_]](implicit ev: EqualK[Var]): Unification.Aux[Rule[Var], Update[Var], Delta[Var]] = new Unification[Rule[Var]] {

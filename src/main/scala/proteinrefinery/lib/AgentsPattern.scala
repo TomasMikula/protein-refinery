@@ -220,9 +220,8 @@ object AgentsPattern {
       Delta(newAgents, deltas)
     }
 
-    def assess(ap: AgentsPattern[Ref]): Dom.Status[Update] =
-      if(ap.isAdmissible) Dom.Refined
-      else Dom.Failed
+    override def isFailed(ap: AgentsPattern[Ref]): Boolean =
+      !ap.isAdmissible
   }
 
   implicit def unificationInstance[Ref[_]](implicit ev: EqualK[Ref]): Unification.Aux[AgentsPattern[Ref], Update[Ref], Delta[Ref]] = new Unification[AgentsPattern[Ref]] {
