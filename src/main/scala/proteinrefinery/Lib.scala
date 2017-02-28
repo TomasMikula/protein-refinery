@@ -26,7 +26,7 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
   NegativeInfluenceOnRule.Search[M, Ref] with
   Syntax[Ref]
 {
-  implicit val M: Monad[M] = M0
+  protected implicit val M: Monad[M] = M0
   implicit val RefEquality: EqualK[Ref] = E
   implicit val Propagation: Propagation[M, Ref] = P
   implicit val Tracking: Tracking[M, Ref] = T

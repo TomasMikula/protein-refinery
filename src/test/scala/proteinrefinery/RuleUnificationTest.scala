@@ -4,7 +4,8 @@ import org.scalatest.FunSuite
 import proteinrefinery.util.Unification.Syntax._
 
 class RuleUnificationTest extends FunSuite {
-  import proteinrefinery.Lib._
+  val refinery = proteinrefinery.refinery()
+  import refinery.lib._
 
   test("unification") {
     val β_TrCP = Protein("β-TrCP")

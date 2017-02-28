@@ -2,10 +2,12 @@ package proteinrefinery
 
 import nutcracker.util.{Desc, ShowK}
 import org.scalatest.FunSuite
+import scalaz.syntax.monad._
 
 class PositiveInfluenceOnRuleTest extends FunSuite {
   val refinery = proteinrefinery.refinery()
-  import proteinrefinery.Lib._
+  import refinery._
+  import refinery.lib._
 
   val β_TrCP = Protein("β-TrCP")
   val β_Cat  = Protein("β-Catenin")
@@ -28,46 +30,36 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
     GSK phosphorylates β_Cat at 'S33
   )
 
-  val initBindings: Prg[List[Binding]] = Lib.addBindings(bindings)
+  val initBindings: Prg[List[Binding]] = addBindings(bindings)
 
-  val initPhospho: Prg[Unit] = Lib.addNuggets(phosphoSites = phosphoTargets)
-
-  val Interpreter = proteinrefinery.interpreterF
+  val initPhospho: Prg[Unit] = addNuggets(phosphoSites = phosphoTargets)
 
   test("1") {
-    implicit val refinery = proteinrefinery.refinery()
-    import refinery.{lib => _, _}
+    val session = newSession(refinery)
 
-    val bnds = interpret(initPhospho >> initBindings)
-    val solutionsRef = interpret(Lib.positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(3).witness))
-    val solutions = fetch(solutionsRef)
+    val bnds = session.interpret(initPhospho >> initBindings)
+    val solutions = session.interpretFetch(positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(3).witness))
     assertResult(1)(solutions.size)
     val sol = solutions.head
     assertResult(PositiveInfluenceOnRule.InLhs(β_Cat('S45~"p", 'T41~"p"), bnds(3).witness))(sol)
   }
 
   test("2") {
-    implicit val refinery = proteinrefinery.refinery()
-    import refinery.{lib => _, _}
+    val session = newSession(refinery)
 
-    val bnds = interpret(initPhospho >> initBindings)
-    val solutionsRef = interpret(Lib.positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(4).witness))
-    val solutions = fetch(solutionsRef)
-//    val solutions = solutionRefs.toList.map(ref => proteinrefinery.fetch(ref)(s))
-    assertResult(1, Desc(solutions).printTree(fetch, implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
+    val bnds = session.interpret(initPhospho >> initBindings)
+    val solutions = session.interpretFetch(positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(4).witness))
+    assertResult(1, Desc(solutions).printTree(session.deref, implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
     val sol = solutions.head
     assertResult(PositiveInfluenceOnRule.InLhs(β_Cat('S45~"p", 'T41~"p"), bnds(4).witness))(sol)
   }
 
   test("3") {
-    implicit val refinery = proteinrefinery.refinery()
-    import refinery.{lib => _, _}
+    val session = newSession(refinery)
 
-    val bnds = interpret(initPhospho >> initBindings)
-    val solutionsRef = interpret(Lib.positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(5).witness))
-    val solutions = fetch(solutionsRef)
-//    val solutions = solutionRefs.toList.map(ref => proteinrefinery.fetch(ref)(s))
-    assertResult(1, Desc(solutions).printTree(fetch, implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
+    val bnds = session.interpret(initPhospho >> initBindings)
+    val solutions = session.interpretFetch(positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(5).witness))
+    assertResult(1, Desc(solutions).printTree(session.deref, implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
     val sol = solutions.head
     assertResult(???)(sol)
   }

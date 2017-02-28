@@ -26,7 +26,7 @@ trait Nuggets[M[_], Ref[_]] {
   import Nuggets._
   import Nuggets.DomTypes._
 
-  implicit val M: Monad[M]
+  protected implicit val M: Monad[M]
   implicit val RefEquality: EqualK[Ref]
   implicit val Propagation: Propagation[M, Ref]
   implicit val Tracking: Tracking[M, Ref]

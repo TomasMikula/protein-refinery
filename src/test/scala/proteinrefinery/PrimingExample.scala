@@ -5,11 +5,12 @@ import nutcracker.ops._
 import nutcracker.util.ContU
 import org.scalatest.FunSuite
 import proteinrefinery.util.Unification.Syntax._
+import scalaz.syntax.monad._
 
 class PrimingExample extends FunSuite {
   val refinery = proteinrefinery.refinery()
   import refinery._
-  import proteinrefinery.Lib._
+  import refinery.lib._
 
   val β_TrCP = Protein("β-TrCP")
   val β_Cat  = Protein("β-Catenin")
@@ -32,32 +33,31 @@ class PrimingExample extends FunSuite {
     GSK phosphorylates β_Cat at 'S33
   )
 
-  val initialNuggets: Prg[Unit] = Lib.addNuggets(
+  val initialNuggets: Prg[Unit] = addNuggets(
     rules = bindings.map(_.witness),
     phosphoSites = phosphoTargets
   )
 
   val watchForExplanationsViaPositiveInfluenceC: ContU[Prg, (Rule, PositiveInfluenceOnRule)] = for {
-    ref1 <- Lib.forEachRule
-    ref2 <- Lib.forEachRule
+    ref1 <- lib.forEachRule
+    ref2 <- lib.forEachRule
     r1 <- ref1.peekC[Prg]
     r2 <- ref2.peekC[Prg]
     (d1, r, d2) = r1.value unify r2.value
     diff <- if(d2.isEmpty && d1.isDefined) ContU.point[Prg, Rule.Delta](d1.get) else ContU.noop[Prg, Rule.Delta]
     diffPatterns = breakDown(r1.value.lhs, diff, r2.value.lhs)
-    searches = diffPatterns.map(pp => Lib.positiveInfluenceOnRuleC(pp, ref1))
+    searches = diffPatterns.map(pp => positiveInfluenceOnRuleC(pp, ref1))
     infl <- ContU.sequence(searches)
   } yield (r2.value, infl)
 
   val watchForExplanationsViaPositiveInfluence: Prg[Ref[IncSet[(Rule, PositiveInfluenceOnRule)]]] =
     IncSets.collect(watchForExplanationsViaPositiveInfluenceC)
 
-  val Interpreter = proteinrefinery.interpreterF
-
   test("suspicion search") {
+    val session = newSession(refinery)
     val program = initialNuggets >> watchForExplanationsViaPositiveInfluence
-    val (s, ref) = Interpreter(program)(proteinrefinery.emptyState)
-    val solutions = proteinrefinery.fetchIncSet(ref)(s)
+    val ref = session.interpret(program)
+    val solutions = session.fetch(ref).value
     assert(solutions.nonEmpty)
     assertResult(???)(solutions)
   }

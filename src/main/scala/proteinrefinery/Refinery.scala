@@ -1,26 +1,31 @@
 package proteinrefinery
 
 import nutcracker.util.{HEqualK, ShowK}
-import proteinrefinery.lib.{PhosphoTarget, PhosphoTriple, Rule}
-
 import scala.language.higherKinds
-import scalaz.~>
 import scalaz.Id.Id
+import scalaz.{Monad, StateT}
 
 trait Refinery {
-
-  type M[_]
+  type Prg[_]
   type Ref[_]
 
+  implicit val prgMonad: Monad[Prg]
   implicit val refEquality: HEqualK[Ref]
   implicit val refShow: ShowK[Ref]
 
-  implicit val fetch: Ref ~> Id
+  def fetch[A](ref: Ref[A])(s: State[Prg]): A
+  def interpret[A](prg: Prg[A], s: State[Prg]): (State[Prg], A)
 
-  def nugget(bnd: lib.BindingData): Rule.Ref[Ref] = interpret(lib.addRule(bnd.witness))
-  def nugget(pt: PhosphoTriple[Ref]): Rule.Ref[Ref] = interpret(lib.addRule(PhosphoTarget[Ref](pt.kinase, pt.substrate, pt.targetSite).witness))
+  def interpret[A](prg: Prg[A]): StateT[Id, State[Prg], A] = scalaz.State(s => interpret(prg, s))
+  def interpret0[A](prg: Prg[A]): (State[Prg], A) = interpret(prg, emptyState[Prg])
+  def interpretFetch0[A](prg: Prg[Ref[A]]): A = {
+    val (s, ref) = interpret0(prg)
+    fetch(ref)(s)
+  }
 
-  def interpret[A](prg: M[A]): A
+  val lib: Lib[Prg, Ref]
+}
 
-  val lib: Lib[M, Ref]
+object Refinery {
+  type Aux[Prg0[_], Ref0[_]] = Refinery { type Prg[A] = Prg0[A]; type Ref[A] = Ref0[A] }
 }
