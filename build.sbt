@@ -4,9 +4,6 @@ version := "0.2-SNAPSHOT"
 
 scalaVersion := "2.12.1"
 
-resolvers += "bintray/non" at "http://dl.bintray.com/non/maven"
-resolvers += Resolver.sonatypeRepo("releases")
-
 autoCompilerPlugins := true
 addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.3" cross CrossVersion.binary)
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
@@ -37,7 +34,7 @@ javacOptions ++= Seq(
 libraryDependencies ++= Seq(
   "com.github.tomasmikula" %% "nutcracker" % "0.2-SNAPSHOT",
   "org.typelevel" %% "algebra" % "0.6.0",
-  "org.scalaz" %% "scalaz-core" % "7.3.0-M8",
+  "org.scalaz" %% "scalaz-core" % "7.3.0-M9",
   "org.reactfx" % "reactfx" % "2.0-M5",
   "org.scalacheck" %% "scalacheck" % "1.13.4",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
