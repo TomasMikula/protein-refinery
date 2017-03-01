@@ -77,7 +77,7 @@ object PositiveInfluenceOfRuleOnRule {
   }
 
   trait Search[M[_], Var[_]] {
-    implicit def Propagation: Propagation[M, Var]
+    protected implicit def Propagation: Propagation[M, Var]
     def RuleOps: Rule.Ops[M, Var]
 
     def positiveInfluenceOfRuleOnRule(r: Rule.Ref[Var], t: Rule.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, PositiveInfluenceOfRuleOnRule[Var]] =

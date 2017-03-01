@@ -271,7 +271,7 @@ object AgentsPattern {
   }
 
   trait Ops[M[_], Ref[_]] {
-    implicit def Propagation: Propagation[M, Ref]
+    protected implicit def Propagation: Propagation[M, Ref]
 
     def IncRefSets: nutcracker.IncRefSets[M, Ref]
     def AssocSearch: Assoc.Search[M, Ref]

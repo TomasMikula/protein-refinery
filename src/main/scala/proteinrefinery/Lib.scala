@@ -28,7 +28,7 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
 {
   protected implicit val M: Monad[M] = M0
   implicit val RefEquality: EqualK[Ref] = E
-  implicit val Propagation: Propagation[M, Ref] = P
+  protected implicit val Propagation: Propagation[M, Ref] = P
   implicit val Tracking: Tracking[M, Ref] = T
   implicit val Defer: Defer[M, Cost] = D
 

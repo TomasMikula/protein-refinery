@@ -22,7 +22,7 @@ object NegativeInfluenceOnAssociation {
 
   trait Search[M[_], Var[_]] {
 
-    implicit def Propagation: Propagation[M, Var]
+    protected implicit def Propagation: Propagation[M, Var]
     implicit def Tracking: Tracking[M, Var]
     def Nuggets: proteinrefinery.lib.Nuggets[M, Var]
     def IncSets: nutcracker.IncSets[M, Var]

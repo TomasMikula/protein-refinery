@@ -1,6 +1,8 @@
 package proteinrefinery
 
+import nutcracker.{Defer, Propagation}
 import nutcracker.util.{HEqualK, ShowK}
+import proteinrefinery.util.Tracking
 import scala.language.higherKinds
 import scalaz.Id.Id
 import scalaz.{Monad, StateT}
@@ -12,6 +14,9 @@ trait Refinery {
   implicit val prgMonad: Monad[Prg]
   implicit val refEquality: HEqualK[Ref]
   implicit val refShow: ShowK[Ref]
+  implicit val propagationApi: Propagation[Prg, Ref]
+  implicit val deferApi: Defer[Prg, Cost]
+  implicit val trackingApi: Tracking[Prg, Ref]
 
   def fetch[A](ref: Ref[A])(s: State[Prg]): A
   def interpret[A](prg: Prg[A], s: State[Prg]): (State[Prg], A)

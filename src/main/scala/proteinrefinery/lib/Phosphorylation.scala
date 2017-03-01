@@ -22,7 +22,7 @@ object Phosphorylation {
   type Ref[Var[_]] = Var[Discrete[Phosphorylation[Var]]]
 
   trait Search[M[_], Var[_]] {
-    implicit def Propagation: nutcracker.Propagation[M, Var]
+    protected implicit def Propagation: nutcracker.Propagation[M, Var]
     implicit def Tracking: proteinrefinery.util.Tracking[M, Var]
 
     def IncSets: nutcracker.IncSets[M, Var]

@@ -17,6 +17,8 @@ scalacOptions ++= Seq(
   "-deprecation",
   "-feature",
   "-Xfatal-warnings",
+  "-Xlint:-nullary-unit", // Disable warning for side-effecting nullary methods.
+                          // They are useful for side-effecting REPL commands.
   "-Yno-adapted-args",
   "-Ypartial-unification",
   "-Ywarn-numeric-widen",

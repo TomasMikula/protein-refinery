@@ -28,7 +28,7 @@ trait Nuggets[M[_], Ref[_]] {
 
   protected implicit val M: Monad[M]
   implicit val RefEquality: EqualK[Ref]
-  implicit val Propagation: Propagation[M, Ref]
+  protected implicit val Propagation: Propagation[M, Ref]
   implicit val Tracking: Tracking[M, Ref]
 
   def IncSets: nutcracker.IncSets[M, Ref]

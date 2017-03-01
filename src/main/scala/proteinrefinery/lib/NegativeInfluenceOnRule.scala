@@ -17,7 +17,7 @@ object NegativeInfluenceOnRule {
   def        byNegativeInfluenceOnAssociation[Var[_]](value: NegativeInfluenceOnAssociation[Var]):        NegativeInfluenceOnRule[Var] = ByNegativeInfluenceOnAssociation(value)
 
   trait Search[M[_], Var[_]] {
-    implicit def Propagation: Propagation[M, Var]
+    protected implicit def Propagation: Propagation[M, Var]
 
     def IncSets: nutcracker.IncSets[M, Var]
     def AgentsPatternOps: AgentsPattern.Ops[M, Var]

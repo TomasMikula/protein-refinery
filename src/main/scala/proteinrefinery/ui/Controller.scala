@@ -2,15 +2,15 @@ package proteinrefinery.ui
 
 import nutcracker.Trigger._
 import nutcracker.util.CoproductK.:++:
-import nutcracker.util.{DeepShow, FreeK}
-import nutcracker.{Discrete, Dom, IncSet, Propagation}
+import nutcracker.util.{DeepShow, FreeK, InjectK}
+import nutcracker.{Defer, Discrete, Dom, IncSet, Propagation}
 import nutcracker.Propagation.{module => Prop}
 import org.reactfx.EventStreams
+import proteinrefinery.Cost
 import proteinrefinery.lib.{Assoc, BindingData, ISite, NegativeInfluenceOnPhosphorylation, PhosphoTarget, PhosphoTriple, Protein, ProteinPattern, SiteLabel}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.util.syntax._
-
 import scala.language.higherKinds
 import scalaz.Id._
 import scalaz.{Lens, Show, ~>}
@@ -93,6 +93,8 @@ object Controller {
 
   type DSL[K[_], A] = (UIUpdateLang[Ref, ?[_], ?] :++: proteinrefinery.DSL)#Out[K, A]
   type Prg[A] = FreeK[DSL, A]
+
+  private implicit def deferApi: Defer[Prg, Cost] = proteinrefinery.Def.freeDeferApi[DSL](InjectK.injectRight(InjectK.injectRight(InjectK.injectRight))) // should not be necessary after https://issues.scala-lang.org/browse/SI-10213
 
   val Lib = new proteinrefinery.Lib[Prg, Ref]
 

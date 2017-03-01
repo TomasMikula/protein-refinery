@@ -28,7 +28,7 @@ object PositiveInfluenceOnState {
     self: PositiveInfluenceOnRule.Search[M, Var] /*with
           PositiveInfluenceOnPhosphorylation.Search[M, Var]*/ =>
 
-    implicit def Propagation: nutcracker.Propagation[M, Var]
+    protected implicit def Propagation: nutcracker.Propagation[M, Var]
     implicit def Tracking: proteinrefinery.util.Tracking[M, Var]
 
     def positiveInfluenceOnStateC(agent: Protein, target: ProteinPattern[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =

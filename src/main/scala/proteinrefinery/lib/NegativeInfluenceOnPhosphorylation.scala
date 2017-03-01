@@ -24,7 +24,7 @@ object NegativeInfluenceOnPhosphorylation {
 
 
   trait Search[M[_], Var[_]] {
-    implicit def Propagation: Propagation[M, Var]
+    protected implicit def Propagation: Propagation[M, Var]
 
     def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Var]
     def NegativeInfluenceOnRuleSearch: NegativeInfluenceOnRule.Search[M, Var]

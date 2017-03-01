@@ -36,7 +36,7 @@ object PositiveInfluenceOnRule {
 
   trait Search[M[_], Var[_]] { self: PositiveInfluenceOfRuleOnRule.Search[M, Var] =>
 
-    implicit def Propagation: nutcracker.Propagation[M, Var]
+    protected implicit def Propagation: nutcracker.Propagation[M, Var]
     implicit def Tracking: proteinrefinery.util.Tracking[M, Var]
     implicit def IncSets: nutcracker.IncSets[M, Var]
 

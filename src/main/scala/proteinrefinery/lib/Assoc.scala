@@ -25,7 +25,7 @@ object Assoc {
 
   trait Search[M[_], Var[_]] {
     implicit def Defer: nutcracker.Defer[M, Cost]
-    implicit def Propagation: nutcracker.Propagation[M, Var]
+    protected implicit def Propagation: nutcracker.Propagation[M, Var]
     implicit def Tracking: proteinrefinery.util.Tracking[M, Var]
     implicit def IncSets: nutcracker.IncSets[M, Var]
 

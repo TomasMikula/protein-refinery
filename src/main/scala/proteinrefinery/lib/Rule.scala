@@ -201,7 +201,7 @@ object Rule {
   }
 
   trait Ops[M[_], Var[_]] {
-    implicit val Propagation: Propagation[M, Var]
+    protected implicit val Propagation: Propagation[M, Var]
 
     def Nuggets: Nuggets[M, Var]
     def AgentsPatternOps: AgentsPattern.Ops[M, Var]
