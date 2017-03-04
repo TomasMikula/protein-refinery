@@ -5,7 +5,6 @@ import nutcracker.ops._
 import nutcracker.util.ContU
 import org.scalatest.FunSuite
 import proteinrefinery.util.Unification.Syntax._
-import scalaz.syntax.monad._
 
 class PrimingExample extends FunSuite {
   val refinery = proteinrefinery.refinery()
@@ -54,10 +53,11 @@ class PrimingExample extends FunSuite {
     IncSets.collect(watchForExplanationsViaPositiveInfluenceC)
 
   test("suspicion search") {
-    val session = newSession(refinery)
     val program = initialNuggets >> watchForExplanationsViaPositiveInfluence
-    val ref = session.interpret(program)
-    val solutions = session.fetch(ref).value
+    val solutions = eval(for {
+      ref <- interpret(program)
+      solutions <- fetch(ref)
+    } yield solutions.value)
     assert(solutions.nonEmpty)
     assertResult(???)(solutions)
   }

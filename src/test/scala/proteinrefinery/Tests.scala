@@ -3,7 +3,6 @@ package proteinrefinery
 import nutcracker.util.EqualK
 import proteinrefinery.lib.PhosphoTriple
 import scala.language.higherKinds
-import scalaz.syntax.monad._
 
 class Tests extends TestSuite {
 

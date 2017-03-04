@@ -2,32 +2,31 @@ package proteinrefinery.ui
 
 import nutcracker.Trigger._
 import nutcracker.util.CoproductK.:++:
-import nutcracker.util.{DeepShow, FreeK, InjectK}
+import nutcracker.util.{DeepShow, FreeK}
 import nutcracker.{Defer, Discrete, Dom, IncSet, Propagation}
-import nutcracker.Propagation.{module => Prop}
 import org.reactfx.EventStreams
 import proteinrefinery.Cost
 import proteinrefinery.lib.{Assoc, BindingData, ISite, NegativeInfluenceOnPhosphorylation, PhosphoTarget, PhosphoTriple, Protein, ProteinPattern, SiteLabel}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.util.syntax._
+import proteinrefinery.util.Tracking
 import scala.language.higherKinds
 import scalaz.Id._
-import scalaz.{Lens, Show, ~>}
+import scalaz.{Show, ~>}
 
-class Controller(val kbWidget: KBWidget[Prop.Ref], val goalWidget: GoalWidget[Prop.Ref]) {
+class Controller(val kbWidget: KBWidget[Controller.Ref], val goalWidget: GoalWidget[Controller.Ref]) {
   import Controller._
-  import Prop._
+  import refinery.{refEquality, refShow}
 
-  val Propagation: Propagation[Prg, Ref] = Prop.freePropagation[DSL]
   val UIUpdate: UIUpdate[Prg, Ref] = UIUpdateLang.freeUIUpdate[Ref, DSL]
-  val IncSets: nutcracker.IncSets[Prg, Ref] = new nutcracker.IncSets[Prg, Ref]()(Propagation)
-  import Propagation._
+  val IncSets: nutcracker.IncSets[Prg, Ref] = new nutcracker.IncSets[Prg, Ref]()(Controller.Propagation)
+  import Controller.Propagation._
   import UIUpdate._
 
-  val interpreter = (UIUpdateInterpreter(kbWidget, goalWidget) :>>: proteinrefinery.interpreter).freeInstance
-  var state = proteinrefinery.emptyState[Prg]
-  val fetch = λ[Ref ~> Id](ref => Prop.fetch(implicitly[Lens[proteinrefinery.State[Prg], Prop.State[Prg]]].get(state))(ref))
+  val interpreter = (UIUpdateInterpreter(kbWidget, goalWidget) :>>: refinery.interpreter).freeInstance
+  var state = refinery.empty[Prg]
+  val fetch = λ[Ref ~> Id](ref => refinery.fetch(ref, state))
 
   EventStreams.merge(kbWidget.requests, goalWidget.requests).forEach(_ match {
     case ReqGoalAssoc(p, q) => exec(addGoalAssoc(p, q))
@@ -89,12 +88,16 @@ class Controller(val kbWidget: KBWidget[Prop.Ref], val goalWidget: GoalWidget[Pr
 }
 
 object Controller {
-  import Prop._
+  val refinery = proteinrefinery.refinery()
+  type Ref[A] = refinery.Ref[A]
 
-  type DSL[K[_], A] = (UIUpdateLang[Ref, ?[_], ?] :++: proteinrefinery.DSL)#Out[K, A]
+  type DSL[K[_], A] = (UIUpdateLang[Ref, ?[_], ?] :++: refinery.Lang)#Out[K, A]
   type Prg[A] = FreeK[DSL, A]
 
-  private implicit def deferApi: Defer[Prg, Cost] = proteinrefinery.Def.freeDeferApi[DSL](InjectK.injectRight(InjectK.injectRight(InjectK.injectRight))) // should not be necessary after https://issues.scala-lang.org/browse/SI-10213
+  implicit val Propagation: Propagation[Prg, Ref] = refinery.freePropagation[DSL]
+  private implicit def deferApi: Defer[Prg, Cost] = refinery.freeDeferApi[DSL]
+  private implicit def trackingApi: Tracking[Prg, Ref] = refinery.freeTrackingApi[DSL]
+  import refinery.refEquality
 
   val Lib = new proteinrefinery.Lib[Prg, Ref]
 

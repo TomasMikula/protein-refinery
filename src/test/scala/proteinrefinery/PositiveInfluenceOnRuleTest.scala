@@ -2,7 +2,6 @@ package proteinrefinery
 
 import nutcracker.util.{Desc, ShowK}
 import org.scalatest.FunSuite
-import scalaz.syntax.monad._
 
 class PositiveInfluenceOnRuleTest extends FunSuite {
   val refinery = proteinrefinery.refinery()
@@ -35,31 +34,34 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
   val initPhospho: Prg[Unit] = addNuggets(phosphoSites = phosphoTargets)
 
   test("1") {
-    val session = newSession(refinery)
+    val (bnds, solutions) = eval(for {
+      bnds <- interpret(initPhospho >> initBindings)
+      solutions <- interpretFetch(positiveInfluenceOnRule(β_Cat('S45 ~ "p", 'T41 ~ "p"), bnds(3).witness))
+    } yield (bnds, solutions))
 
-    val bnds = session.interpret(initPhospho >> initBindings)
-    val solutions = session.interpretFetch(positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(3).witness))
     assertResult(1)(solutions.size)
     val sol = solutions.head
     assertResult(PositiveInfluenceOnRule.InLhs(β_Cat('S45~"p", 'T41~"p"), bnds(3).witness))(sol)
   }
 
   test("2") {
-    val session = newSession(refinery)
+    val (s, (bnds, solutions)) = refinery.run(for {
+      bnds <- interpret(initPhospho >> initBindings)
+      solutions <- interpretFetch(positiveInfluenceOnRule(β_Cat('S45 ~ "p", 'T41 ~ "p"), bnds(4).witness))
+    } yield (bnds, solutions))
 
-    val bnds = session.interpret(initPhospho >> initBindings)
-    val solutions = session.interpretFetch(positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(4).witness))
-    assertResult(1, Desc(solutions).printTree(session.deref, implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
+    assertResult(1, Desc(solutions).printTree(refinery.fetcher(s), implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
     val sol = solutions.head
     assertResult(PositiveInfluenceOnRule.InLhs(β_Cat('S45~"p", 'T41~"p"), bnds(4).witness))(sol)
   }
 
   test("3") {
-    val session = newSession(refinery)
+    val (s, (bnds, solutions)) = refinery.run(for {
+      bnds <- interpret(initPhospho >> initBindings)
+      solutions <- interpretFetch(positiveInfluenceOnRule(β_Cat('S45 ~ "p", 'T41 ~ "p"), bnds(5).witness))
+    } yield(bnds, solutions))
 
-    val bnds = session.interpret(initPhospho >> initBindings)
-    val solutions = session.interpretFetch(positiveInfluenceOnRule(β_Cat('S45~"p", 'T41~"p"), bnds(5).witness))
-    assertResult(1, Desc(solutions).printTree(session.deref, implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
+    assertResult(1, Desc(solutions).printTree(refinery.fetcher(s), implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
     val sol = solutions.head
     assertResult(???)(sol)
   }
