@@ -10,33 +10,28 @@ addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
 scalastyleFailOnError := true
 
-scalacOptions ++= Seq(
+val commonScalacOptions = List(
   "-language:higherKinds",
   "-Xlint",
   "-unchecked",
   "-deprecation",
   "-feature",
   "-Xfatal-warnings",
-  "-Xlint:-nullary-unit", // Disable warning for side-effecting nullary methods.
-                          // They are useful for side-effecting REPL commands.
   "-Yno-adapted-args",
   "-Ypartial-unification",
   "-Ywarn-numeric-widen",
-  "-Ywarn-unused-import",
   "-Ywarn-value-discard",
   "-Ypatmat-exhaust-depth", "40",
   "-Xfuture")
 
-javacOptions ++= Seq(
-  "-source", "1.8",
-  "-target", "1.8",
-  "-Xlint:unchecked",
-  "-Xlint:deprecation")
+scalacOptions ++= "-Ywarn-unused-import" :: commonScalacOptions
+scalacOptions in (Compile, console) := commonScalacOptions
+scalacOptions in (Test, console) := commonScalacOptions
 
 libraryDependencies ++= Seq(
   "com.github.tomasmikula" %% "nutcracker" % "0.2-SNAPSHOT",
   "org.typelevel" %% "algebra" % "0.6.0",
-  "org.scalaz" %% "scalaz-core" % "7.3.0-M9",
+  "org.scalaz" %% "scalaz-core" % "7.3.0-M10",
   "org.reactfx" % "reactfx" % "2.0-M5",
   "org.scalacheck" %% "scalacheck" % "1.13.4",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
@@ -45,3 +40,25 @@ libraryDependencies ++= Seq(
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oF") // show full stack traces
 
 fork := true
+
+
+// Config for refinery REPL session.
+// Extends Test in order to include compiled sources on classpath.
+val ReplSession = config("repl-session") extend(Test)
+
+val root = project.in(file("."))
+  .configs(ReplSession)
+
+// define task that starts the refinery REPL session
+lazy val session = TaskKey[Unit]("session")
+session <<= Seq(
+  console in (root, ReplSession)
+).dependOn
+
+// session initialization
+initialCommands in (Test, console) := """
+  | val $session = proteinrefinery.newReplSession()
+  | import $session._
+  | import $session.lib._
+  |
+""".stripMargin

@@ -46,7 +46,7 @@ trait Syntax[Ref[_]] {
   }
 
   case class KinaseSubstratePair(kinase: Protein, substrate: Protein) {
-    def at[Var[_]](targetSite: SiteLabel): PhosphoTriple[Var] = PhosphoTriple(kinase, substrate, ISite[Var](targetSite))
+    def at(targetSite: SiteLabel): PhosphoTriple[Ref] = PhosphoTriple(kinase, substrate, ISite[Ref](targetSite))
   }
 
   implicit def symbolToProtein(sym: Symbol): Protein = Protein(sym)

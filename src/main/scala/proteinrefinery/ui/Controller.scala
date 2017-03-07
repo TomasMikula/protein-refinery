@@ -66,8 +66,10 @@ class Controller(val kbWidget: KBWidget[Controller.Ref], val goalWidget: GoalWid
     Lib.addKinaseActivity(pp) >> newFact(FactKinase, pp)(DeepShow.show[Ref, ProteinPattern[Ref]](fetch))
   }
 
-  private def addFactPhosSite(k: Protein, s: Protein, ss: SiteLabel): Prg[Unit] =
-    Lib.addPhosphoTarget(PhosphoTriple(k, s, ISite(ss))) >> newFact(FactPhosTarget, PhosphoTarget(k, s, ISite[Ref](ss)))
+  private def addFactPhosSite(k: Protein, s: Protein, ss: SiteLabel): Prg[Unit] = for {
+    _ <- Lib.addPhosphoTarget(PhosphoTriple(k, s, ISite(ss)))
+    u <- newFact(FactPhosTarget, PhosphoTarget(k, s, ISite[Ref](ss)))
+  } yield u
 
   private def observeGoal[A[_[_]]](desc: String, ref: Ref[IncSet[Ref[A[Ref]]]])(implicit t: GoalType[A], dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
     observe(ref).by(d => {

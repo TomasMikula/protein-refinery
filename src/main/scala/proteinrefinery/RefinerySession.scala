@@ -1,7 +1,8 @@
 package proteinrefinery
 
-import nutcracker.util.{Exists, FreeK, HEqualK, ShowK}
-import proteinrefinery.lib.{PhosphoTarget, PhosphoTriple, Rule}
+import nutcracker.util.typealigned.APair
+import nutcracker.util.{DeepShow, FreeK, HEqualK, ShowK}
+import proteinrefinery.lib.Rule
 import scalaz.Id.Id
 import scalaz.{Monad, ~>}
 import scalaz.syntax.monad._
@@ -28,10 +29,10 @@ trait RefinerySession {
   implicit val deref: Ref ~> Id = λ[Ref ~> Id](fetch(_))
 
 
-  def nugget(bnd: lib.BindingData): Rule.Ref[Ref] = interpret(lib.addRule(bnd.witness))
-  def nugget(pt: PhosphoTriple[Ref]): Rule.Ref[Ref] = interpret(lib.addRule(PhosphoTarget[Ref](pt.kinase, pt.substrate, pt.targetSite).witness))
-  def addGoal[A](p: Prg[Ref[A]]): Ref[A] = interpret(p >>! goalKeepingApi.keep)
-  def getGoals: List[Exists[Ref]] = interpret(goalKeepingApi.list)
+  def nugget(bnd: lib.BindingData): Rule.Ref[Ref] = interpret(lib.addBinding(bnd)).witness
+  def nugget(pt: lib.PhosphoTriple): Rule.Ref[Ref] = interpret(lib.addPhosphoTarget(pt))
+  def addGoal[A](p: Prg[Ref[A]])(implicit ev: DeepShow[A, Ref]): Ref[A] = interpret(p >>! { goalKeepingApi.keep(_) })
+  def getGoals: List[APair[Ref, DeepShow[?, Ref]]] = interpret(goalKeepingApi.list)
 }
 
 object RefinerySession {

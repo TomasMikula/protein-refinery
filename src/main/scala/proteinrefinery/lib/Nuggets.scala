@@ -44,7 +44,7 @@ trait Nuggets[M[_], Ref[_]] {
   ): M[Unit] = {
     import scalaz.syntax.traverse._
     val a = rules.traverse_(addRule(_) map (_ => ()))
-    val b = phosphoSites.traverse_(pt => addPhosphoTarget(pt))
+    val b = phosphoSites.traverse_(addPhosphoTarget(_) map (_ => ()))
     M.apply2(a, b)((_, _) => ())
   }
 
@@ -64,11 +64,11 @@ trait Nuggets[M[_], Ref[_]] {
     newCell(Discrete(activeState)) >>= { track[λ[A[_] => Discrete[ProteinPattern[A]]]](_) }
 
   // derived programs for adding nuggets
-  def addPhosphoTarget(t: PhosphoTriple[Ref]): M[Unit] =
+  def addPhosphoTarget(t: PhosphoTriple[Ref]): M[Rule.Ref[Ref]] =
     for {
       pt <- PhosphoTargetOps.define(t)
-      _ <- addRule(pt.witness)
-    } yield ()
+      r <- addRule(pt.witness)
+    } yield r
 
   // basic programs for querying nuggets
   def rules(f: Rule[Ref] => OnceTrigger[Rule.Ref[Ref] => M[Unit]]): M[Unit] =

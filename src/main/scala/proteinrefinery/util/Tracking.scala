@@ -1,8 +1,7 @@
 package proteinrefinery.util
 
-import scala.language.higherKinds
 import nutcracker.{Alternator, Discrete, Dom, DomSet, Propagation, Revocable, TriggerF}
-
+import scala.language.higherKinds
 import scalaz.{Monad, ~>}
 import scalaz.Id._
 import scalaz.syntax.monad._

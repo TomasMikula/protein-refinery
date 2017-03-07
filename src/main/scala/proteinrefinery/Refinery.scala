@@ -1,8 +1,10 @@
 package proteinrefinery
 
-import nutcracker.{Defer, Propagation, RefBundle, StashRestore}
-import nutcracker.util.{FreeK, HEqualK, InjectK, ShowK, StateInterpreter}
-import proteinrefinery.util.Tracking
+import nutcracker.util.CoproductK.{:++:, :+:}
+import nutcracker.util.KPair.{:**:, :*:, _}
+import nutcracker.{Defer, DeferModule, Propagation, PropagationModule, RefBundle}
+import nutcracker.util.{FreeK, FreeKT, HEqualK, InjectK, ShowK, StateInterpreter}
+import proteinrefinery.util.{Tracking, TrackingModule}
 import scala.language.higherKinds
 import scalaz.Id.Id
 import scalaz.{Monad, StateT, ~>}
@@ -56,14 +58,40 @@ object Refinery {
   }
 }
 
-trait StashRefinery extends Refinery {
-  implicit def stashRestore[K[_]]: StashRestore[State[K]]
+private[proteinrefinery] class RefineryImpl[Ref0[_], PropState[_[_]], TrackState[_[_]], DeferState[_[_]]](
+  val propMod: PropagationModule { type Ref[A] = Ref0[A]; type State[K[_]] = PropState[K] },
+  val trckMod: TrackingModule[Ref0] { type State[K[_]] = TrackState[K] },
+  val defMod: DeferModule[Cost] { type State[K[_]] = DeferState[K] }
+) extends Refinery {
+  type Ref[A] = Ref0[A]
+  type Lang[K[_], A] = (propMod.Lang :+: trckMod.Lang :++: defMod.Lang)#Out[K, A]
+  type State[K[_]]   = (PropState    :*: TrackState   :**: DeferState )#Out[K]
+
+  private implicit def freeKMonad[F[_[_], _]]: Monad[FreeK[F, ?]] = FreeKT.freeKTMonad[F, Id]
+
+  val prgMonad: Monad[Prg] = freeKMonad[Lang]
+  implicit val refEquality: HEqualK[Ref] = propMod.refEquality
+  implicit val refShow: ShowK[Ref] = propMod.refShow
+
+  implicit def freePropagation[F[_[_], _]](implicit i: InjectK[Lang, F]): Propagation[FreeK[F, ?], Ref] = propMod.freePropagation[F](i.compose[propMod.Lang])
+  implicit def freeDeferApi[F[_[_], _]](implicit i: InjectK[Lang, F]): Defer[FreeK[F, ?], Cost] = defMod.freeDeferApi[F](i.compose[defMod.Lang](InjectK.injectRight(InjectK.injectRight)))
+  implicit def freeTrackingApi[F[_[_], _]](implicit i: InjectK[Lang, F]): Tracking[FreeK[F, ?], Ref] = trckMod.freeTracking[F](i.compose[trckMod.Lang])
+
+  def freeLib[F[_[_], _]](implicit i: InjectK[Lang, F]): Lib[FreeK[F, ?], Ref] = new Lib[FreeK[F, ?], Ref]
+
+  val interpreter: StateInterpreter[Lang, State] = propMod.interpreter :&: trckMod.interpreter :&&: defMod.interpreter
+  private val interpreterF = interpreter.freeInstance
+
+  def empty[K[_]]: State[K] = propMod.empty[K] :*: trckMod.empty[K] :*: defMod.empty[K]
+  def fetch[K[_], D](ref: Ref[D], s: State[K]): D = propMod.fetch(ref, s._1)
+  def interpret[A](prg: Prg[A], s: State[Prg]): (State[Prg], A) = interpreterF(prg)(s)
+
+  val lib: Lib[Prg, Ref] =
+  // all of the arguments are implicit, but scalac...
+  new Lib[Prg, Ref]()(deferApi, propagationApi, trackingApi, prgMonad, refEquality.homogenize)
 }
 
-object StashRefinery {
-  type Aux[Lang0[_[_], _], State0[_[_]], Ref0[_]] = StashRefinery {
-    type Lang[K[_], A] = Lang0[K, A]
-    type State[K[_]] = State0[K]
-    type Ref[A] = Ref0[A]
-  }
+object RefineryImpl {
+  def apply(propMod: PropagationModule)(trckMod: TrackingModule[propMod.Ref], defMod: DeferModule[Cost]): RefineryImpl[propMod.Ref, propMod.State, trckMod.State, defMod.State] =
+    new RefineryImpl[propMod.Ref, propMod.State, trckMod.State, defMod.State](propMod, trckMod, defMod)
 }
