@@ -4,6 +4,8 @@ version := "0.2-SNAPSHOT"
 
 scalaVersion := "2.12.1"
 
+resolvers += Resolver.sonatypeRepo("snapshots")
+
 autoCompilerPlugins := true
 addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.3" cross CrossVersion.binary)
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
