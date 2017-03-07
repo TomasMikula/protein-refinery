@@ -53,9 +53,9 @@ val root = project.in(file("."))
 
 // define task that starts the refinery REPL session
 lazy val session = TaskKey[Unit]("session")
-session <<= Seq(
+session := (Seq(
   console in (root, ReplSession)
-).dependOn
+).dependOn).value
 
 // session initialization
 initialCommands in (Test, console) := """
