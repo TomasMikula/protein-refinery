@@ -4,7 +4,7 @@ import scala.language.higherKinds
 import nutcracker.Promise.{Completed, Conflict, Empty}
 import nutcracker.{Discrete, Dom, Promise, UpdateResult}
 import nutcracker.util.ops.iterator._
-import nutcracker.syntax.dom._
+import nutcracker.ops.dom._
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState

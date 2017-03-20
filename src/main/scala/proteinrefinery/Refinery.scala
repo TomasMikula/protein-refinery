@@ -36,7 +36,6 @@ trait Refinery extends RefBundle {
   def fetch[A](ref: Ref[A]): StateT[Id, State[Prg], A] = scalaz.State(s => (s, fetch(ref, s)))
   def interpret[A](prg: Prg[A]): StateT[Id, State[Prg], A] = scalaz.State(s => interpret(prg, s))
   def interpretFetch[A](prg: Prg[Ref[A]]): StateT[Id, State[Prg], A] = scalaz.State(s => interpretFetch(prg, s))
-  def interpret0[A](prg: Prg[A]): (State[Prg], A) = interpret(prg, empty[Prg])
   def interpretFetch0[A](prg: Prg[Ref[A]]): A = {
     val (s, ref) = interpret0(prg)
     fetch(ref, s)

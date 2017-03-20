@@ -3,7 +3,7 @@ package proteinrefinery.lib
 import scala.language.higherKinds
 import nutcracker.Promise.Completed
 import nutcracker.{Dom, UpdateResult}
-import nutcracker.syntax.dom._
+import nutcracker.ops.dom._
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, IsEqual, MonadObjectOutput, ShowK}
 import nutcracker.util.EqualK._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
