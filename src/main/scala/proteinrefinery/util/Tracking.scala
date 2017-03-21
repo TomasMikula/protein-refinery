@@ -1,6 +1,6 @@
 package proteinrefinery.util
 
-import nutcracker.{Alternator, Discrete, Dom, DomSet, Propagation, Revocable, TriggerF}
+import nutcracker.{Alternator, CellSet, Discrete, Dom, Propagation, Revocable, TriggerF}
 import scala.language.higherKinds
 import scalaz.{Monad, ~>}
 import scalaz.Id._
@@ -26,8 +26,8 @@ trait Tracking[M[_], Ref[_]] {
     domD: Dom[D[Ref]],
     domQ: Dom[Q],
     M: Monad[M]
-  ): M[Ref[DomSet[Ref, Revocable[Ref[D[Ref]]]]]] = for {
-    res <- DomSet.init[M, Ref, Revocable[Ref[D[Ref]]]]
+  ): M[Ref[CellSet[Ref, Revocable[Ref[D[Ref]]]]]] = for {
+    res <- CellSet.init[Revocable[Ref[D[Ref]]]]()
     _ <- handle[D](t)(dref =>
       P.alternate[Q, D[Ref], Unit, Ref[Revocable[Ref[D[Ref]]]]](qref, dref)(
         (q, d) => rel(q, d) match {
@@ -36,9 +36,9 @@ trait Tracking[M[_], Ref[_]] {
           case QueryRel.Irreconcilable => Alternator.Stop
         },
         onStartLeft = () => M.pure(()),
-        onStartRight = () => Revocable.init[M, Ref, Ref[D[Ref]]](dref) >>! { DomSet.insert(_, res) },
+        onStartRight = () => Revocable.init[M, Ref, Ref[D[Ref]]](dref) >>! { CellSet.insert(_, res) },
         onSwitchToLeft = revref => Revocable.revoke(revref),
-        onSwitchToRight = (_: Unit) => Revocable.init[M, Ref, Ref[D[Ref]]](dref) >>! { DomSet.insert(_, res) },
+        onSwitchToRight = (_: Unit) => Revocable.init[M, Ref, Ref[D[Ref]]](dref) >>! { CellSet.insert(_, res) },
         onStop = (_ match {
           case Some(Right(revref)) => Revocable.revoke(revref)
           case _ => M.pure(())

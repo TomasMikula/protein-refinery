@@ -1,7 +1,7 @@
 package proteinrefinery
 
 import nutcracker.util.EqualK
-import nutcracker.{Defer, IncRefSets, IncSets, Propagation}
+import nutcracker.{Defer, IncSets, Propagation}
 import proteinrefinery.lib.{AgentsPattern, Assoc, NegativeInfluenceOnAssociation, NegativeInfluenceOnPhosphorylation, NegativeInfluenceOnRule, Nuggets, PhosphoTarget, Phosphorylation, PositiveInfluenceOfRuleOnRule, PositiveInfluenceOnKinaseActivity, PositiveInfluenceOnPhosphorylatedStateSearch, PositiveInfluenceOnRule, PositiveInfluenceOnState, Rule, Syntax}
 import proteinrefinery.util.Tracking
 
@@ -40,7 +40,6 @@ class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: T
   def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Ref] = this
   def NegativeInfluenceOnRuleSearch: NegativeInfluenceOnRule.Search[M, Ref] = this
   def IncSets: IncSets[M, Ref] = new IncSets[M, Ref]()(P)
-  def IncRefSets: IncRefSets[M, Ref] = new IncRefSets[M, Ref]()(P)
 
   type Protein = lib.Protein
   type SiteLabel = lib.SiteLabel

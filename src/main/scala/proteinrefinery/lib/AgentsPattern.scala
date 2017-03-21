@@ -1,14 +1,13 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Discrete, Dom, IncRefSet, Propagation, UpdateResult}
+import nutcracker.{CellSet, Discrete, Dom, Propagation, UpdateResult}
 import nutcracker.ops.dom._
 import nutcracker.util.{ContU, DeepEqual, DeepEqualK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import nutcracker.util.ops._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.util.{Unification, mapUnion}
 import proteinrefinery.util.Unification.Syntax._
-
 import scalaz.Id.Id
 import scalaz.{Applicative, Equal, Monad, State, StateT}
 import scalaz.std.tuple._
@@ -18,7 +17,7 @@ import scalaz.syntax.monad._
 case class AgentsPattern[Ref[_]](
   agents: Vector[Option[ProteinPattern[Ref]]],
   bonds: Vector[Option[(AgentIndex, LocalSiteId[Ref], AgentIndex, LocalSiteId[Ref])]],
-  assocs: Vector[Option[(AgentIndex, AgentIndex, Ref[IncRefSet[Ref, Discrete[Assoc[Ref]]]])]],
+  assocs: Vector[Option[(AgentIndex, AgentIndex, Ref[CellSet[Ref, Discrete[Assoc[Ref]]]])]],
   unbound: List[(AgentIndex, LocalSiteId[Ref])]
 ) {
   import AgentsPattern._
@@ -88,7 +87,7 @@ case class AgentsPattern[Ref[_]](
     AgentsPattern(agents.updated(i.value, Some(ag)), bonds, assocs, unbound)
   }
 
-  def addAssoc(i: AgentIndex, j: AgentIndex, assocRef: Ref[IncRefSet[Ref, Discrete[Assoc[Ref]]]]): (AgentsPattern[Ref], AssocId) = {
+  def addAssoc(i: AgentIndex, j: AgentIndex, assocRef: Ref[CellSet[Ref, Discrete[Assoc[Ref]]]]): (AgentsPattern[Ref], AssocId) = {
     val assoc = (i, j, assocRef)
     (AgentsPattern[Ref](agents, bonds, assocs :+ Some(assoc), unbound), AssocId(assocs.size))
   }
@@ -273,7 +272,6 @@ object AgentsPattern {
   trait Ops[M[_], Ref[_]] {
     protected implicit def Propagation: Propagation[M, Ref]
 
-    def IncRefSets: nutcracker.IncRefSets[M, Ref]
     def AssocSearch: Assoc.Search[M, Ref]
 
     def requireAssoc(i: AgentIndex, j: AgentIndex, predicate: Assoc[Ref] => Boolean)(implicit M: Monad[M], ev: EqualK[Ref]): StateT[M, AgentsPattern[Ref], AssocId] = {
@@ -282,7 +280,7 @@ object AgentsPattern {
           if (predicate(a)) Some(a)
           else None
         }
-        val assocS = IncRefSets.collect(assocC)
+        val assocS = CellSet.collect(assocC)
         M.map(assocS)(ref => ap.addAssoc(i, j, ref))
       })
     }
@@ -292,7 +290,7 @@ object AgentsPattern {
         case Some((_, _, asr)) => Vector(asr)
         case None => Vector()
       }
-      ContU.sequence(as.map(asr => IncRefSets.forEach(asr)))
+      ContU.sequence(as.map(asr => CellSet.forEach(asr)))
     }
   }
 }
