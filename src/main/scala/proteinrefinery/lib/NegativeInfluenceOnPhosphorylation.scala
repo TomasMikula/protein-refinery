@@ -42,7 +42,7 @@ object NegativeInfluenceOnPhosphorylation {
       Discrete.map(NegativeInfluenceOnRuleSearch.negativeInfluenceOnRuleC(p, ph.witness))(byNegativeInfluenceOnRule)
 
     def negativeInfluenceOnPhosphorylationC_r(p: Protein, ptRef: PhosphoTarget.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
-      ptRef.asCont[M] flatMap (negativeInfluenceOnPhosphorylationC(p, _))
+      ptRef.asCont_[M] flatMap (negativeInfluenceOnPhosphorylationC(p, _))
 
   }
 

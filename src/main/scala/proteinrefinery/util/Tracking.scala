@@ -2,7 +2,7 @@ package proteinrefinery.util
 
 import nutcracker.{Alternator, CellSet, Discrete, Dom, Propagation, Revocable, TriggerF}
 import scala.language.higherKinds
-import scalaz.{Monad, ~>}
+import scalaz.{Functor, Monad, ~>}
 import scalaz.Id._
 import scalaz.syntax.monad._
 
@@ -13,9 +13,10 @@ trait Tracking[M[_], Ref[_]] {
 
   def thresholdQuery[D[_[_]]](t: DomType[D])(f: D[Ref] => OnceTrigger[Ref[D[Ref]] => M[Unit]])(implicit
     P: Propagation[M, Ref],
+    M: Functor[M],
     dom: Dom[D[Ref]]
   ): M[Unit] =
-    handle[D](t)(ref => P.observe(ref).by(λ[Id ~> λ[α => D[Ref] => TriggerF[M, α]]](α => d => f(d) match {
+    handle[D](t)(ref => P.observe(ref).by_(λ[Id ~> λ[α => D[Ref] => TriggerF[M, α]]](α => d => f(d) match {
       case OnceTrigger.Sleep() => TriggerF.Sleep(α)
       case OnceTrigger.Discard() => TriggerF.Discard()
       case OnceTrigger.Fire(h) => TriggerF.Fire(h(ref))

@@ -92,7 +92,7 @@ object PositiveInfluenceOfRuleOnRule {
         },
         for {
           aRef <- RuleOps.associationsOfC(t.link)
-          a <- aRef.asCont[M]
+          a <- aRef.asCont_[M]
           infl <- ContU.sequence(a.bindings.map(b => {
             val w = b.witness
             if(w === r) ContU.point[M, PositiveInfluenceOfRuleOnRule[Var]](InAssoc(r, t))

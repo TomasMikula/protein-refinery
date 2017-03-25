@@ -98,7 +98,7 @@ trait Nuggets[M[_], Ref[_]] {
     rules(_ => OnceTrigger.Fire(ruleRef => RuleOps.phosphorylationsC(ruleRef).apply(f)))
 
   def phosphoSites(kinase: Protein, substrate: Protein)(f: ISite[Ref] => M[Unit]): M[Unit] =
-    phosphoTargets(ptr => observe(ptr).by(apt => {
+    phosphoTargets(ptr => observe(ptr).by_(apt => {
       val pt = apt.value
       if(kinase === pt.kinase && substrate === pt.substrate)
         Trigger.fireReload(f(pt.targetSite) map (_ => (d, δ) => ???))
@@ -113,17 +113,17 @@ trait Nuggets[M[_], Ref[_]] {
   def phosphoSitesS(substrate: Protein): M[Ref[IncSet[ISite[Ref]]]] =
     for {
       res <- IncSets.init[ISite[Ref]]
-      _   <- phosphoTargets(ptr => observe(ptr).by(apt => {
+      _   <- phosphoTargets(ptr => observe(ptr).by_(apt => {
         val pt = apt.value
         if(pt.substrate === substrate) Trigger.fireReload(IncSets.insert(pt.targetSite, res) map (_ => (d, δ) => ???))
         else Trigger.sleep((d, δ) => ???)
       }))
     } yield res
   def phosphoSitesC(substrate: Protein): ContU[M, ISite[Ref]] = // TODO: return Site.Ref
-    phosphoSitesS(substrate).map(IncSets.forEach(_)).wrapEffect
+    phosphoSitesS(substrate).map(IncSets.forEach_(_)).wrapEffect
 
   def kinasesOf(substrate: Protein, site: SiteLabel)(f: Protein => M[Unit]): M[Unit] =
-    phosphoTargets(ptr => observe(ptr).by(apt => {
+    phosphoTargets(ptr => observe(ptr).by_(apt => {
       val pt = apt.value
       if(substrate === pt.substrate && ISite[Ref](site) === pt.targetSite) Trigger.fireReload(f(pt.kinase) map (_ => (d, δ) => ???))
       else Trigger.sleep((d, δ) => ???)

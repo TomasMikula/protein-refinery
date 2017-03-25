@@ -290,7 +290,7 @@ object AgentsPattern {
         case Some((_, _, asr)) => Vector(asr)
         case None => Vector()
       }
-      ContU.sequence(as.map(asr => CellSet.forEach(asr)))
+      ContU.sequence(as.map(asr => CellSet.forEach_(asr)))
     }
   }
 }

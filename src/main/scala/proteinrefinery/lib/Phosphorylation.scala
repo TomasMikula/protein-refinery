@@ -31,7 +31,7 @@ object Phosphorylation {
 
     def phosphorylationsC(kinase: Protein, substrate: Protein)(implicit M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
       ContU(f =>
-        Nuggets.phosphoTargets(ptRef => Propagation.observe(ptRef).by(apt => {
+        Nuggets.phosphoTargets(ptRef => Propagation.observe(ptRef).by_(apt => {
           val pt = apt.value
           if (pt.kinase === kinase && pt.substrate === substrate) Trigger.fireReload(f(ptRef) map (_ => (d, δ) => ???))
           else Trigger.sleep((d, δ) => ???)

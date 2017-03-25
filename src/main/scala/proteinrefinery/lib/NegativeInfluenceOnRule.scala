@@ -27,7 +27,7 @@ object NegativeInfluenceOnRule {
       IncSets.collect(negativeInfluenceOnRuleC_r(p, ref))
 
     def negativeInfluenceOnRuleC_r(p: Protein, ref: Rule.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
-      ref.asCont[M] flatMap (negativeInfluenceOnRuleC(p, _))
+      ref.asCont_[M] flatMap (negativeInfluenceOnRuleC(p, _))
 
     def negativeInfluenceOnRuleC(p: Protein, r: Rule[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
       // currently the only way a protein can have negative influence on rule

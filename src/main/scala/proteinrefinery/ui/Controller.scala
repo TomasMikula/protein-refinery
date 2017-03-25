@@ -1,9 +1,10 @@
 package proteinrefinery.ui
 
+import nutcracker.{Defer, Discrete, Dom, IncSet, Propagation}
 import nutcracker.Trigger._
 import nutcracker.util.CoproductK.:++:
 import nutcracker.util.{DeepShow, FreeK}
-import nutcracker.{Defer, Discrete, Dom, IncSet, Propagation}
+import nutcracker.util.ops._
 import org.reactfx.EventStreams
 import proteinrefinery.Cost
 import proteinrefinery.lib.{Assoc, BindingData, ISite, NegativeInfluenceOnPhosphorylation, PhosphoTarget, PhosphoTriple, Protein, ProteinPattern, SiteLabel}
@@ -72,17 +73,17 @@ class Controller(val kbWidget: KBWidget[Controller.Ref], val goalWidget: GoalWid
   } yield u
 
   private def observeGoal[A[_[_]]](desc: String, ref: Ref[IncSet[Ref[A[Ref]]]])(implicit t: GoalType[A], dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
-    observe(ref).by(d => {
+    observe(ref).by_(d => {
       val now = initGoal(t, ref, desc)
       val onChange = (d: IncSet[Ref[A[Ref]]], δ: IncSet.Delta[Ref[A[Ref]]]) => updateGoal[A](t, ref, δ)
       fireReload(now map (_ => continually(onChange)))
     })
 
   private def updateGoal[A[_[_]]](t: GoalType[A], gref: Ref[IncSet[Ref[A[Ref]]]], δ: IncSet.Delta[Ref[A[Ref]]])(implicit dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
-    FreeK.sequence_(δ.value.iterator.map(observeSolution[A](t, gref, _)).toList)
+    δ.value.iterator.traverse_(observeSolution[A](t, gref, _))
 
   private def observeSolution[A[_[_]]](t: GoalType[A], gref: Ref[IncSet[Ref[A[Ref]]]], sref: Ref[A[Ref]])(implicit dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
-    observe(sref).by(a => {
+    observe(sref).by_(a => {
       val now = addSolution[A](t, gref, sref, a)
       val onChange = (a: A[Ref], δ: dom.Delta) => updateSolution[A](t, gref, sref, a)
       fireReload(now map (_ => continually(onChange)))

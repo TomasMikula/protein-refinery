@@ -7,10 +7,9 @@ import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{OnceTrigger, Unification}
 import proteinrefinery.util.Unification.Syntax._
-
 import scala.collection.mutable.ArrayBuffer
 import scala.language.higherKinds
-import scalaz.{Lens, Monad, Show, Store}
+import scalaz.{Functor, Lens, Monad, Show, Store}
 import scalaz.std.list._
 import scalaz.syntax.equal._
 import scalaz.syntax.monad._
@@ -208,25 +207,25 @@ object Rule {
     import Propagation._
 
     def linksAgentToC(ref: Rule.Ref[Var])(p: Protein)(implicit M: Monad[M]): ContU[M, Binding[Var]] =
-      ContU(f => observe(ref).by(r => {
+      ContU(f => observe(ref).by_(r => {
         import scalaz.syntax.traverse._
         val now = r.value.linksAgentTo(p).iterator.map(l => f(Binding(ref, l))).toList.sequence_
         Trigger.fireReload(now map (_ => (d, δ) => ???))
       }))
 
     def phosphorylationsC(ref: Rule.Ref[Var])(implicit M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
-      ContU(f => observe(ref).by(r => {
+      ContU(f => observe(ref).by_(r => {
         import scalaz.syntax.traverse._
         val now = r.value.phosphorylations.iterator.map(p => newCell(Discrete(p)).flatMap(f)).toList.sequence_
         Trigger.fireReload(now map (_ => (d, δ) => ???))
       }))
 
-    def enablersOfC(ref: Rule.Ref[Var]): ContU[M, Rule.Ref[Var]] = for {
-      r <- ref.asCont[M]
+    def enablersOfC(ref: Rule.Ref[Var])(implicit M: Functor[M]): ContU[M, Rule.Ref[Var]] = for {
+      r <- ref.asCont_[M]
       q <- Nuggets.rulesC(q => if(q.enables(r)) OnceTrigger.Fire(()) else OnceTrigger.Discard())
     } yield q
 
     def associationsOfC(ref: Rule.Ref[Var])(implicit M: Monad[M]): ContU[M, Assoc.Ref[Var]] =
-      ref.asCont[M] flatMap { r => AgentsPatternOps.forEachAssoc(r.lhs) }
+      ref.asCont_[M] flatMap { r => AgentsPatternOps.forEachAssoc(r.lhs) }
   }
 }

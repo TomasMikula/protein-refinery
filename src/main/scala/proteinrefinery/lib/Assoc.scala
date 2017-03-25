@@ -40,7 +40,7 @@ object Assoc {
     private def assocC0(leftTail: List[Binding[Var]], p: Protein, q: Protein, rightTail: List[Binding[Var]])(implicit M: Monad[M], ev: EqualK[Var]): ContU[M, Var[Discrete[Assoc[Var]]]] =
       for {
         b <- Nuggets.bindingsOfC(p)
-        br <- b.witness.asCont[M]
+        br <- b.witness.asCont_[M]
         aref <- {
           if (leftTail.nonEmpty && b.leftS === leftTail.head.rightS) ContU.noop[M, Var[Discrete[Assoc[Var]]]] // linter:ignore DuplicateIfBranches
           else if (leftTail.any(_ === b) || rightTail.any(_ === b)) ContU.noop[M, Var[Discrete[Assoc[Var]]]]
