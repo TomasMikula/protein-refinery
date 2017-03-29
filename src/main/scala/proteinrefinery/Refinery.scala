@@ -4,7 +4,7 @@ import nutcracker.rel.{RelModule, Relations}
 import nutcracker.util.CoproductK.{:++:, :+:}
 import nutcracker.util.KPair.{:**:, :*:, _}
 import nutcracker.{Defer, DeferModule, Propagation, PropagationModule, RefBundle}
-import nutcracker.util.{FreeK, FreeKT, HEqualK, InjectK, ShowK, StateInterpreter}
+import nutcracker.util.{FreeK, FreeKT, HEqualK, HOrderK, InjectK, ShowK, StateInterpreter}
 import proteinrefinery.util.{Tracking, TrackingModule}
 import scala.language.higherKinds
 import scalaz.Id.Id
@@ -14,6 +14,7 @@ trait Refinery extends RefBundle {
 
   implicit val prgMonad: Monad[Prg]
   implicit val refEquality: HEqualK[Ref]
+  implicit val refOrder: HOrderK[Ref]
   implicit val refShow: ShowK[Ref]
 
   def freePropagation[F[_[_], _]](implicit i: InjectK[Lang, F]): Propagation[FreeK[F, ?], Ref]
@@ -74,6 +75,7 @@ private[proteinrefinery] class RefineryImpl[Ref0[_], PropState[_[_]], RelState[_
 
   val prgMonad: Monad[Prg] = freeKMonad[Lang]
   implicit val refEquality: HEqualK[Ref] = propMod.refEquality
+  implicit val refOrder: HOrderK[Ref] = propMod.refOrder
   implicit val refShow: ShowK[Ref] = propMod.refShow
 
   implicit def freePropagation[F[_[_], _]](implicit i: InjectK[Lang, F]): Propagation[FreeK[F, ?], Ref] = propMod.freePropagation[F](i.compose[propMod.Lang])
