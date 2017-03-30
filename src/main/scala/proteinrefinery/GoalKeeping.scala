@@ -4,6 +4,7 @@ import nutcracker.util.typealigned.APair
 import nutcracker.{ListModule, Module, PersistentStateModule, StashModule}
 import nutcracker.util.{DeepShow, FreeK, InjectK, Lst, Step, StepT, WriterState}
 import scalaz.Id._
+import scalaz.Monad
 
 trait GoalKeeping[M[_], Ref[_]] {
   def keep[A](ref: Ref[A])(implicit ev: DeepShow[A, Ref]): M[Unit]
@@ -56,7 +57,7 @@ private[proteinrefinery] class GoalKeepingModuleImpl[Ref[_]] extends PersistentG
   }
 
   def interpreter: Step[Lang, State] = new StepT[Id, Lang, State] {
-    def apply[K[_], A](ga: GoalKeepingLang[Ref, K, A]): WriterState[Lst[K[Unit]], GoalKeeper[Ref, K], A] = ga match {
+    def apply[K[_]: Monad, A](ga: GoalKeepingLang[Ref, K, A]): WriterState[Lst[K[Unit]], GoalKeeper[Ref, K], A] = ga match {
       case KeepGoal(ref, ev) => WriterState(s => (Lst.empty, s.addGoal(ref)(ev), ()))
       case ListGoals() => WriterState(s => (Lst.empty, s, s.goals))
     }

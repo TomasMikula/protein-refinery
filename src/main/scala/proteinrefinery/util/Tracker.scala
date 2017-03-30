@@ -4,6 +4,7 @@ import nutcracker.util.{FreeK, HHKMap, InjectK, Lst, Step, WriterState}
 import proteinrefinery.util.TrackLang._
 import proteinrefinery.util.Tracker._
 import scala.language.higherKinds
+import scalaz.Monad
 import scalaz.std.list._
 import scalaz.syntax.traverse._
 
@@ -23,7 +24,7 @@ private[util] class TrackingModuleImpl[Ref[_]] extends PersistentTrackingModule[
     }
 
   def interpreter: Step[Lang, State] = new Step[Lang, State] {
-    def apply[K[_], A](t: TrackLang[Ref, K, A]): WriterState[Lst[K[Unit]], Tracker[Ref, K], A] =
+    def apply[K[_]: Monad, A](t: TrackLang[Ref, K, A]): WriterState[Lst[K[Unit]], Tracker[Ref, K], A] =
       WriterState(tracker => t match {
         case i @ Track(t, ref) => tracker.track[i.Tracked](t, ref) match { case (tr, ks) => (ks, tr, ()) }
         case i @ Handle(t, f) => tracker.handle[i.Tracked](t)(f) match { case (tr, ks) => (ks, tr, ()) }
