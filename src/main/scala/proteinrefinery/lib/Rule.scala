@@ -1,6 +1,7 @@
 package proteinrefinery.lib
 
-import nutcracker.{Discrete, Dom, Promise, Propagation, Trigger, UpdateResult}
+import nutcracker.{Discrete, Dom, Promise, Propagation, UpdateResult}
+import nutcracker.Trigger._
 import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
@@ -8,7 +9,6 @@ import proteinrefinery.lib.SiteState.SiteState
 import proteinrefinery.util.{OnceTrigger, Unification}
 import proteinrefinery.util.Unification.Syntax._
 import scala.collection.mutable.ArrayBuffer
-import scala.language.higherKinds
 import scalaz.{Functor, Lens, Monad, Show, Store}
 import scalaz.std.list._
 import scalaz.syntax.equal._
@@ -210,14 +210,14 @@ object Rule {
       ContU(f => observe(ref).by_(r => {
         import scalaz.syntax.traverse._
         val now = r.value.linksAgentTo(p).iterator.map(l => f(Binding(ref, l))).toList.sequence_
-        Trigger.fireReload(now map (_ => (d, δ) => ???))
+        fireReload(now.as(sleep((d, δ) => ???)))
       }))
 
     def phosphorylationsC(ref: Rule.Ref[Var])(implicit M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
       ContU(f => observe(ref).by_(r => {
         import scalaz.syntax.traverse._
         val now = r.value.phosphorylations.iterator.map(p => newCell(Discrete(p)).flatMap(f)).toList.sequence_
-        Trigger.fireReload(now map (_ => (d, δ) => ???))
+        fireReload(now.as(sleep((d, δ) => ???)))
       }))
 
     def enablersOfC(ref: Rule.Ref[Var])(implicit M: Functor[M]): ContU[M, Rule.Ref[Var]] = for {

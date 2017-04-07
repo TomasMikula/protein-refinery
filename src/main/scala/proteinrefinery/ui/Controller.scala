@@ -12,9 +12,9 @@ import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.ui.FactType._
 import proteinrefinery.ui.util.syntax._
 import proteinrefinery.util.Tracking
-import scala.language.higherKinds
-import scalaz.Id._
 import scalaz.{Show, ~>}
+import scalaz.Id._
+import scalaz.syntax.monad._
 
 class Controller(val kbWidget: KBWidget[Controller.Ref], val goalWidget: GoalWidget[Controller.Ref]) {
   import Controller._
@@ -76,7 +76,7 @@ class Controller(val kbWidget: KBWidget[Controller.Ref], val goalWidget: GoalWid
     observe(ref).by_(d => {
       val now = initGoal(t, ref, desc)
       val onChange = (d: IncSet[Ref[A[Ref]]], δ: IncSet.Delta[Ref[A[Ref]]]) => updateGoal[A](t, ref, δ)
-      fireReload(now map (_ => continually(onChange)))
+      fireReload(now.as(sleep(continually(onChange))))
     })
 
   private def updateGoal[A[_[_]]](t: GoalType[A], gref: Ref[IncSet[Ref[A[Ref]]]], δ: IncSet.Delta[Ref[A[Ref]]])(implicit dom: Dom[A[Ref]], show: Show[A[Ref]]): Prg[Unit] =
@@ -86,7 +86,7 @@ class Controller(val kbWidget: KBWidget[Controller.Ref], val goalWidget: GoalWid
     observe(sref).by_(a => {
       val now = addSolution[A](t, gref, sref, a)
       val onChange = (a: A[Ref], δ: dom.Delta) => updateSolution[A](t, gref, sref, a)
-      fireReload(now map (_ => continually(onChange)))
+      fireReload(now.as(sleep(continually(onChange))))
     })
 }
 

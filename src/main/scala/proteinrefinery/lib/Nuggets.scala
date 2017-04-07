@@ -1,13 +1,12 @@
 package proteinrefinery.lib
 
+import nutcracker.{Discrete, IncSet, Propagation}
+import nutcracker.Trigger._
 import nutcracker.util.{ContU, EqualK}
 import nutcracker.util.ContU._
-import nutcracker.{Discrete, IncSet, Propagation, Trigger}
 import proteinrefinery.util.DomType.DiscreteDomType
 import proteinrefinery.util.OnceTrigger.Fire
 import proteinrefinery.util.{OnceTrigger, Tracking}
-
-import scala.language.higherKinds
 import scalaz.Monad
 import scalaz.std.list._
 import scalaz.syntax.equal._
@@ -101,9 +100,9 @@ trait Nuggets[M[_], Ref[_]] {
     phosphoTargets(ptr => observe(ptr).by_(apt => {
       val pt = apt.value
       if(kinase === pt.kinase && substrate === pt.substrate)
-        Trigger.fireReload(f(pt.targetSite) map (_ => (d, δ) => ???))
+        fireReload(f(pt.targetSite).as(sleep((d, δ) => ???)))
       else
-        Trigger.sleep((d, δ) => ???)
+        sleep((d, δ) => ???)
     }))
   def phosphoSitesC(kinase: Protein, substrate: Protein): ContU[M, ISite[Ref]] = // TODO: return Site.Ref
     ContU(f => phosphoSites(kinase, substrate)(f))
@@ -115,8 +114,8 @@ trait Nuggets[M[_], Ref[_]] {
       res <- IncSets.init[ISite[Ref]]
       _   <- phosphoTargets(ptr => observe(ptr).by_(apt => {
         val pt = apt.value
-        if(pt.substrate === substrate) Trigger.fireReload(IncSets.insert(pt.targetSite, res) map (_ => (d, δ) => ???))
-        else Trigger.sleep((d, δ) => ???)
+        if(pt.substrate === substrate) fireReload(IncSets.insert(pt.targetSite, res).as(sleep((d, δ) => ???)))
+        else sleep((d, δ) => ???)
       }))
     } yield res
   def phosphoSitesC(substrate: Protein): ContU[M, ISite[Ref]] = // TODO: return Site.Ref
@@ -125,8 +124,8 @@ trait Nuggets[M[_], Ref[_]] {
   def kinasesOf(substrate: Protein, site: SiteLabel)(f: Protein => M[Unit]): M[Unit] =
     phosphoTargets(ptr => observe(ptr).by_(apt => {
       val pt = apt.value
-      if(substrate === pt.substrate && ISite[Ref](site) === pt.targetSite) Trigger.fireReload(f(pt.kinase) map (_ => (d, δ) => ???))
-      else Trigger.sleep((d, δ) => ???)
+      if(substrate === pt.substrate && ISite[Ref](site) === pt.targetSite) fireReload(f(pt.kinase).as(sleep((d, δ) => ???)))
+      else sleep((d, δ) => ???)
     }))
   def kinasesOfC(substrate: Protein, site: SiteLabel): ContU[M, Protein] = // TODO: return Protein.Ref
     ContU(f => kinasesOf(substrate, site)(f))

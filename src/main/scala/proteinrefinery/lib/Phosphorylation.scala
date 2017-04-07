@@ -1,9 +1,7 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
 import nutcracker.{Discrete, IncSet, Trigger}
 import nutcracker.util.ContU
-
 import scalaz.{Monad, Show}
 import scalaz.syntax.equal._
 import scalaz.syntax.monad._
@@ -33,7 +31,7 @@ object Phosphorylation {
       ContU(f =>
         Nuggets.phosphoTargets(ptRef => Propagation.observe(ptRef).by_(apt => {
           val pt = apt.value
-          if (pt.kinase === kinase && pt.substrate === substrate) Trigger.fireReload(f(ptRef) map (_ => (d, δ) => ???))
+          if (pt.kinase === kinase && pt.substrate === substrate) Trigger.fireReload(f(ptRef).as(Trigger.sleep((d, δ) => ???)))
           else Trigger.sleep((d, δ) => ???)
         }))
       )
