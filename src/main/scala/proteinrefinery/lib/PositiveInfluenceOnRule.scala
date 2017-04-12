@@ -34,13 +34,13 @@ object PositiveInfluenceOnRule {
   }
 
 
-  trait Search[M[_], Var[_]] { self: PositiveInfluenceOfRuleOnRule.Search[M, Var] =>
+  trait Search[M[_], Var[_], Val[_]] { self: PositiveInfluenceOfRuleOnRule.Search[M, Var, Val] =>
 
-    protected implicit def Propagation: nutcracker.Propagation[M, Var]
-    implicit def Tracking: proteinrefinery.util.Tracking[M, Var]
-    implicit def IncSets: nutcracker.IncSets[M, Var]
+    protected implicit def Propagation: nutcracker.Propagation[M, Var, Val]
+    implicit def Tracking: proteinrefinery.util.Tracking[M, Var, Val]
+    implicit def IncSets: nutcracker.IncSets[M, Var, Val]
 
-    def Nuggets: proteinrefinery.lib.Nuggets[M, Var]
+    def Nuggets: proteinrefinery.lib.Nuggets[M, Var, Val]
 
     def positiveInfluenceOnRule(agent: Protein, rule: Rule.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): M[Var[IncSet[PositiveInfluenceOnRule[Var]]]] =
       IncSets.collect(positiveInfluenceOnRuleC(agent, rule))

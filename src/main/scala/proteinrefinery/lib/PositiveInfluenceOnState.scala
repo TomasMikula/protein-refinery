@@ -24,12 +24,12 @@ object PositiveInfluenceOnState {
   }
 
 
-  trait Search[M[_], Var[_]] {
-    self: PositiveInfluenceOnRule.Search[M, Var] /*with
+  trait Search[M[_], Var[_], Val[_]] {
+    self: PositiveInfluenceOnRule.Search[M, Var, Val] /*with
           PositiveInfluenceOnPhosphorylation.Search[M, Var]*/ =>
 
-    protected implicit def Propagation: nutcracker.Propagation[M, Var]
-    implicit def Tracking: proteinrefinery.util.Tracking[M, Var]
+    protected implicit def Propagation: nutcracker.Propagation[M, Var, Val]
+    implicit def Tracking: proteinrefinery.util.Tracking[M, Var, Val]
 
     def positiveInfluenceOnStateC(agent: Protein, target: ProteinPattern[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
       searchByRule(agent, target)
@@ -39,7 +39,7 @@ object PositiveInfluenceOnState {
       for {
         rRef <- Nuggets.rulesC(r => if (r enables ap) OnceTrigger.Fire(()) else OnceTrigger.Sleep())
         infl <- positiveInfluenceOnRuleC(agent, rRef)
-        res <- Discrete.cellC[M, Var, PositiveInfluenceOnState[Var]](ByRule(infl, target))
+        res <- Discrete.cellC[M, Var, Val, PositiveInfluenceOnState[Var]](ByRule(infl, target))
       } yield res
     }
 

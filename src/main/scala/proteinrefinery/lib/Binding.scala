@@ -1,11 +1,10 @@
 package proteinrefinery.lib
 
 import scala.language.higherKinds
-import nutcracker.{Discrete, RelPSource}
+import nutcracker.{Discrete, RelObservable}
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import nutcracker.util.ops.tell._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
-
 import scalaz.Equal
 import scalaz.syntax.equal._
 
@@ -27,10 +26,10 @@ sealed trait Binding[Ref[_]] {
   def qs: LocalSiteId[Ref]
 
   /** first binding partner */
-  def p: RelPSource[Ref, Discrete[Protein]] = protein(pi)
+  def p: RelObservable[Ref, Discrete[Protein]] = protein(pi)
 
   /** second binding partner */
-  def q: RelPSource[Ref, Discrete[Protein]] = protein(qi)
+  def q: RelObservable[Ref, Discrete[Protein]] = protein(qi)
 
   /** Alias for [[p]]. */
   def left = p
@@ -48,8 +47,8 @@ sealed trait Binding[Ref[_]] {
   /** Alias for [[qs]]. */
   def rightS = qs
 
-  def pPattern: RelPSource[Ref, Discrete[BindingPartnerPattern[Ref]]] = partner(pi, ps) // BindingPartnerPattern(witness.lhs(pi), ps)
-  def qPattern: RelPSource[Ref, Discrete[BindingPartnerPattern[Ref]]] = partner(qi, qs) // BindingPartnerPattern(witness.lhs(qi), qs)
+  def pPattern: RelObservable[Ref, Discrete[BindingPartnerPattern[Ref]]] = partner(pi, ps) // BindingPartnerPattern(witness.lhs(pi), ps)
+  def qPattern: RelObservable[Ref, Discrete[BindingPartnerPattern[Ref]]] = partner(qi, qs) // BindingPartnerPattern(witness.lhs(qi), qs)
   def leftPattern = pPattern
   def rightPattern = qPattern
 
@@ -68,11 +67,11 @@ sealed trait Binding[Ref[_]] {
     tell"${p_}>${ps_} - ${qs_}<${q_}"
   }
 
-  private def protein(i: AgentIndex): RelPSource[Ref, Discrete[Protein]] =
-    RelPSource.lift(witness).map(r => Discrete(r.value.lhs(i).protein)).deltas(x => x)
+  private def protein(i: AgentIndex): RelObservable[Ref, Discrete[Protein]] =
+    RelObservable.lift(witness).map(r => Discrete(r.value.lhs(i).protein)).deltas(x => x)
 
-  private def partner(i: AgentIndex, si: LocalSiteId[Ref]): RelPSource[Ref, Discrete[BindingPartnerPattern[Ref]]] =
-    RelPSource.lift(witness).map(r => Discrete(BindingPartnerPattern(r.value.lhs(i), si))).deltas(x => x)
+  private def partner(i: AgentIndex, si: LocalSiteId[Ref]): RelObservable[Ref, Discrete[BindingPartnerPattern[Ref]]] =
+    RelObservable.lift(witness).map(r => Discrete(BindingPartnerPattern(r.value.lhs(i), si))).deltas(x => x)
 }
 
 object Binding {

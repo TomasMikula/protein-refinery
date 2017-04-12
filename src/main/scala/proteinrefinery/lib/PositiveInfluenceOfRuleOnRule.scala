@@ -76,9 +76,9 @@ object PositiveInfluenceOfRuleOnRule {
       }
   }
 
-  trait Search[M[_], Var[_]] {
-    protected implicit def Propagation: Propagation[M, Var]
-    def RuleOps: Rule.Ops[M, Var]
+  trait Search[M[_], Var[_], Val[_]] {
+    protected implicit def Propagation: Propagation[M, Var, Val]
+    def RuleOps: Rule.Ops[M, Var, Val]
 
     def positiveInfluenceOfRuleOnRule(r: Rule.Ref[Var], t: Rule.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, PositiveInfluenceOfRuleOnRule[Var]] =
       positiveInfluenceOfRuleOnRule(r, Enablee.Singleton(t))
@@ -92,7 +92,7 @@ object PositiveInfluenceOfRuleOnRule {
         },
         for {
           aRef <- RuleOps.associationsOfC(t.link)
-          a <- aRef.asCont_[M]
+          a <- aRef.asCont_
           infl <- ContU.sequence(a.bindings.map(b => {
             val w = b.witness
             if(w === r) ContU.point[M, PositiveInfluenceOfRuleOnRule[Var]](InAssoc(r, t))

@@ -21,18 +21,18 @@ object Nuggets {
 
 }
 
-trait Nuggets[M[_], Ref[_]] {
+trait Nuggets[M[_], Ref[_], Val[_]] {
   import Nuggets._
   import Nuggets.DomTypes._
 
   protected implicit val M: Monad[M]
   implicit val RefEquality: EqualK[Ref]
-  protected implicit val Propagation: Propagation[M, Ref]
-  implicit val Tracking: Tracking[M, Ref]
+  protected implicit val Propagation: Propagation[M, Ref, Val]
+  implicit val Tracking: Tracking[M, Ref, Val]
 
-  def IncSets: nutcracker.IncSets[M, Ref]
-  def PhosphoTargetOps: PhosphoTarget.Ops[M, Ref]
-  def RuleOps: Rule.Ops[M, Ref]
+  def IncSets: nutcracker.IncSets[M, Ref, Val]
+  def PhosphoTargetOps: PhosphoTarget.Ops[M, Ref, Val]
+  def RuleOps: Rule.Ops[M, Ref, Val]
 
   import Propagation._
   import Tracking._

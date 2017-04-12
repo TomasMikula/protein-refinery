@@ -269,10 +269,10 @@ object AgentsPattern {
     def dom: Dom.Aux[AgentsPattern[Ref], Update, Delta] = domInstance
   }
 
-  trait Ops[M[_], Ref[_]] {
-    protected implicit def Propagation: Propagation[M, Ref]
+  trait Ops[M[_], Ref[_], Val[_]] {
+    protected implicit def Propagation: Propagation[M, Ref, Val]
 
-    def AssocSearch: Assoc.Search[M, Ref]
+    def AssocSearch: Assoc.Search[M, Ref, Val]
 
     def requireAssoc(i: AgentIndex, j: AgentIndex, predicate: Assoc[Ref] => Boolean)(implicit M: Monad[M], ev: EqualK[Ref]): StateT[M, AgentsPattern[Ref], AssocId] = {
       StateT(ap => {

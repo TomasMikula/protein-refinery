@@ -8,10 +8,10 @@ trait StashSession extends RefinerySession {
   def restore(): Unit
 }
 
-private[proteinrefinery] class StashSessionImpl[Lang[_[_], _], State1[_[_]], State2[_[_]], Ref[_]](
-  refinery: StashRefinery.Aux[Lang, State1, Ref],
+private[proteinrefinery] class StashSessionImpl[Lang[_[_], _], State1[_[_]], State2[_[_]], Ref[_], Val[_]](
+  refinery: StashRefinery.Aux[Lang, State1, Ref, Val],
   goalModule: GoalKeepingStashModule.Aux[State2, Ref]
-) extends RefinerySessionImpl[State1, State2, Ref](refinery, goalModule) with StashSession {
+) extends RefinerySessionImpl[State1, State2, Ref, Val](refinery, goalModule) with StashSession {
 
   private val ev1 = refinery.stashRestore[Prg]
   private val ev2 = goalModule.stashRestore[Prg]
@@ -29,10 +29,10 @@ trait ReplSession extends StashSession {
   def listGoals(): Unit
 }
 
-private[proteinrefinery] class ReplSessionImpl[Lang[_[_], _], State1[_[_]], State2[_[_]], Ref[_]](
-  refinery: StashRefinery.Aux[Lang, State1, Ref],
+private[proteinrefinery] class ReplSessionImpl[Lang[_[_], _], State1[_[_]], State2[_[_]], Ref[_], Val[_]](
+  refinery: StashRefinery.Aux[Lang, State1, Ref, Val],
   goalModule: GoalKeepingStashModule.Aux[State2, Ref]
-) extends StashSessionImpl[Lang, State1, State2, Ref](refinery, goalModule) with ReplSession {
+) extends StashSessionImpl[Lang, State1, State2, Ref, Val](refinery, goalModule) with ReplSession {
 
   def listGoals(): Unit = {
     for((g, i) <- getGoals.reverse.zipWithIndex) {
@@ -40,13 +40,13 @@ private[proteinrefinery] class ReplSessionImpl[Lang[_[_], _], State1[_[_]], Stat
     }
   }
 
-  private def printGoal[A](g: Ref[A], i: Int)(implicit ev: DeepShow[A, Ref]): Unit = {
+  private def printGoal[A](g: Var[A], i: Int)(implicit ev: DeepShow[A, Var]): Unit = {
     println(s"Goal ${i+1}:")
     println(ev.free(deref(g)).printTree(deref, ShowK.fromToString)())
   }
 }
 
 object ReplSessionImpl {
-  def apply(r: StashRefinery)(g: GoalKeepingStashModule[r.Ref]): ReplSessionImpl[r.Lang, r.State, g.State, r.Ref] =
-    new ReplSessionImpl[r.Lang, r.State, g.State, r.Ref](r, g)
+  def apply(r: StashRefinery)(g: GoalKeepingStashModule[r.Var]): ReplSessionImpl[r.Lang, r.State, g.State, r.Var, r.Val] =
+    new ReplSessionImpl[r.Lang, r.State, g.State, r.Var, r.Val](r, g)
 }

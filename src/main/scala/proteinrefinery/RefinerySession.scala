@@ -8,31 +8,32 @@ import scalaz.{Monad, ~>}
 import scalaz.syntax.monad._
 
 trait RefinerySession {
-  type Ref[_]
+  type Var[_]
+  type Val[_]
   type Lang[_[_], _]
   type State[_[_]]
 
   type Prg[A] = FreeK[Lang, A]
 
   implicit val prgMonad: Monad[Prg]
-  implicit val refEquality: HEqualK[Ref]
-  implicit val refShow: ShowK[Ref]
+  implicit val refEquality: HEqualK[Var]
+  implicit val refShow: ShowK[Var]
 
-  protected implicit val goalKeepingApi: GoalKeeping[Prg, Ref]
+  protected implicit val goalKeepingApi: GoalKeeping[Prg, Var]
 
-  def fetch[A](ref: Ref[A]): A
+  def fetch[A](ref: Var[A]): A
   def interpret[A](prg: Prg[A]): A
-  def interpretFetch[A](prg: Prg[Ref[A]]): A = fetch(interpret(prg))
+  def interpretFetch[A](prg: Prg[Var[A]]): A = fetch(interpret(prg))
 
-  val lib: Lib[Prg, Ref]
+  val lib: Lib[Prg, Var, Val]
 
-  implicit val deref: Ref ~> Id = λ[Ref ~> Id](fetch(_))
+  implicit val deref: Var ~> Id = λ[Var ~> Id](fetch(_))
 
 
-  def nugget(bnd: lib.BindingData): Rule.Ref[Ref] = interpret(lib.addBinding(bnd)).witness
-  def nugget(pt: lib.PhosphoTriple): Rule.Ref[Ref] = interpret(lib.addPhosphoTarget(pt))
-  def addGoal[A](p: Prg[Ref[A]])(implicit ev: DeepShow[A, Ref]): Ref[A] = interpret(p >>! { goalKeepingApi.keep(_) })
-  def getGoals: List[APair[Ref, DeepShow[?, Ref]]] = interpret(goalKeepingApi.list)
+  def nugget(bnd: lib.BindingData): Rule.Ref[Var] = interpret(lib.addBinding(bnd)).witness
+  def nugget(pt: lib.PhosphoTriple): Rule.Ref[Var] = interpret(lib.addPhosphoTarget(pt))
+  def addGoal[A](p: Prg[Var[A]])(implicit ev: DeepShow[A, Var]): Var[A] = interpret(p >>! { goalKeepingApi.keep(_) })
+  def getGoals: List[APair[Var, DeepShow[?, Var]]] = interpret(goalKeepingApi.list)
 }
 
 object RefinerySession {

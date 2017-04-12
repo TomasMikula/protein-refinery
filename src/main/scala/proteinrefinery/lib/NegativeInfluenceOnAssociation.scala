@@ -20,25 +20,25 @@ object NegativeInfluenceOnAssociation {
   def        byCompetitiveBinding[Var[_]](value: CompetitiveBinding[Var]):        NegativeInfluenceOnAssociation[Var] = ByCompetitiveBinding(value)
 
 
-  trait Search[M[_], Var[_]] {
+  trait Search[M[_], Var[_], Val[_]] {
 
-    protected implicit def Propagation: Propagation[M, Var]
-    implicit def Tracking: Tracking[M, Var]
-    def Nuggets: proteinrefinery.lib.Nuggets[M, Var]
-    def IncSets: nutcracker.IncSets[M, Var]
+    protected implicit def Propagation: Propagation[M, Var, Val]
+    implicit def Tracking: Tracking[M, Var, Val]
+    def Nuggets: proteinrefinery.lib.Nuggets[M, Var, Val]
+    def IncSets: nutcracker.IncSets[M, Var, Val]
 
     // TODO: should return DSet
     def negativeInfluenceOnAssociation(p: Protein, a: Assoc[Var])(implicit M: Monad[M], E: EqualK[Var]): M[Var[IncSet[NegativeInfluenceOnAssociation[Var]]]] =
       IncSets.collectAll(a.bindings.map(b => searchCompetitiveBinding(p, b)))
 
     def negativeInfluenceOnAssociationC(p: Protein, aRef: Assoc.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, NegativeInfluenceOnAssociation[Var]] =
-      aRef.asCont_[M] flatMap (a => negativeInfluenceOnAssociationC(p, a))
+      aRef.asCont_ flatMap (a => negativeInfluenceOnAssociationC(p, a))
 
     def negativeInfluenceOnAssociationC(p: Protein, a: Assoc[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, NegativeInfluenceOnAssociation[Var]] =
       ContU.sequence(a.bindings.map(b => searchCompetitiveBinding(p, b)))
 
     private def searchCompetitiveBinding(competitor: Protein, bnd: Binding[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, NegativeInfluenceOnAssociation[Var]] =
-    bnd.witness.asCont_[M] flatMap { rule => {
+    bnd.witness.asCont_ flatMap { rule => {
       val l = competitiveBindings(competitor, bnd.getLeftPattern(rule) ).map(cb => byCompetitiveBinding(CompetitiveBinding(bnd.flip, cb)))
       val r = competitiveBindings(competitor, bnd.getRightPattern(rule)).map(cb => byCompetitiveBinding(CompetitiveBinding(bnd,      cb)))
       ContU.sequence(l, r)
@@ -46,7 +46,7 @@ object NegativeInfluenceOnAssociation {
 
     // TODO: return Prg[CellSet[Binding]] instead
     private def competitiveBindings(competitor: Protein, bp: BindingPartnerPattern[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Binding[Var]] =
-      ContU.filterMap(Nuggets.bindingsOfC(competitor).flatMap(bnd => bnd.witness.asCont_[M].map((bnd, _)))) {
+      ContU.filterMap(Nuggets.bindingsOfC(competitor).flatMap(bnd => bnd.witness.asCont_.map((bnd, _)))) {
         case (bnd, rule) => if(bnd.getRightPattern(rule) overlaps bp) Option(bnd) else None
       }
 

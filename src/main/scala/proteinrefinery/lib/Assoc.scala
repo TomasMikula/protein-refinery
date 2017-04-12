@@ -23,13 +23,13 @@ object Assoc {
 
   type Ref[Var[_]] = Var[Discrete[Assoc[Var]]]
 
-  trait Search[M[_], Var[_]] {
+  trait Search[M[_], Var[_], Val[_]] {
     implicit def Defer: nutcracker.Defer[M, Cost]
-    protected implicit def Propagation: nutcracker.Propagation[M, Var]
-    implicit def Tracking: proteinrefinery.util.Tracking[M, Var]
-    implicit def IncSets: nutcracker.IncSets[M, Var]
+    protected implicit def Propagation: nutcracker.Propagation[M, Var, Val]
+    implicit def Tracking: proteinrefinery.util.Tracking[M, Var, Val]
+    implicit def IncSets: nutcracker.IncSets[M, Var, Val]
 
-    def Nuggets: proteinrefinery.lib.Nuggets[M, Var]
+    def Nuggets: proteinrefinery.lib.Nuggets[M, Var, Val]
 
     def assoc(p: Protein, q: Protein)(implicit M: Monad[M], ev: EqualK[Var]): M[Var[IncSet[Var[Discrete[Assoc[Var]]]]]] =
       IncSets.collect(assocC(p, q))
@@ -40,7 +40,7 @@ object Assoc {
     private def assocC0(leftTail: List[Binding[Var]], p: Protein, q: Protein, rightTail: List[Binding[Var]])(implicit M: Monad[M], ev: EqualK[Var]): ContU[M, Var[Discrete[Assoc[Var]]]] =
       for {
         b <- Nuggets.bindingsOfC(p)
-        br <- b.witness.asCont_[M]
+        br <- b.witness.asCont_
         aref <- {
           if (leftTail.nonEmpty && b.leftS === leftTail.head.rightS) ContU.noop[M, Var[Discrete[Assoc[Var]]]] // linter:ignore DuplicateIfBranches
           else if (leftTail.any(_ === b) || rightTail.any(_ === b)) ContU.noop[M, Var[Discrete[Assoc[Var]]]]

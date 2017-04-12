@@ -50,7 +50,7 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
       solutions <- interpretFetch(positiveInfluenceOnRule(β_Cat('S45 ~ "p", 'T41 ~ "p"), bnds(4).witness))
     } yield (bnds, solutions))
 
-    assertResult(1, Desc(solutions).printTree(refinery.fetcher(s), implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
+    assertResult(1, Desc(solutions).printTree(refinery.fetcher(s), implicitly[ShowK[refinery.Var]], lineLimit = 80)())(solutions.size)
     val sol = solutions.head
     assertResult(PositiveInfluenceOnRule.InLhs(β_Cat('S45~"p", 'T41~"p"), bnds(4).witness))(sol)
   }
@@ -61,7 +61,7 @@ class PositiveInfluenceOnRuleTest extends FunSuite {
       solutions <- interpretFetch(positiveInfluenceOnRule(β_Cat('S45 ~ "p", 'T41 ~ "p"), bnds(5).witness))
     } yield(bnds, solutions))
 
-    assertResult(1, Desc(solutions).printTree(refinery.fetcher(s), implicitly[ShowK[refinery.Ref]], lineLimit = 80)())(solutions.size)
+    assertResult(1, Desc(solutions).printTree(refinery.fetcher(s), implicitly[ShowK[refinery.Var]], lineLimit = 80)())(solutions.size)
     val sol = solutions.head
     assertResult(???)(sol)
   }

@@ -23,12 +23,12 @@ object NegativeInfluenceOnPhosphorylation {
     byNegativeInfluenceOnRule(NegativeInfluenceOnRule.byNegativeInfluenceOnAssociation(NegativeInfluenceOnAssociation.byCompetitiveBinding(cb)))
 
 
-  trait Search[M[_], Var[_]] {
-    protected implicit def Propagation: Propagation[M, Var]
+  trait Search[M[_], Var[_], Val[_]] {
+    protected implicit def Propagation: Propagation[M, Var, Val]
 
-    def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Var]
-    def NegativeInfluenceOnRuleSearch: NegativeInfluenceOnRule.Search[M, Var]
-    def IncSets: nutcracker.IncSets[M, Var]
+    def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Var, Val]
+    def NegativeInfluenceOnRuleSearch: NegativeInfluenceOnRule.Search[M, Var, Val]
+    def IncSets: nutcracker.IncSets[M, Var, Val]
 
     def negativeInfluenceOnPhosphorylation(p: Protein, ph: PhosphoTarget[Var])(implicit M: Monad[M], E: EqualK[Var]): M[Var[IncSet[Ref[Var]]]] = {
       IncSets.collect(negativeInfluenceOnPhosphorylationC(p, ph))
@@ -42,7 +42,7 @@ object NegativeInfluenceOnPhosphorylation {
       Discrete.map(NegativeInfluenceOnRuleSearch.negativeInfluenceOnRuleC(p, ph.witness))(byNegativeInfluenceOnRule)
 
     def negativeInfluenceOnPhosphorylationC_r(p: Protein, ptRef: PhosphoTarget.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
-      ptRef.asCont_[M] flatMap (negativeInfluenceOnPhosphorylationC(p, _))
+      ptRef.asCont_ flatMap (negativeInfluenceOnPhosphorylationC(p, _))
 
   }
 

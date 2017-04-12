@@ -198,11 +198,11 @@ object Rule {
     override def shows(r: Rule[Var]): String = r.toString
   }
 
-  trait Ops[M[_], Var[_]] {
-    protected implicit val Propagation: Propagation[M, Var]
+  trait Ops[M[_], Var[_], Val[_]] {
+    protected implicit val Propagation: Propagation[M, Var, Val]
 
-    def Nuggets: Nuggets[M, Var]
-    def AgentsPatternOps: AgentsPattern.Ops[M, Var]
+    def Nuggets: Nuggets[M, Var, Val]
+    def AgentsPatternOps: AgentsPattern.Ops[M, Var, Val]
 
     import Propagation._
 
@@ -221,11 +221,11 @@ object Rule {
       }))
 
     def enablersOfC(ref: Rule.Ref[Var])(implicit M: Functor[M]): ContU[M, Rule.Ref[Var]] = for {
-      r <- ref.asCont_[M]
+      r <- ref.asCont_
       q <- Nuggets.rulesC(q => if(q.enables(r)) OnceTrigger.Fire(()) else OnceTrigger.Discard())
     } yield q
 
     def associationsOfC(ref: Rule.Ref[Var])(implicit M: Monad[M]): ContU[M, Assoc.Ref[Var]] =
-      ref.asCont_[M] flatMap { r => AgentsPatternOps.forEachAssoc(r.lhs) }
+      ref.asCont_ flatMap { r => AgentsPatternOps.forEachAssoc(r.lhs) }
   }
 }

@@ -59,9 +59,9 @@ sealed trait PositiveInfluenceOnPhosphorylation[Ref[_]] {
 //
 //}
 
-trait PositiveInfluenceOnPhosphorylatedStateSearch[M[_], Ref[_]] { self: PositiveInfluenceOnState.Search[M, Ref] =>
+trait PositiveInfluenceOnPhosphorylatedStateSearch[M[_], Ref[_], Val[_]] { self: PositiveInfluenceOnState.Search[M, Ref, Val] =>
 
-  def Nuggets: proteinrefinery.lib.Nuggets[M, Ref]
+  def Nuggets: proteinrefinery.lib.Nuggets[M, Ref, Val]
 
   def positiveInfluenceOnPhosphorylatedStateC(agent: Protein, target: Protein)(implicit M: Monad[M], E: EqualK[Ref]): ContU[M, PositiveInfluenceOnState.Ref[Ref]] =
     Nuggets.phosphoSitesC(target).flatMap(site => {

@@ -16,18 +16,18 @@ object NegativeInfluenceOnRule {
   case class ByNegativeInfluenceOnAssociation[Var[_]](value: NegativeInfluenceOnAssociation[Var]) extends NegativeInfluenceOnRule[Var]
   def        byNegativeInfluenceOnAssociation[Var[_]](value: NegativeInfluenceOnAssociation[Var]):        NegativeInfluenceOnRule[Var] = ByNegativeInfluenceOnAssociation(value)
 
-  trait Search[M[_], Var[_]] {
-    protected implicit def Propagation: Propagation[M, Var]
+  trait Search[M[_], Var[_], Val[_]] {
+    protected implicit def Propagation: Propagation[M, Var, Val]
 
-    def IncSets: nutcracker.IncSets[M, Var]
-    def AgentsPatternOps: AgentsPattern.Ops[M, Var]
-    def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Var]
+    def IncSets: nutcracker.IncSets[M, Var, Val]
+    def AgentsPatternOps: AgentsPattern.Ops[M, Var, Val]
+    def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Var, Val]
 
     def negativeInfluenceOnRule(p: Protein, ref: Rule.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): M[Var[IncSet[Ref[Var]]]] =
       IncSets.collect(negativeInfluenceOnRuleC_r(p, ref))
 
     def negativeInfluenceOnRuleC_r(p: Protein, ref: Rule.Ref[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
-      ref.asCont_[M] flatMap (negativeInfluenceOnRuleC(p, _))
+      ref.asCont_ flatMap (negativeInfluenceOnRuleC(p, _))
 
     def negativeInfluenceOnRuleC(p: Protein, r: Rule[Var])(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] =
       // currently the only way a protein can have negative influence on rule

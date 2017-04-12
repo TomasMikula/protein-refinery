@@ -40,8 +40,8 @@ class PrimingExample extends FunSuite {
   val watchForExplanationsViaPositiveInfluenceC: ContU[Prg, (Rule, PositiveInfluenceOnRule)] = for {
     ref1 <- lib.forEachRule
     ref2 <- lib.forEachRule
-    r1 <- ref1.peekC[Prg]
-    r2 <- ref2.peekC[Prg]
+    r1 <- ref1.peekC
+    r2 <- ref2.peekC
     (d1, r, d2) = r1.value unify r2.value
     diff <- if(d2.isEmpty && d1.isDefined) ContU.point[Prg, Rule.Delta](d1.get) else ContU.noop[Prg, Rule.Delta]
     diffPatterns = breakDown(r1.value.lhs, diff, r2.value.lhs)
@@ -49,7 +49,7 @@ class PrimingExample extends FunSuite {
     infl <- ContU.sequence(searches)
   } yield (r2.value, infl)
 
-  val watchForExplanationsViaPositiveInfluence: Prg[Ref[IncSet[(Rule, PositiveInfluenceOnRule)]]] =
+  val watchForExplanationsViaPositiveInfluence: Prg[Var[IncSet[(Rule, PositiveInfluenceOnRule)]]] =
     IncSets.collect(watchForExplanationsViaPositiveInfluenceC)
 
   test("suspicion search") {

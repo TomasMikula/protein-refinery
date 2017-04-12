@@ -82,8 +82,8 @@ object PhosphoTarget {
           IsEqual(false)
     }
 
-  trait Ops[M[_], Var[_]] {
-    def AgentsPatternOps: AgentsPattern.Ops[M, Var]
+  trait Ops[M[_], Var[_], Val[_]] {
+    def AgentsPatternOps: AgentsPattern.Ops[M, Var, Val]
 
     def define(kinase: Protein, substrate: Protein, targetSite: ISite[Var])(implicit M: Monad[M], E: EqualK[Var]): M[PhosphoTarget[Var]] = {
       import proteinrefinery.util.Identification.Syntax._

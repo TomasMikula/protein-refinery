@@ -8,17 +8,17 @@ import scalaz.Monad
 import scalaz.std.list._
 import scalaz.syntax.traverse._
 
-private[util] class TrackingModuleImpl[Ref[_]] extends PersistentTrackingModule[Ref] {
+private[util] class TrackingModuleImpl[Ref[_], Val[_]] extends PersistentTrackingModule[Ref, Val] {
   type Lang[K[_], A] = TrackLang[Ref, K, A]
   type State[K[_]] = Tracker[Ref, K]
 
   def empty[K[_]]: Tracker[Ref, K] = Tracker.empty[Ref, K]
 
-  def stashable: StashTrackingModule[Ref] { type Lang[K[_], A] = TrackLang[Ref, K, A] } =
-    new TrackingListModule[Ref, Lang, State](this)
+  def stashable: StashTrackingModule[Ref, Val] { type Lang[K[_], A] = TrackLang[Ref, K, A] } =
+    new TrackingListModule[Ref, Val, Lang, State](this)
 
-  def freeTracking[F[_[_], _]](implicit i: InjectK[Lang, F]): Tracking[FreeK[F, ?], Ref] =
-    new Tracking[FreeK[F, ?], Ref] {
+  def freeTracking[F[_[_], _]](implicit i: InjectK[Lang, F]): Tracking[FreeK[F, ?], Ref, Val] =
+    new Tracking[FreeK[F, ?], Ref, Val] {
       def track[D[_[_]]](ref: Ref[D[Ref]])(implicit t: DomType[D]): FreeK[F, Unit] = trackF[Ref, F, D](ref)
       def handle[D[_[_]]](t: DomType[D])(f: (Ref[D[Ref]]) => FreeK[F, Unit]): FreeK[F, Unit] = handleF(t)(f)
     }

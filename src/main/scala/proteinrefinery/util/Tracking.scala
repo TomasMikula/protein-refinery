@@ -4,30 +4,33 @@ import nutcracker.{Alternator, CellSet, Discrete, Dom, Propagation, Revocable}
 import scalaz.{Functor, Monad}
 import scalaz.syntax.monad._
 
-trait Tracking[M[_], Ref[_]] {
+trait Tracking[M[_], Ref[_], Val[_]] {
   def track[D[_[_]]](ref: Ref[D[Ref]])(implicit t: DomType[D]): M[Unit]
   def handle[D[_[_]]](t: DomType[D])(f: Ref[D[Ref]] => M[Unit]): M[Unit]
 
 
   def thresholdQuery[D[_[_]]](t: DomType[D])(f: D[Ref] => OnceTrigger[Ref[D[Ref]] => M[Unit]])(implicit
-    P: Propagation[M, Ref],
+    P: Propagation[M, Ref, Val],
     M: Functor[M],
     dom: Dom[D[Ref]]
-  ): M[Unit] =
+  ): M[Unit] = {
+    import P._
     handle[D](t)(ref => P.observe(ref).thresholdOpt_(d => f(d) match {
       case OnceTrigger.Sleep() => None
       case OnceTrigger.Discard() => Some(None)
       case OnceTrigger.Fire(h) => Some(Some(h(ref)))
     }))
+  }
 
   def dynamicQuery[D[_[_]], Q](t: DomType[D])(qref: Ref[Q])(rel: QueryRel[Q, D[Ref]])(implicit
-    P: Propagation[M, Ref],
+    P: Propagation[M, Ref, Val],
     domD: Dom[D[Ref]],
     domQ: Dom[Q],
     M: Monad[M]
   ): M[Ref[CellSet[Ref, Revocable[Ref[D[Ref]]]]]] = for {
     res <- CellSet.init[Revocable[Ref[D[Ref]]]]()
-    _ <- handle[D](t)(dref =>
+    _ <- handle[D](t)(dref => {
+      import P.{Val => _, _}
       P.alternate[Q, D[Ref], Unit, Ref[Revocable[Ref[D[Ref]]]]](qref, dref)(
         (q, d) => rel(q, d) match {
           case QueryRel.Match => Alternator.Left
@@ -35,20 +38,20 @@ trait Tracking[M[_], Ref[_]] {
           case QueryRel.Irreconcilable => Alternator.Stop
         },
         onStartLeft = () => M.pure(()),
-        onStartRight = () => Revocable.init[M, Ref, Ref[D[Ref]]](dref) >>! { CellSet.insert(_, res) },
+        onStartRight = () => Revocable.init[M, Ref, Val, Ref[D[Ref]]](dref) >>! { CellSet.insert(_, res) },
         onSwitchToLeft = revref => Revocable.revoke(revref),
-        onSwitchToRight = (_: Unit) => Revocable.init[M, Ref, Ref[D[Ref]]](dref) >>! { CellSet.insert(_, res) },
+        onSwitchToRight = (_: Unit) => Revocable.init[M, Ref, Val, Ref[D[Ref]]](dref) >>! { CellSet.insert(_, res) },
         onStop = (_ match {
           case Some(Right(revref)) => Revocable.revoke(revref)
           case _ => M.pure(())
         })
       )
-    )
+    })
   } yield res
 }
 
 object Tracking {
-  def apply[M[_], Ref[_]](implicit ev: Tracking[M, Ref]): Tracking[M, Ref] = ev
+  def apply[M[_], Ref[_], Val[_]](implicit ev: Tracking[M, Ref, Val]): Tracking[M, Ref, Val] = ev
 }
 
 trait DomType[D[_[_]]] { self: Singleton =>

@@ -41,7 +41,7 @@ class Tests extends TestSuite {
   def initBindings(implicit s: RefinerySession): s.Prg[List[s.lib.Binding]] = {
     import s.lib._
 
-    addBindings(bindings[s.Ref](RefEquality))
+    addBindings(bindings[s.Var](RefEquality))
   }
 
   test("Phosphorylation search") {

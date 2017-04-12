@@ -25,9 +25,9 @@ object PositiveInfluenceOnKinaseActivity {
     PositiveInfluenceOnActiveState(infl)
 
 
-  trait Search[M[_], Var[_]] { self: PositiveInfluenceOnState.Search[M, Var] =>
+  trait Search[M[_], Var[_], Val[_]] { self: PositiveInfluenceOnState.Search[M, Var, Val] =>
 
-    def Nuggets: proteinrefinery.lib.Nuggets[M, Var]
+    def Nuggets: proteinrefinery.lib.Nuggets[M, Var, Val]
 
     def positiveInfluenceOnKinaseActivityC(agent: Protein, kinase: Protein)(implicit M: Monad[M], E: EqualK[Var]): ContU[M, Ref[Var]] = for {
       ppref <- Nuggets.kinaseActivityC(kinase)

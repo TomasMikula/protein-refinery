@@ -12,9 +12,9 @@ object UI extends App {
 class UIApp extends Application {
 
   def start(stage: Stage): Unit = {
-    import Controller.Ref
-    val kbWidget = KBWidget[Ref]()
-    val goalWidget = GoalWidget[Ref]()
+    import Controller.Var
+    val kbWidget = KBWidget[Var]()
+    val goalWidget = GoalWidget[Var]()
     val controller = Controller(kbWidget, goalWidget)
     val content = new SplitPane(kbWidget.node, goalWidget.node)
 

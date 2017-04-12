@@ -8,38 +8,38 @@ import proteinrefinery.util.Tracking
 import scala.language.higherKinds
 import scalaz.Monad
 
-class Lib[M[_], Ref[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref], T: Tracking[M, Ref], M0: Monad[M], E: EqualK[Ref]) extends
-  Nuggets[M, Ref] with
-  Assoc.Search[M, Ref] with
-  Phosphorylation.Search[M, Ref] with
-  PhosphoTarget.Ops[M, Ref] with
-  AgentsPattern.Ops[M, Ref] with
-  Rule.Ops[M, Ref] with
-  PositiveInfluenceOnRule.Search[M, Ref] with
-  PositiveInfluenceOfRuleOnRule.Search[M, Ref] with
-  PositiveInfluenceOnState.Search[M, Ref] with
-  PositiveInfluenceOnPhosphorylatedStateSearch[M, Ref] with
-  PositiveInfluenceOnKinaseActivity.Search[M, Ref] with
+class Lib[M[_], Ref[_], Val[_]](implicit D: Defer[M, Cost], P: Propagation[M, Ref, Val], T: Tracking[M, Ref, Val], M0: Monad[M], E: EqualK[Ref]) extends
+  Nuggets[M, Ref, Val] with
+  Assoc.Search[M, Ref, Val] with
+  Phosphorylation.Search[M, Ref, Val] with
+  PhosphoTarget.Ops[M, Ref, Val] with
+  AgentsPattern.Ops[M, Ref, Val] with
+  Rule.Ops[M, Ref, Val] with
+  PositiveInfluenceOnRule.Search[M, Ref, Val] with
+  PositiveInfluenceOfRuleOnRule.Search[M, Ref, Val] with
+  PositiveInfluenceOnState.Search[M, Ref, Val] with
+  PositiveInfluenceOnPhosphorylatedStateSearch[M, Ref, Val] with
+  PositiveInfluenceOnKinaseActivity.Search[M, Ref, Val] with
 //  PositiveInfluenceOnPhosphorylation.Search[M, Ref] with
-  NegativeInfluenceOnAssociation.Search[M, Ref] with
-  NegativeInfluenceOnPhosphorylation.Search[M, Ref] with
-  NegativeInfluenceOnRule.Search[M, Ref] with
+  NegativeInfluenceOnAssociation.Search[M, Ref, Val] with
+  NegativeInfluenceOnPhosphorylation.Search[M, Ref, Val] with
+  NegativeInfluenceOnRule.Search[M, Ref, Val] with
   Syntax[Ref]
 {
   protected implicit val M: Monad[M] = M0
   implicit val RefEquality: EqualK[Ref] = E
-  protected implicit val Propagation: Propagation[M, Ref] = P
-  implicit val Tracking: Tracking[M, Ref] = T
+  protected implicit val Propagation: Propagation[M, Ref, Val] = P
+  implicit val Tracking: Tracking[M, Ref, Val] = T
   implicit val Defer: Defer[M, Cost] = D
 
-  def Nuggets: Nuggets[M, Ref] = this
-  def AssocSearch: lib.Assoc.Search[M, Ref] = this
-  def PhosphoTargetOps: lib.PhosphoTarget.Ops[M, Ref] = this
-  def AgentsPatternOps: lib.AgentsPattern.Ops[M, Ref] = this
-  def RuleOps: lib.Rule.Ops[M, Ref] = this
-  def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Ref] = this
-  def NegativeInfluenceOnRuleSearch: NegativeInfluenceOnRule.Search[M, Ref] = this
-  def IncSets: IncSets[M, Ref] = new IncSets[M, Ref]()(P)
+  def Nuggets: Nuggets[M, Ref, Val] = this
+  def AssocSearch: lib.Assoc.Search[M, Ref, Val] = this
+  def PhosphoTargetOps: lib.PhosphoTarget.Ops[M, Ref, Val] = this
+  def AgentsPatternOps: lib.AgentsPattern.Ops[M, Ref, Val] = this
+  def RuleOps: lib.Rule.Ops[M, Ref, Val] = this
+  def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Ref, Val] = this
+  def NegativeInfluenceOnRuleSearch: NegativeInfluenceOnRule.Search[M, Ref, Val] = this
+  def IncSets: IncSets[M, Ref, Val] = new IncSets[M, Ref, Val]()(P)
 
   type Protein = lib.Protein
   type SiteLabel = lib.SiteLabel
