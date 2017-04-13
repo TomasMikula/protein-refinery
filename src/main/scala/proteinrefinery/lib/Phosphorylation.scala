@@ -5,7 +5,6 @@ import nutcracker.ops._
 import nutcracker.util.ContU
 import scalaz.{Monad, Show}
 import scalaz.syntax.equal._
-import scalaz.syntax.monad._
 
 case class Phosphorylation[Ref[_]](
   assoc: Assoc[Ref],
@@ -32,7 +31,7 @@ object Phosphorylation {
       ContU(f =>
         Nuggets.phosphoTargets(ptRef => ptRef.observe.by_(apt => {
           val pt = apt.value
-          if (pt.kinase === kinase && pt.substrate === substrate) Trigger.fireReload(f(ptRef).as(Trigger.sleep((d, δ) => ???)))
+          if (pt.kinase === kinase && pt.substrate === substrate) Trigger.fireReload(f(ptRef), (d, δ) => ???)
           else Trigger.sleep((d, δ) => ???)
         }))
       )

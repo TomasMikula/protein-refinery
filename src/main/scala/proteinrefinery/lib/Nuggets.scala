@@ -100,7 +100,7 @@ trait Nuggets[M[_], Ref[_], Val[_]] {
     phosphoTargets(ptr => observe(ptr).by_(apt => {
       val pt = apt.value
       if(kinase === pt.kinase && substrate === pt.substrate)
-        fireReload(f(pt.targetSite).as(sleep((d, δ) => ???)))
+        fireReload(f(pt.targetSite), (d, δ) => ???)
       else
         sleep((d, δ) => ???)
     }))
@@ -114,7 +114,7 @@ trait Nuggets[M[_], Ref[_], Val[_]] {
       res <- IncSets.init[ISite[Ref]]
       _   <- phosphoTargets(ptr => observe(ptr).by_(apt => {
         val pt = apt.value
-        if(pt.substrate === substrate) fireReload(IncSets.insert(pt.targetSite, res).as(sleep((d, δ) => ???)))
+        if(pt.substrate === substrate) fireReload(IncSets.insert(pt.targetSite, res), (d, δ) => ???)
         else sleep((d, δ) => ???)
       }))
     } yield res
@@ -124,7 +124,7 @@ trait Nuggets[M[_], Ref[_], Val[_]] {
   def kinasesOf(substrate: Protein, site: SiteLabel)(f: Protein => M[Unit]): M[Unit] =
     phosphoTargets(ptr => observe(ptr).by_(apt => {
       val pt = apt.value
-      if(substrate === pt.substrate && ISite[Ref](site) === pt.targetSite) fireReload(f(pt.kinase).as(sleep((d, δ) => ???)))
+      if(substrate === pt.substrate && ISite[Ref](site) === pt.targetSite) fireReload(f(pt.kinase), (d, δ) => ???)
       else sleep((d, δ) => ???)
     }))
   def kinasesOfC(substrate: Protein, site: SiteLabel): ContU[M, Protein] = // TODO: return Protein.Ref

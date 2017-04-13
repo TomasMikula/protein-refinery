@@ -210,14 +210,14 @@ object Rule {
       ContU(f => observe(ref).by_(r => {
         import scalaz.syntax.traverse._
         val now = r.value.linksAgentTo(p).iterator.map(l => f(Binding(ref, l))).toList.sequence_
-        fireReload(now.as(sleep((d, δ) => ???)))
+        fireReload(now, (d, δ) => ???)
       }))
 
     def phosphorylationsC(ref: Rule.Ref[Var])(implicit M: Monad[M]): ContU[M, PhosphoTarget.Ref[Var]] =
       ContU(f => observe(ref).by_(r => {
         import scalaz.syntax.traverse._
         val now = r.value.phosphorylations.iterator.map(p => newCell(Discrete(p)).flatMap(f)).toList.sequence_
-        fireReload(now.as(sleep((d, δ) => ???)))
+        fireReload(now, (d, δ) => ???)
       }))
 
     def enablersOfC(ref: Rule.Ref[Var])(implicit M: Functor[M]): ContU[M, Rule.Ref[Var]] = for {
