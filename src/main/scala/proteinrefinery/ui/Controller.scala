@@ -1,9 +1,8 @@
 package proteinrefinery.ui
 
 import nutcracker.{Defer, Discrete, Dom, IncSet, Propagation}
-import nutcracker.Trigger._
 import nutcracker.util.CoproductK.:++:
-import nutcracker.util.{DeepShow, FreeK}
+import nutcracker.util.{DeepShow, FreeK, FreeKT}
 import nutcracker.util.ops._
 import org.reactfx.EventStreams
 import proteinrefinery.Cost
@@ -77,7 +76,7 @@ class Controller(val kbWidget: KBWidget[Controller.Var], val goalWidget: GoalWid
       val now = initGoal(t, ref, desc)
       val onChange = (d: IncSet[Var[A[Var]]], δ: IncSet.Delta[Var[A[Var]]]) => updateGoal[A](t, ref, δ)
       reconsider(now.as(sleep(continually(onChange))))
-    })
+    })(FreeKT.freeKTMonad[DSL, Id])
 
   private def updateGoal[A[_[_]]](t: GoalType[A], gref: Var[IncSet[Var[A[Var]]]], δ: IncSet.Delta[Var[A[Var]]])(implicit dom: Dom[A[Var]], show: Show[A[Var]]): Prg[Unit] =
     δ.value.iterator.traverse_(observeSolution[A](t, gref, _))

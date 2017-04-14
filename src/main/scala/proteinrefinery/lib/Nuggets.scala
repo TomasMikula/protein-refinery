@@ -1,7 +1,6 @@
 package proteinrefinery.lib
 
 import nutcracker.{Discrete, IncSet, Propagation}
-import nutcracker.Trigger._
 import nutcracker.util.{ContU, EqualK}
 import nutcracker.util.ContU._
 import proteinrefinery.util.DomType.DiscreteDomType
