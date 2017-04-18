@@ -13,9 +13,6 @@ import scalaz.{Monad, StateT, ~>}
 trait Refinery extends RefBundle {
 
   implicit val prgMonad: Monad[Prg]
-  implicit val refEquality: HEqualK[Var]
-  implicit val refOrder: HOrderK[Var]
-  implicit val refShow: ShowK[Var]
 
   def freePropagation[F[_[_], _]](implicit i: InjectK[Lang, F]): Propagation[FreeK[F, ?], Var, Val]
   def freeDeferApi[F[_[_], _]](implicit i: InjectK[Lang, F]): Defer[FreeK[F, ?], Cost]
@@ -74,9 +71,12 @@ private[proteinrefinery] class RefineryImpl[Var0[_], Val0[_], PropState[_[_]], R
   private implicit def freeKMonad[F[_[_], _]]: Monad[FreeK[F, ?]] = FreeKT.freeKTMonad[F, Id] // https://issues.scala-lang.org/browse/SI-10238
 
   val prgMonad: Monad[Prg] = freeKMonad[Lang]
-  implicit val refEquality: HEqualK[Var] = propMod.refEquality
-  implicit val refOrder: HOrderK[Var] = propMod.refOrder
-  implicit val refShow: ShowK[Var] = propMod.refShow
+  implicit val varEquality: HEqualK[Var] = propMod.varEquality
+  implicit val varOrder: HOrderK[Var] = propMod.varOrder
+  implicit val varShow: ShowK[Var] = propMod.varShow
+  implicit val valEquality: HEqualK[Val] = propMod.valEquality
+  implicit val valOrder: HOrderK[Val] = propMod.valOrder
+  implicit val valShow: ShowK[Val] = propMod.valShow
 
   override def readOnly[A](ref: Var0[A]): Val0[A] = propagationApi.readOnly(ref)
 
@@ -96,7 +96,7 @@ private[proteinrefinery] class RefineryImpl[Var0[_], Val0[_], PropState[_[_]], R
 
   val lib: Lib[Prg, Var, Val] =
   // all of the arguments are implicit, but scalac...
-  new Lib[Prg, Var, Val]()(deferApi, propagationApi, trackingApi, prgMonad, refEquality.homogenize)
+  new Lib[Prg, Var, Val]()(deferApi, propagationApi, trackingApi, prgMonad, varEquality.homogenize)
 }
 
 object RefineryImpl {

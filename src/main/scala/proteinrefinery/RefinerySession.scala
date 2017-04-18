@@ -16,8 +16,8 @@ trait RefinerySession {
   type Prg[A] = FreeK[Lang, A]
 
   implicit val prgMonad: Monad[Prg]
-  implicit val refEquality: HEqualK[Var]
-  implicit val refShow: ShowK[Var]
+  implicit val varEquality: HEqualK[Var]
+  implicit val varShow: ShowK[Var]
 
   protected implicit val goalKeepingApi: GoalKeeping[Prg, Var]
 

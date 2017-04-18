@@ -17,7 +17,7 @@ import scalaz.syntax.monad._
 
 class Controller(val kbWidget: KBWidget[Controller.Var], val goalWidget: GoalWidget[Controller.Var]) {
   import Controller._
-  import refinery.{refEquality, refShow}
+  import refinery.{varEquality, varShow}
 
   val UIUpdate: UIUpdate[Prg, Var] = UIUpdateLang.freeUIUpdate[Var, DSL]
   val IncSets: nutcracker.IncSets[Prg, Var, Val] = new nutcracker.IncSets[Prg, Var, Val]()(Controller.Propagation)
@@ -100,7 +100,7 @@ object Controller {
   implicit val Propagation: Propagation[Prg, Var, Val] = refinery.freePropagation[DSL]
   private implicit def deferApi: Defer[Prg, Cost] = refinery.freeDeferApi[DSL]
   private implicit def trackingApi: Tracking[Prg, Var, Val] = refinery.freeTrackingApi[DSL]
-  import refinery.refEquality
+  import refinery.varEquality
 
   val Lib = new proteinrefinery.Lib[Prg, Var, Val]
 

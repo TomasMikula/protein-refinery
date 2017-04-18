@@ -16,8 +16,8 @@ class RefinerySessionImpl[State1[_[_]], State2[_[_]], Ref0[_], Val0[_]](
   type State[K[_]]   = (State1        :**:          State2)#Out[K]
 
   implicit val prgMonad: Monad[Prg] = FreeKT.freeKTMonad
-  implicit val refEquality: HEqualK[Var] = refinery.refEquality
-  implicit val refShow: ShowK[Var] = refinery.refShow
+  implicit val varEquality: HEqualK[Var] = refinery.varEquality
+  implicit val varShow: ShowK[Var] = refinery.varShow
 
   protected implicit val goalKeepingApi: GoalKeeping[Prg, Var] = goalModule.freeGoalKeeping
 
