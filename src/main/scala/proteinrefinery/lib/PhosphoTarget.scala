@@ -19,9 +19,9 @@ sealed trait PhosphoTarget[Ref[_]] {
   def targetSite: ISite[Ref]
 
 
-  def kinase: Protein = witness.lhs(kinaseIndex).protein
+  def kinase: ProteinPattern[Ref] = witness.lhs(kinaseIndex)
 
-  def substrate: Protein = witness.lhs(substrateIndex).protein
+  def substrate: ProteinPattern[Ref] = witness.lhs(substrateIndex)
 }
 
 object PhosphoTarget {

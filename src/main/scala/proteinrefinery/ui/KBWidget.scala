@@ -50,7 +50,7 @@ class KBWidget[Ref[_]] {
   private val factHandlers: HHKMap[FactType, λ[`A[_[_]]` => A[Ref] => Unit]] =
     HHKMap[FactType, λ[`A[_[_]]` => A[Ref] => Unit]]()
       .put(FactRule)(ruleAdded)
-      .put(FactPhosTarget)(pt => phosTargetAdded(pt.kinase, pt.substrate, pt.targetSite))
+      .put(FactPhosTarget)(pt => phosTargetAdded(pt.kinase.protein, pt.substrate.protein, pt.targetSite))
       .put(FactKinase)(kinaseAdded)
 
   def requests: EventStream[UIRequest[Ref]] = _requests

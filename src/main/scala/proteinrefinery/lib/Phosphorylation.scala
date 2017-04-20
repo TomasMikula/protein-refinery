@@ -33,7 +33,7 @@ object Phosphorylation {
       ContU(f =>
         Nuggets.phosphoTargets(ptRef => ptRef.observe.by_(apt => {
           val pt = apt.value
-          if (pt.kinase === kinase && pt.substrate === substrate) fireReload(f(ptRef), (d, δ) => ???)
+          if (pt.kinase.protein === kinase && pt.substrate.protein === substrate) fireReload(f(ptRef), (d, δ) => ???)
           else sleep((d, δ) => ???)
         }))
       )

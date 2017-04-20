@@ -59,8 +59,8 @@ class Tests extends TestSuite {
 
     val pt = fetch(solutions.head).value
 
-    assertEqual(Protein('C))(pt.kinase)
-    assertEqual(Protein('B))(pt.substrate)
+    assertEqual(Protein('C))(pt.kinase.protein)
+    assertEqual(Protein('B))(pt.substrate.protein)
     assertEqual(ISite('s))(pt.targetSite)
 
     val assocss = pt.witness.lhs.assocs
@@ -96,8 +96,8 @@ class Tests extends TestSuite {
     val phosRef = phoss.value.head
     val phos = fetch(phosRef).value
 
-    assertEqual(Protein('C))(phos.kinase)
-    assertEqual(Protein('B))(phos.substrate)
+    assertEqual(Protein('C))(phos.kinase.protein)
+    assertEqual(Protein('B))(phos.substrate.protein)
     assertEqual(ISite('s))(phos.targetSite)
 
     val paths = phos.witness.lhs.assocs
