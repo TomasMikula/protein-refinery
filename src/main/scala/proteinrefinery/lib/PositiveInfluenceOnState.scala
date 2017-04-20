@@ -1,11 +1,8 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-
 import nutcracker.Discrete
 import nutcracker.util.{ContU, EqualK}
 import proteinrefinery.util.OnceTrigger
-
 import scalaz.Monad
 
 sealed trait PositiveInfluenceOnState[Ref[_]] {
@@ -44,5 +41,17 @@ object PositiveInfluenceOnState {
     }
 
   }
+
+}
+
+trait PositiveInfluenceOnPhosphorylatedStateSearch[M[_], Ref[_], Val[_]] { self: PositiveInfluenceOnState.Search[M, Ref, Val] =>
+
+  def Nuggets: proteinrefinery.lib.Nuggets[M, Ref, Val]
+
+  def positiveInfluenceOnPhosphorylatedStateC(agent: Protein, target: Protein)(implicit M: Monad[M], E: EqualK[Ref]): ContU[M, PositiveInfluenceOnState.Ref[Ref]] =
+    Nuggets.phosphoSitesC(target).flatMap(site => {
+      val pat = ProteinPattern[Ref](target).addModification(site, SiteState("p")) // XXX hard-coded phosphorylated state as "p"
+      positiveInfluenceOnStateC(agent, pat)
+    })
 
 }
