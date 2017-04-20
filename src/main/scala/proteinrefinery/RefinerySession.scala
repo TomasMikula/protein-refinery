@@ -1,7 +1,7 @@
 package proteinrefinery
 
 import nutcracker.util.typealigned.APair
-import nutcracker.util.{DeepShow, FreeK, HEqualK, ShowK}
+import nutcracker.util.{DeepShow, FreeK, HOrderK, ShowK}
 import proteinrefinery.lib.Rule
 import scalaz.Id.Id
 import scalaz.{Monad, ~>}
@@ -16,7 +16,7 @@ trait RefinerySession {
   type Prg[A] = FreeK[Lang, A]
 
   implicit val prgMonad: Monad[Prg]
-  implicit val varEquality: HEqualK[Var]
+  implicit val varOrder: HOrderK[Var]
   implicit val varShow: ShowK[Var]
 
   protected implicit val goalKeepingApi: GoalKeeping[Prg, Var]

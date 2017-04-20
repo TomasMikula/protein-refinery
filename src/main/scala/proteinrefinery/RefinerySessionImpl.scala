@@ -2,7 +2,7 @@ package proteinrefinery
 
 import nutcracker.util.CoproductK.:++:
 import nutcracker.util.KPair._
-import nutcracker.util.{FreeKT, HEqualK, ShowK, StateInterpreter}
+import nutcracker.util.{FreeKT, HOrderK, ShowK, StateInterpreter}
 import scalaz.Monad
 
 class RefinerySessionImpl[State1[_[_]], State2[_[_]], Ref0[_], Val0[_]](
@@ -16,7 +16,7 @@ class RefinerySessionImpl[State1[_[_]], State2[_[_]], Ref0[_], Val0[_]](
   type State[K[_]]   = (State1        :**:          State2)#Out[K]
 
   implicit val prgMonad: Monad[Prg] = FreeKT.freeKTMonad
-  implicit val varEquality: HEqualK[Var] = refinery.varEquality
+  implicit val varOrder: HOrderK[Var] = refinery.varOrder
   implicit val varShow: ShowK[Var] = refinery.varShow
 
   protected implicit val goalKeepingApi: GoalKeeping[Prg, Var] = goalModule.freeGoalKeeping

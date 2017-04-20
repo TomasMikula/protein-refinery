@@ -4,7 +4,7 @@ import nutcracker.rel.{RelModule, Relations}
 import nutcracker.util.CoproductK.{:++:, :+:}
 import nutcracker.util.KPair.{:**:, :*:, _}
 import nutcracker.{Defer, DeferModule, Propagation, PropagationModule, RefBundle}
-import nutcracker.util.{FreeK, FreeKT, HEqualK, HOrderK, InjectK, ShowK, StateInterpreter}
+import nutcracker.util.{FreeK, FreeKT, HOrderK, InjectK, ShowK, StateInterpreter}
 import proteinrefinery.util.{Tracking, TrackingModule}
 import scala.language.higherKinds
 import scalaz.Id.Id
@@ -71,10 +71,8 @@ private[proteinrefinery] class RefineryImpl[Var0[_], Val0[_], PropState[_[_]], R
   private implicit def freeKMonad[F[_[_], _]]: Monad[FreeK[F, ?]] = FreeKT.freeKTMonad[F, Id] // https://issues.scala-lang.org/browse/SI-10238
 
   val prgMonad: Monad[Prg] = freeKMonad[Lang]
-  implicit val varEquality: HEqualK[Var] = propMod.varEquality
   implicit val varOrder: HOrderK[Var] = propMod.varOrder
   implicit val varShow: ShowK[Var] = propMod.varShow
-  implicit val valEquality: HEqualK[Val] = propMod.valEquality
   implicit val valOrder: HOrderK[Val] = propMod.valOrder
   implicit val valShow: ShowK[Val] = propMod.valShow
 
@@ -96,7 +94,7 @@ private[proteinrefinery] class RefineryImpl[Var0[_], Val0[_], PropState[_[_]], R
 
   val lib: Lib[Prg, Var, Val] =
   // all of the arguments are implicit, but scalac...
-  new Lib[Prg, Var, Val]()(deferApi, propagationApi, trackingApi, prgMonad, varEquality.homogenize)
+  new Lib[Prg, Var, Val]()(deferApi, propagationApi, trackingApi, prgMonad, varOrder.homogenize)
 }
 
 object RefineryImpl {
