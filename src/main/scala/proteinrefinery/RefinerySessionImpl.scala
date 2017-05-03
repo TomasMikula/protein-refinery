@@ -5,31 +5,31 @@ import nutcracker.util.KPair._
 import nutcracker.util.{FreeKT, HOrderK, ShowK, StateInterpreter}
 import scalaz.Monad
 
-class RefinerySessionImpl[State1[_[_]], State2[_[_]], Ref0[_], Val0[_]](
-  val refinery: Refinery { type Var[A] = Ref0[A]; type Val[A] = Val0[A]; type State[K[_]] = State1[K] },
-  val goalModule: GoalKeepingModule[Ref0] { type State[K[_]] = State2[K] }
+class RefinerySessionImpl[State1[_[_]], State2[_[_]], Ref0[_[_], _], Val0[_[_], _]](
+  val refinery: Refinery { type VarK[K[_], A] = Ref0[K, A]; type ValK[K[_], A] = Val0[K, A]; type StateK[K[_]] = State1[K] },
+  val goalModule: GoalKeepingModule[Ref0] { type StateK[K[_]] = State2[K] }
 ) extends RefinerySession {
 
-  type Var[A] = Ref0[A]
-  type Val[A] = Val0[A]
+  type VarK[K[_], A] = Ref0[K, A]
+  type ValK[K[_], A] = Val0[K, A]
   type Lang[K[_], A] = (refinery.Lang :++: goalModule.Lang)#Out[K, A]
-  type State[K[_]]   = (State1        :**:          State2)#Out[K]
+  type StateK[K[_]]  = (State1        :**:          State2)#Out[K]
 
   implicit val prgMonad: Monad[Prg] = FreeKT.freeKTMonad
-  implicit val varOrder: HOrderK[Var] = refinery.varOrder
-  implicit val varShow: ShowK[Var] = refinery.varShow
+  implicit def varOrderK[K[_]]: HOrderK[VarK[K, ?]] = refinery.varOrderK
+  implicit def varShowK[K[_]]: ShowK[VarK[K, ?]] = refinery.varShowK
 
   protected implicit val goalKeepingApi: GoalKeeping[Prg, Var] = goalModule.freeGoalKeeping
 
-  val interpreter: StateInterpreter[Lang, State] = refinery.interpreter :&&: goalModule.interpreter
+  val interpreter: StateInterpreter[Lang, StateK] = refinery.interpreter :&&: goalModule.interpreter
   private val prgInterpreter = interpreter.freeInstance
 
-  protected var state: State[Prg] = empty[Prg]
+  protected var state: StateK[Prg] = empty[Prg]
 
-  def empty[K[_]]: State[K] = refinery.empty[K] :*: goalModule.empty[K]
+  def empty[K[_]]: StateK[K] = refinery.emptyK[K] :*: goalModule.emptyK[K]
 
-  override def fetch[A](ref: Var[A]): A =
-    refinery.fetch(refinery.propagationApi.readOnly(ref), state._1)
+  def fetch[A](ref: Var[A]): A =
+    refinery.fetchK(ref, state._1)
 
   def interpret[A](prg: Prg[A]): A = {
     val (s, a) = prgInterpreter(prg).run(state)

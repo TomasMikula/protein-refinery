@@ -8,7 +8,7 @@ trait StashSession extends RefinerySession {
   def restore(): Unit
 }
 
-private[proteinrefinery] class StashSessionImpl[Lang[_[_], _], State1[_[_]], State2[_[_]], Ref[_], Val[_]](
+private[proteinrefinery] class StashSessionImpl[Lang[_[_], _], State1[_[_]], State2[_[_]], Ref[_[_], _], Val[_[_], _]](
   refinery: StashRefinery.Aux[Lang, State1, Ref, Val],
   goalModule: GoalKeepingStashModule.Aux[State2, Ref]
 ) extends RefinerySessionImpl[State1, State2, Ref, Val](refinery, goalModule) with StashSession {
@@ -29,7 +29,7 @@ trait ReplSession extends StashSession {
   def listGoals(): Unit
 }
 
-private[proteinrefinery] class ReplSessionImpl[Lang[_[_], _], State1[_[_]], State2[_[_]], Ref[_], Val[_]](
+private[proteinrefinery] class ReplSessionImpl[Lang[_[_], _], State1[_[_]], State2[_[_]], Ref[_[_], _], Val[_[_], _]](
   refinery: StashRefinery.Aux[Lang, State1, Ref, Val],
   goalModule: GoalKeepingStashModule.Aux[State2, Ref]
 ) extends StashSessionImpl[Lang, State1, State2, Ref, Val](refinery, goalModule) with ReplSession {
@@ -47,6 +47,6 @@ private[proteinrefinery] class ReplSessionImpl[Lang[_[_], _], State1[_[_]], Stat
 }
 
 object ReplSessionImpl {
-  def apply(r: StashRefinery)(g: GoalKeepingStashModule[r.Var]): ReplSessionImpl[r.Lang, r.State, g.State, r.Var, r.Val] =
-    new ReplSessionImpl[r.Lang, r.State, g.State, r.Var, r.Val](r, g)
+  def apply(r: StashRefinery)(g: GoalKeepingStashModule[r.VarK]): ReplSessionImpl[r.Lang, r.StateK, g.StateK, r.VarK, r.ValK] =
+    new ReplSessionImpl[r.Lang, r.StateK, g.StateK, r.VarK, r.ValK](r, g)
 }

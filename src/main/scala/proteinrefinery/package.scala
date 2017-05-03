@@ -10,19 +10,19 @@ package object proteinrefinery extends ImplicitConversions {
   def newSession(): RefinerySession =
     newSession(refinery())(GoalKeeping.module)
 
-  def newSession(r: Refinery)(g: GoalKeepingModule[r.Var]): RefinerySession =
-    new RefinerySessionImpl[r.State, g.State, r.Var, r.Val](r, g)
+  def newSession(r: Refinery)(g: GoalKeepingModule[r.VarK]): RefinerySession =
+    new RefinerySessionImpl[r.StateK, g.StateK, r.VarK, r.ValK](r, g)
 
   def newReplSession(): ReplSession = {
     val r = stashRefinery
-    newReplSession(r)(GoalKeeping.module[r.Var].stashable)
+    newReplSession(r)(GoalKeeping.module[r.VarK].stashable)
   }
 
-  def newReplSession(r: StashRefinery)(g: GoalKeepingStashModule[r.Var]): ReplSession =
+  def newReplSession(r: StashRefinery)(g: GoalKeepingStashModule[r.VarK]): ReplSession =
     ReplSessionImpl(r)(g)
 
   private def stashRefinery: StashRefinery = {
     val p = Propagation.module.stashable
-    StashRefineryImpl(p, RelModule.instance.stashable)(TrackingModule.instance[p.Var, p.Val].stashable, DeferModule.instance[Cost].stashable)
+    StashRefineryImpl(p, RelModule.instance.stashable)(TrackingModule.instance[p.VarK, p.ValK].stashable, DeferModule.instance[Cost].stashable)
   }
 }

@@ -8,16 +8,24 @@ import scalaz.{Monad, ~>}
 import scalaz.syntax.monad._
 
 trait RefinerySession {
-  type Var[_]
-  type Val[_]
+  type VarK[_[_], _]
+  type ValK[_[_], _]
   type Lang[_[_], _]
-  type State[_[_]]
+  type StateK[_[_]]
 
   type Prg[A] = FreeK[Lang, A]
 
+  type Var[A] = VarK[Prg, A]
+  type Val[A] = ValK[Prg, A]
+  type State = StateK[Prg]
+
   implicit val prgMonad: Monad[Prg]
-  implicit val varOrder: HOrderK[Var]
-  implicit val varShow: ShowK[Var]
+  
+  def varOrderK[K[_]]: HOrderK[VarK[K, ?]]
+  def varShowK[K[_]]: ShowK[VarK[K, ?]]
+
+  implicit val varOrder: HOrderK[Var] = varOrderK
+  implicit val varShow: ShowK[Var] = varShowK
 
   protected implicit val goalKeepingApi: GoalKeeping[Prg, Var]
 
