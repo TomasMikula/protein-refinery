@@ -1,6 +1,7 @@
 package proteinrefinery.util
 
-import nutcracker.{Alternator, CellSet, Discrete, Dom, Propagation, Revocable}
+import nutcracker.{Alternator, Dom, Propagation}
+import nutcracker.data.{CellSet, Discrete, Revocable}
 import scalaz.{Functor, Monad}
 import scalaz.syntax.monad._
 

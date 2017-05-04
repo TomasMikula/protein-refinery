@@ -1,7 +1,8 @@
 package proteinrefinery.util
 
-import nutcracker.Promise.{Completed, Conflict}
-import nutcracker.{Dom, Promise}
+import nutcracker.data.Promise.{Completed, Conflict}
+import nutcracker.data.Promise
+import nutcracker.Dom
 
 import scalaz.Isomorphism.<=>
 import scalaz.syntax.equal._

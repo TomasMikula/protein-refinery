@@ -3,8 +3,7 @@ package proteinrefinery.lib
 import nutcracker.util.EqualK
 import proteinrefinery.lib.ProteinModifications.LocalSiteId
 import proteinrefinery.lib.SiteState.SiteState
-
-import scala.language.{higherKinds, implicitConversions}
+import scala.language.implicitConversions
 
 trait Syntax[Ref[_]] {
 

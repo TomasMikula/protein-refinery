@@ -1,7 +1,5 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-
 import nutcracker.util.{DeepEqualK, IsEqual}
 import scalaz.Show
 

@@ -1,6 +1,7 @@
 package proteinrefinery.lib
 
-import nutcracker.{Discrete, Dom, Promise, Propagation, UpdateResult}
+import nutcracker.{Dom, Propagation, UpdateResult}
+import nutcracker.data.{Discrete, Promise}
 import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.LocalSiteId

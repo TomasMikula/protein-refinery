@@ -1,7 +1,8 @@
 package proteinrefinery
 
+import nutcracker.{Defer, Propagation}
+import nutcracker.data.IncSets
 import nutcracker.util.EqualK
-import nutcracker.{Defer, IncSets, Propagation}
 import proteinrefinery.lib.{AgentsPattern, Assoc, NegativeInfluenceOnAssociation, NegativeInfluenceOnPhosphorylation, NegativeInfluenceOnRule, Nuggets, PhosphoTarget, Phosphorylation, PositiveInfluenceOfRuleOnRule, PositiveInfluenceOnKinaseActivity, PositiveInfluenceOnPhosphorylatedStateSearch, PositiveInfluenceOnRule, PositiveInfluenceOnState, Rule, Syntax}
 import proteinrefinery.util.Tracking
 

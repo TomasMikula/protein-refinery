@@ -1,6 +1,5 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
 import nutcracker.util.{DeepEqual, DeepShow, IsEqual, MonadObjectOutput}
 
 import scalaz.{Equal, Show}

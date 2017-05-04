@@ -1,7 +1,6 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-import nutcracker.{Discrete, IncSet}
+import nutcracker.data.{Discrete, IncSet}
 import nutcracker.util.{ContU, DeepShowK, EqualK, MonadObjectOutput}
 import nutcracker.util.EqualK._
 import nutcracker.util.ops.tell._
@@ -38,7 +37,7 @@ object PositiveInfluenceOnRule {
 
     protected implicit def Propagation: nutcracker.Propagation[M, Var, Val]
     implicit def Tracking: proteinrefinery.util.Tracking[M, Var, Val]
-    implicit def IncSets: nutcracker.IncSets[M, Var, Val]
+    implicit def IncSets: nutcracker.data.IncSets[M, Var, Val]
 
     def Nuggets: proteinrefinery.lib.Nuggets[M, Var, Val]
 

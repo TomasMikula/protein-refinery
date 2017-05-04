@@ -20,7 +20,7 @@ trait RefinerySession {
   type State = StateK[Prg]
 
   implicit val prgMonad: Monad[Prg]
-  
+
   def varOrderK[K[_]]: HOrderK[VarK[K, ?]]
   def varShowK[K[_]]: ShowK[VarK[K, ?]]
 

@@ -1,7 +1,6 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-import nutcracker.Promise
+import nutcracker.data.Promise
 import nutcracker.util.{DeepEqual, DeepShow, IsEqual, MonadObjectOutput}
 import proteinrefinery.util.{HomSet, Unification}
 

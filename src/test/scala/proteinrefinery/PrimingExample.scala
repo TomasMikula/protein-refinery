@@ -1,6 +1,6 @@
 package proteinrefinery
 
-import nutcracker.IncSet
+import nutcracker.data.IncSet
 import nutcracker.ops._
 import nutcracker.util.ContU
 import org.scalatest.FunSuite

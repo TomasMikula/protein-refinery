@@ -1,7 +1,5 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-
 case class BindingPartner[Ref[_]](p: ProteinPattern[Ref], s: SiteLabel)
 
 object BindingPartner {

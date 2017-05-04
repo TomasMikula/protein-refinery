@@ -1,8 +1,8 @@
 package proteinrefinery.util
 
-import nutcracker.Promise.{Completed, Conflict, Empty}
-
-import nutcracker.{Dom, Promise}
+import nutcracker.Dom
+import nutcracker.data.Promise
+import nutcracker.data.Promise.{Completed, Conflict, Empty}
 
 import scalaz.\&/.{Both, That, This}
 import scalaz.{Equal, \&/}

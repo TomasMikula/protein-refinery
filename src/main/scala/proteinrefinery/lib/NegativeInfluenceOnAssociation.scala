@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-import nutcracker.{Discrete, IncSet, Propagation}
+import nutcracker.Propagation
+import nutcracker.data.{Discrete, IncSet}
 import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 import proteinrefinery.util.Tracking
@@ -25,7 +25,7 @@ object NegativeInfluenceOnAssociation {
     protected implicit def Propagation: Propagation[M, Var, Val]
     implicit def Tracking: Tracking[M, Var, Val]
     def Nuggets: proteinrefinery.lib.Nuggets[M, Var, Val]
-    def IncSets: nutcracker.IncSets[M, Var, Val]
+    def IncSets: nutcracker.data.IncSets[M, Var, Val]
 
     // TODO: should return DSet
     def negativeInfluenceOnAssociation(p: Protein, a: Assoc[Var])(implicit M: Monad[M], E: EqualK[Var]): M[Var[IncSet[NegativeInfluenceOnAssociation[Var]]]] =

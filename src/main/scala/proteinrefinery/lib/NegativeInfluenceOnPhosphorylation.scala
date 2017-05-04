@@ -1,8 +1,7 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-
-import nutcracker.{Discrete, IncSet, Propagation}
+import nutcracker.Propagation
+import nutcracker.data.{Discrete, IncSet}
 import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 
@@ -28,7 +27,7 @@ object NegativeInfluenceOnPhosphorylation {
 
     def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Var, Val]
     def NegativeInfluenceOnRuleSearch: NegativeInfluenceOnRule.Search[M, Var, Val]
-    def IncSets: nutcracker.IncSets[M, Var, Val]
+    def IncSets: nutcracker.data.IncSets[M, Var, Val]
 
     def negativeInfluenceOnPhosphorylation(p: Protein, ph: PhosphoTarget[Var])(implicit M: Monad[M], E: EqualK[Var]): M[Var[IncSet[Ref[Var]]]] = {
       IncSets.collect(negativeInfluenceOnPhosphorylationC(p, ph))

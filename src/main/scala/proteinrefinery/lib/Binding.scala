@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-import nutcracker.{Discrete, RelObservable}
+import nutcracker.RelObservable
+import nutcracker.data.Discrete
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import nutcracker.util.ops.tell._
 import proteinrefinery.lib.ProteinModifications.LocalSiteId

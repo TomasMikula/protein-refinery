@@ -1,7 +1,6 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-import nutcracker.Discrete
+import nutcracker.data.Discrete
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, IsEqual, MonadObjectOutput}
 import nutcracker.util.ops._
 

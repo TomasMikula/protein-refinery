@@ -1,8 +1,7 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-
-import nutcracker.{Discrete, IncSet, Propagation}
+import nutcracker.Propagation
+import nutcracker.data.{Discrete, IncSet}
 import nutcracker.ops._
 import nutcracker.util.{ContU, DeepEqualK, EqualK, IsEqual}
 
@@ -19,7 +18,7 @@ object NegativeInfluenceOnRule {
   trait Search[M[_], Var[_], Val[_]] {
     protected implicit def Propagation: Propagation[M, Var, Val]
 
-    def IncSets: nutcracker.IncSets[M, Var, Val]
+    def IncSets: nutcracker.data.IncSets[M, Var, Val]
     def AgentsPatternOps: AgentsPattern.Ops[M, Var, Val]
     def NegativeInfluenceOnAssociationSearch: NegativeInfluenceOnAssociation.Search[M, Var, Val]
 

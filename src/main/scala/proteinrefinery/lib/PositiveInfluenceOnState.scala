@@ -1,6 +1,6 @@
 package proteinrefinery.lib
 
-import nutcracker.Discrete
+import nutcracker.data.Discrete
 import nutcracker.util.{ContU, EqualK}
 import proteinrefinery.util.OnceTrigger
 import scalaz.Monad

@@ -1,7 +1,5 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-
 import nutcracker.util.EqualK
 import nutcracker.util.EqualK._
 import proteinrefinery.lib.AgentsPattern._

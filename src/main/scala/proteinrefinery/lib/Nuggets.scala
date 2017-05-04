@@ -1,6 +1,7 @@
 package proteinrefinery.lib
 
-import nutcracker.{Discrete, IncSet, Propagation}
+import nutcracker.Propagation
+import nutcracker.data.{Discrete, IncSet}
 import nutcracker.util.{ContU, EqualK}
 import nutcracker.util.ContU._
 import proteinrefinery.util.DomType.DiscreteDomType
@@ -29,7 +30,7 @@ trait Nuggets[M[_], Ref[_], Val[_]] {
   protected implicit val Propagation: Propagation[M, Ref, Val]
   implicit val Tracking: Tracking[M, Ref, Val]
 
-  def IncSets: nutcracker.IncSets[M, Ref, Val]
+  def IncSets: nutcracker.data.IncSets[M, Ref, Val]
   def PhosphoTargetOps: PhosphoTarget.Ops[M, Ref, Val]
   def RuleOps: Rule.Ops[M, Ref, Val]
 

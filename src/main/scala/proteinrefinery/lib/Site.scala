@@ -1,8 +1,8 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-import nutcracker.{Dom, Promise, UpdateResult}
-import nutcracker.Promise.{Completed, Conflict, Empty}
+import nutcracker.{Dom, UpdateResult}
+import nutcracker.data.Promise
+import nutcracker.data.Promise.{Completed, Conflict, Empty}
 import nutcracker.util.{DeepEqualK, DeepShowK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import proteinrefinery.lib.ProteinModifications.{DefiniteLabel, LocalSiteId, SiteRef}
 import proteinrefinery.util.{HomSet, Identification, Unification}

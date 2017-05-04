@@ -1,7 +1,7 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
-import nutcracker.{CellSet, Discrete, Dom, Propagation, UpdateResult}
+import nutcracker.{Dom, Propagation, UpdateResult}
+import nutcracker.data.{CellSet, Discrete}
 import nutcracker.ops.dom._
 import nutcracker.util.{ContU, DeepEqual, DeepEqualK, EqualK, FreeObjectOutput, IsEqual, MonadObjectOutput, ShowK}
 import nutcracker.util.ops._

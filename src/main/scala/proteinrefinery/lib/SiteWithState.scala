@@ -1,6 +1,5 @@
 package proteinrefinery.lib
 
-import scala.language.higherKinds
 import nutcracker.Dom
 import nutcracker.util.{DeepEqualK, EqualK, IsEqual}
 import proteinrefinery.lib.SiteState.SiteState
