@@ -51,10 +51,17 @@ private[proteinrefinery] class GoalKeepingModuleImpl[Ref[_[_], _]] extends Persi
 
   def emptyK[K[_]]: StateK[K] = GoalKeeper(Nil)
 
-  final def freeGoalKeeping[F[_[_], _]](implicit i: InjectK[Lang, F]): GoalKeeping[FreeK[F, ?], Ref[FreeK[F, ?], ?]] = new GoalKeeping[FreeK[F, ?], Ref[FreeK[F, ?], ?]] {
-    def keep[A](ref: Ref[FreeK[F, ?], A])(implicit ev: DeepShow[A, Ref[FreeK[F, ?], ?]]): FreeK[F, Unit] = FreeK.injLiftF[Lang, F, Unit](KeepGoal(ref, ev))
-    def list: FreeK[F, List[APair[Ref[FreeK[F, ?], ?], DeepShow[?, Ref[FreeK[F, ?], ?]]]]] = FreeK.injLiftF[Lang, F, List[APair[Ref[FreeK[F, ?], ?], DeepShow[?, Ref[FreeK[F, ?], ?]]]]](ListGoals())
-  }
+  final def freeGoalKeeping[F[_[_], _]](implicit i: InjectK[Lang, F]): GoalKeeping[FreeK[F, ?], Ref[FreeK[F, ?], ?]] =
+    new GoalKeeping[FreeK[F, ?], Ref[FreeK[F, ?], ?]] {
+      type K[A] = FreeK[F, A]
+      type Ref1[A] = Ref[K, A]
+
+      def keep[A](ref: Ref1[A])(implicit ev: DeepShow[A, Ref1]): FreeK[F, Unit] =
+        FreeK.liftF(i(KeepGoal[Ref1, K, A](ref, ev)))
+
+      def list: FreeK[F, List[APair[Ref[FreeK[F, ?], ?], DeepShow[?, Ref[FreeK[F, ?], ?]]]]] =
+        FreeK.liftF(i(ListGoals[Ref1, K]()))
+    }
 
   def interpreter: Step[Lang, StateK] = new StepT[Id, Lang, StateK] {
     def apply[K[_]: Monad, A](ga: GoalKeepingLang[Ref[K, ?], K, A]): WriterState[Lst[K[Unit]], GoalKeeper[Ref[K, ?], K], A] =
