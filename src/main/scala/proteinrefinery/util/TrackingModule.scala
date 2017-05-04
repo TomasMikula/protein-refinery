@@ -1,7 +1,7 @@
 package proteinrefinery.util
 
 import nutcracker.util.{FreeK, InjectK, Step}
-import nutcracker.{ListModule, Module, PersistentStateModule, StashModule}
+import nutcracker.toolkit.{ListModule, Module, PersistentStateModule, StashModule}
 
 trait TrackingModule[Ref[_[_], _], Val[_[_], _]] extends Module {
   def freeTracking[F[_[_], _]](implicit i: InjectK[Lang, F]): Tracking[FreeK[F, ?], Ref[FreeK[F, ?], ?], Val[FreeK[F, ?], ?]]

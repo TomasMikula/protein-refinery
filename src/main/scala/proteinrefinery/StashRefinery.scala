@@ -1,8 +1,7 @@
 package proteinrefinery
 
-import nutcracker.{StashDeferModule, StashPropagationModule, StashRestore}
-import nutcracker.StashRestore._
-import nutcracker.rel.StashRelModule
+import nutcracker.toolkit.{StashDeferModule, StashPropagationModule, StashRelModule, StashRestore}
+import nutcracker.toolkit.StashRestore._
 import proteinrefinery.util.StashTrackingModule
 
 trait StashRefinery extends Refinery {

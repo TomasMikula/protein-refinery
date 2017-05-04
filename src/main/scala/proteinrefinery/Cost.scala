@@ -1,6 +1,6 @@
 package proteinrefinery
 
-import nutcracker.algebraic.{NonDecreasingMonoid, OrderPreservingMonoid}
+import nutcracker.util.algebraic.{NonDecreasingMonoid, OrderPreservingMonoid}
 
 import scalaz.Ordering
 

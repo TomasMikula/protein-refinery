@@ -1,16 +1,16 @@
 package proteinrefinery
 
-import nutcracker.rel.{RelModule, Relations}
+import nutcracker.rel.Relations
+import nutcracker.toolkit.{DeferModule, PropagationModule, FreeRefToolkit, RelModule}
 import nutcracker.util.CoproductK.{:++:, :+:}
 import nutcracker.util.KPair.{:**:, :*:, _}
-import nutcracker.{Defer, DeferModule, Propagation, PropagationModule, RefBundle}
+import nutcracker.{Defer, Propagation}
 import nutcracker.util.{FreeK, FreeKT, HOrderK, InjectK, ShowK, StateInterpreter}
 import proteinrefinery.util.{Tracking, TrackingModule}
-import scala.language.higherKinds
 import scalaz.Id.Id
 import scalaz.{Monad, StateT, ~>}
 
-trait Refinery extends RefBundle {
+trait Refinery extends FreeRefToolkit {
 
   implicit val prgMonad: Monad[Prg]
 

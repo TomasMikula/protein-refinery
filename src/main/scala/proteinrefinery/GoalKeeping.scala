@@ -1,7 +1,7 @@
 package proteinrefinery
 
 import nutcracker.util.typealigned.APair
-import nutcracker.{ListModule, Module, PersistentStateModule, StashModule}
+import nutcracker.toolkit.{ListModule, Module, PersistentStateModule, StashModule}
 import nutcracker.util.{DeepShow, FreeK, InjectK, Lst, Step, StepT, WriterState}
 import scalaz.Id._
 import scalaz.Monad

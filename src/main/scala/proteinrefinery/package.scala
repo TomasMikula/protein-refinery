@@ -1,11 +1,10 @@
-import nutcracker.{DeferModule, Propagation}
-import nutcracker.rel.RelModule
+import nutcracker.toolkit.{DeferModule, PersistentPropagationModule, PropagationModule, RelModule}
 import proteinrefinery.util.TrackingModule
 
 package object proteinrefinery extends ImplicitConversions {
 
   def refinery(): Refinery =
-    RefineryImpl(Propagation.module, RelModule.instance)(TrackingModule.instance, DeferModule.instance[Cost])
+    RefineryImpl(PropagationModule.instance, RelModule.instance)(TrackingModule.instance, DeferModule.instance[Cost])
 
   def newSession(): RefinerySession =
     newSession(refinery())(GoalKeeping.module)
@@ -22,7 +21,7 @@ package object proteinrefinery extends ImplicitConversions {
     ReplSessionImpl(r)(g)
 
   private def stashRefinery: StashRefinery = {
-    val p = Propagation.module.stashable
+    val p = PersistentPropagationModule.instance.stashable
     StashRefineryImpl(p, RelModule.instance.stashable)(TrackingModule.instance[p.VarK, p.ValK].stashable, DeferModule.instance[Cost].stashable)
   }
 }
