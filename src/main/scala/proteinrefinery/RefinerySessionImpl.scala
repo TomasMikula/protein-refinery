@@ -12,7 +12,7 @@ class RefinerySessionImpl[State1[_[_]], State2[_[_]], Ref0[_[_], _], Val0[_[_], 
 
   type VarK[K[_], A] = Ref0[K, A]
   type ValK[K[_], A] = Val0[K, A]
-  type Lang[K[_], A] = (refinery.Lang :++: goalModule.Lang)#Out[K, A]
+  type Lang[K[_], A] = (refinery.Lang :++: goalModule.Lang)#Out1[K, A]
   type StateK[K[_]]  = (State1        :**:          State2)#Out[K]
 
   implicit val prgMonad: Monad[Prg] = FreeKT.freeKTMonad
@@ -21,8 +21,8 @@ class RefinerySessionImpl[State1[_[_]], State2[_[_]], Ref0[_[_], _], Val0[_[_], 
 
   protected implicit val goalKeepingApi: GoalKeeping[Prg, Var] = goalModule.freeGoalKeeping
 
-  val interpreter: StateInterpreter[Lang, StateK] = refinery.interpreter :&&: goalModule.interpreter
-  private val prgInterpreter = interpreter.freeInstance
+  val interpreter: StateInterpreter[Prg, Lang[Prg, ?], State] = refinery.interpreter[Prg, State] :+: goalModule.interpreter[Prg, State]
+  private val prgInterpreter = interpreter.freeInstance(_.run.toFree)
 
   protected var state: StateK[Prg] = empty[Prg]
 
@@ -32,7 +32,7 @@ class RefinerySessionImpl[State1[_[_]], State2[_[_]], Ref0[_[_], _], Val0[_[_], 
     refinery.fetchK(ref, state._1)
 
   def interpret[A](prg: Prg[A]): A = {
-    val (s, a) = prgInterpreter(prg).run(state)
+    val (s, a) = prgInterpreter(prg.run.toFree).run(state)
     state = s
     a
   }

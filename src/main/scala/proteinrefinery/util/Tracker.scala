@@ -1,10 +1,9 @@
 package proteinrefinery.util
 
-import nutcracker.util.{FreeK, HHKMap, InjectK, Lst, Step, WriterState}
+import nutcracker.util.{FreeK, HHKMap, Inject, Lst, Step, WriterState}
 import proteinrefinery.util.TrackLang._
 import proteinrefinery.util.Tracker._
-import scala.language.higherKinds
-import scalaz.Monad
+import scalaz.Lens
 import scalaz.std.list._
 import scalaz.syntax.traverse._
 
@@ -17,19 +16,19 @@ private[util] class TrackingModuleImpl[Ref[_[_], _], Val[_[_], _]] extends Persi
   def stashable: StashTrackingModule[Ref, Val] { type Lang[K[_], A] = TrackLang[Ref[K, ?], K, A] } =
     new TrackingListModule[Ref, Val, Lang, StateK](this)
 
-  def freeTracking[F[_[_], _]](implicit i: InjectK[Lang, F]): Tracking[FreeK[F, ?], Ref[FreeK[F, ?], ?], Val[FreeK[F, ?], ?]] =
+  def freeTracking[F[_[_], _]](implicit i: Inject[Lang[FreeK[F, ?], ?], F[FreeK[F, ?], ?]]): Tracking[FreeK[F, ?], Ref[FreeK[F, ?], ?], Val[FreeK[F, ?], ?]] =
     new Tracking[FreeK[F, ?], Ref[FreeK[F, ?], ?], Val[FreeK[F, ?], ?]] {
       type Ref1[A] = Ref[FreeK[F, ?], A]
-      def track[D[_[_]]](ref: Ref1[D[Ref1]])(implicit t: DomType[D]): FreeK[F, Unit] = trackF[Ref1, F, D](ref)(t, i[FreeK[F, ?]])
-      def handle[D[_[_]]](t: DomType[D])(f: (Ref1[D[Ref1]]) => FreeK[F, Unit]): FreeK[F, Unit] = handleF[Ref1, F, D](t)(f)(i[FreeK[F, ?]])
+      def track[D[_[_]]](ref: Ref1[D[Ref1]])(implicit t: DomType[D]): FreeK[F, Unit] = trackF[Ref1, F, D](ref)
+      def handle[D[_[_]]](t: DomType[D])(f: (Ref1[D[Ref1]]) => FreeK[F, Unit]): FreeK[F, Unit] = handleF[Ref1, F, D](t)(f)
     }
 
-  def interpreter: Step[Lang, StateK] = new Step[Lang, StateK] {
-    def apply[K[_]: Monad, A](t: TrackLang[Ref[K, ?], K, A]): WriterState[Lst[K[Unit]], Tracker[Ref[K, ?], K], A] =
-      go[Ref[K, ?], K, A](t)
+  def interpreter[K[_], S](implicit lens: Lens[S, StateK[K]]): Step[K, Lang[K, ?], S] = new Step[K, Lang[K, ?], S] {
+    def apply[A](t: TrackLang[Ref[K, ?], K, A]): WriterState[Lst[K[Unit]], S, A] =
+      go[Ref[K, ?], A](t).zoomOut
 
     // https://github.com/scala/bug/issues/10292
-    private def go[Var0[_], K[_]: Monad, A](t: TrackLang[Var0, K, A]): WriterState[Lst[K[Unit]], Tracker[Var0, K], A] =
+    private def go[Var0[_], A](t: TrackLang[Var0, K, A]): WriterState[Lst[K[Unit]], Tracker[Var0, K], A] =
       WriterState(tracker => t match {
         case i @ Track(t, ref) => tracker.track[i.Tracked](t, ref) match { case (tr, ks) => (ks, tr, ()) }
         case i @ Handle(t, f) => tracker.handle[i.Tracked](t)(f) match { case (tr, ks) => (ks, tr, ()) }

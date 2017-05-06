@@ -1,30 +1,32 @@
 package proteinrefinery
 
-import nutcracker.rel.Relations
-import nutcracker.toolkit.{DeferModule, PropagationModule, FreeRefToolkit, RelModule}
-import nutcracker.util.CoproductK.{:++:, :+:}
-import nutcracker.util.KPair.{:**:, :*:, _}
 import nutcracker.{Defer, Propagation}
-import nutcracker.util.{FreeK, FreeKT, HOrderK, InjectK, ShowK, StateInterpreter}
+import nutcracker.rel.Relations
+import nutcracker.toolkit.{DeferModule, FreeRefToolkit, PropagationModule, RelModule}
+import nutcracker.util.{FreeK, FreeKT, HOrderK, Inject, KPair, ShowK, StateInterpreter}
+import nutcracker.util.CoproductK.{:++:, :+:}
+import nutcracker.util.KPair._
 import proteinrefinery.util.{Tracking, TrackingModule}
 import scalaz.Id.Id
-import scalaz.{Monad, StateT, ~>}
+import scalaz.{Lens, Monad, StateT, Store, ~>}
 
 trait Refinery extends FreeRefToolkit {
 
   implicit val prgMonad: Monad[Prg]
 
-  def freePropagation[F[_[_], _]](implicit i: InjectK[Lang, F]): Propagation[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]]
-  def freeDeferApi[F[_[_], _]](implicit i: InjectK[Lang, F]): Defer[FreeK[F, ?], Cost]
-  def freeTrackingApi[F[_[_], _]](implicit i: InjectK[Lang, F]): Tracking[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]]
-  def freeRelationsApi[F[_[_], _]](implicit i: InjectK[Lang, F]): Relations[FreeK[F, ?]]
+  type Inj[F[_[_], _]] = Inject[Lang[FreeK[F, ?], ?], F[FreeK[F, ?], ?]]
+
+  def freePropagation[F[_[_], _]](implicit i: Inj[F]): Propagation[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]]
+  def freeDeferApi[F[_[_], _]](implicit i: Inj[F]): Defer[FreeK[F, ?], Cost]
+  def freeTrackingApi[F[_[_], _]](implicit i: Inj[F]): Tracking[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]]
+  def freeRelationsApi[F[_[_], _]](implicit i: Inj[F]): Relations[FreeK[F, ?]]
 
   implicit val propagationApi: Propagation[Prg, Var, Val] = freePropagation[Lang]
   implicit val deferApi: Defer[Prg, Cost] = freeDeferApi[Lang]
   implicit val trackingApi: Tracking[Prg, Var, Val] = freeTrackingApi[Lang]
   implicit val relationsApi: Relations[Prg] = freeRelationsApi[Lang]
 
-  val interpreter: StateInterpreter[Lang, StateK]
+  def interpreter[K[_], S](implicit lens: Lens[S, StateK[K]]): StateInterpreter[K, Lang[K, ?], S]
 
   def interpret[A](prg: Prg[A], s: State): (State, A)
 
@@ -46,7 +48,7 @@ trait Refinery extends FreeRefToolkit {
   def fetcher(s: State): Var ~> Id = λ[Var ~> Id](fetch(_, s))
 
   val lib: Lib[Prg, Var, Val]
-  def freeLib[F[_[_], _]](implicit i: InjectK[Lang, F]): Lib[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]]
+  def freeLib[F[_[_], _]](implicit i: Inject[Lang[FreeK[F, ?], ?], F[FreeK[F, ?], ?]]): Lib[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]]
 }
 
 object Refinery {
@@ -65,7 +67,7 @@ private[proteinrefinery] class RefineryImpl[Var0[_[_], _], Val0[_[_], _], PropSt
 ) extends Refinery {
   type VarK[K[_], A] = Var0[K, A]
   type ValK[K[_], A] = Val0[K, A]
-  type Lang[K[_], A] = (propMod.Lang :+: relMod.Lang :+: trckMod.Lang :++: defMod.Lang)#Out[K, A]
+  type Lang[K[_], A] = (propMod.Lang :+: relMod.Lang :+: trckMod.Lang :++: defMod.Lang)#Out1[K, A]
   type StateK[K[_]]  = (PropState    :*: RelState    :*: TrackState   :**: DeferState )#Out[K]
 
   private implicit def freeKMonad[F[_[_], _]]: Monad[FreeK[F, ?]] = FreeKT.freeKTMonad[F, Id] // https://issues.scala-lang.org/browse/SI-10238
@@ -78,20 +80,40 @@ private[proteinrefinery] class RefineryImpl[Var0[_[_], _], Val0[_[_], _], PropSt
 
   override def readOnly[A](ref: Var[A]): Val[A] = propagationApi.readOnly(ref)
 
-  implicit def freePropagation[F[_[_], _]](implicit i: InjectK[Lang, F]): Propagation[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]] = propMod.freePropagation[F](i.compose[propMod.Lang])
-  implicit def freeDeferApi[F[_[_], _]](implicit i: InjectK[Lang, F]): Defer[FreeK[F, ?], Cost] = defMod.freeDeferApi[F](i.compose[defMod.Lang](InjectK.injectRight(InjectK.injectRight(InjectK.injectRight))))
-  implicit def freeTrackingApi[F[_[_], _]](implicit i: InjectK[Lang, F]): Tracking[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]] = trckMod.freeTracking[F](i.compose[trckMod.Lang])
-  implicit def freeRelationsApi[F[_[_], _]](implicit i: InjectK[Lang, F]): Relations[FreeK[F, ?]] = relMod.freeRelations[F](i.compose[relMod.Lang])
+  implicit def freePropagation[F[_[_], _]](implicit i: Inj[F]): Propagation[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]] =
+    propMod.freePropagation[F](i.compose[propMod.Lang[FreeK[F, ?], ?]])
 
-  def freeLib[F[_[_], _]](implicit i: InjectK[Lang, F]): Lib[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]] = new Lib[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]]
+  implicit def freeDeferApi[F[_[_], _]](implicit i: Inj[F]): Defer[FreeK[F, ?], Cost] =
+    defMod.freeDeferApi[F](i.compose[defMod.Lang[FreeK[F, ?], ?]])
 
-  val interpreter: StateInterpreter[Lang, StateK] = propMod.interpreter :&: relMod.interpreter :&: trckMod.interpreter :&&: defMod.interpreter
-  private val interpreterF = interpreter.freeInstance
+  implicit def freeTrackingApi[F[_[_], _]](implicit i: Inj[F]): Tracking[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]] =
+    trckMod.freeTracking[F](i.compose[trckMod.Lang[FreeK[F, ?], ?]])
+
+  implicit def freeRelationsApi[F[_[_], _]](implicit i: Inj[F]): Relations[FreeK[F, ?]] =
+    relMod.freeRelations[F](i.compose[relMod.Lang[FreeK[F, ?], ?]])
+
+  def freeLib[F[_[_], _]](implicit i: Inject[Lang[FreeK[F, ?], ?], F[FreeK[F, ?], ?]]): Lib[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]] =
+    new Lib[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]]
+
+  // scalac could find all of these implicitly, but it doesn't ¯\_(ツ)_/¯
+  private def propLens[K[_]]:  Lens[StateK[K], PropState[K]]  = KPair.fstLens
+  private def relLens[K[_]]:   Lens[StateK[K], RelState[K]]   = implicitly[Lens[StateK[K], RelState[K]]]
+  private def trackLens[K[_]]: Lens[StateK[K], TrackState[K]] = Lens(s => Store(t => s._1 :*: s._2._1 :*: t :*: s._2._2._2, s._2._2._1))
+  private def deferLens[K[_]]: Lens[StateK[K], DeferState[K]] = Lens(s => Store(t => s._1 :*: s._2._1 :*: s._2._2._1 :*: t, s._2._2._2))
+
+  def interpreter[K[_], S](implicit lens: Lens[S, StateK[K]]): StateInterpreter[K, Lang[K, ?], S] = (
+    propMod.interpreter[K, S](propLens[K].compose(lens)) :+:
+      relMod.interpreter[K, S](relLens[K].compose(lens)) :+:
+      trckMod.interpreter[K, S](trackLens[K].compose(lens)) :+:
+      defMod.interpreter[K, S](deferLens[K].compose(lens))
+  )
+
+  private val interpreterF = interpreter[Prg, State](Lens.lensId).freeInstance(_.run.toFree)
 
   def emptyK[K[_]]: StateK[K] = propMod.emptyK[K] :*: relMod.emptyK[K] :*: trckMod.emptyK[K] :*: defMod.emptyK[K]
   def fetchK[K[_], D](ref: ValK[K, D], s: StateK[K]): Option[D] = propMod.fetchK(ref, s._1)
   def fetchK[K[_], D](ref: VarK[K, D], s: StateK[K]):        D  = propMod.fetchK(ref, s._1)
-  def interpret[A](prg: Prg[A], s: State): (State, A) = interpreterF(prg)(s)
+  def interpret[A](prg: Prg[A], s: State): (State, A) = interpreterF(prg.run.toFree)(s)
 
   val lib: Lib[Prg, Var, Val] =
   // all of the arguments are implicit, but scalac...
