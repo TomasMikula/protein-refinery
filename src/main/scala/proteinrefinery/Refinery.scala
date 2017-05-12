@@ -3,7 +3,7 @@ package proteinrefinery
 import nutcracker.{Defer, Propagation}
 import nutcracker.rel.Relations
 import nutcracker.toolkit.{DeferModule, FreeRefToolkit, PropagationModule, RelModule}
-import nutcracker.util.{FreeK, FreeKT, HOrderK, Inject, KPair, ShowK, StateInterpreter}
+import nutcracker.util.{FreeK, HOrderK, Inject, KPair, ShowK, StateInterpreter}
 import nutcracker.util.CoproductK.{:++:, :+:}
 import nutcracker.util.KPair._
 import proteinrefinery.util.{Tracking, TrackingModule}
@@ -70,9 +70,7 @@ private[proteinrefinery] class RefineryImpl[Var0[_[_], _], Val0[_[_], _], PropSt
   type Lang[K[_], A] = (propMod.Lang :+: relMod.Lang :+: trckMod.Lang :++: defMod.Lang)#Out1[K, A]
   type StateK[K[_]]  = (PropState    :*: RelState    :*: TrackState   :**: DeferState )#Out[K]
 
-  private implicit def freeKMonad[F[_[_], _]]: Monad[FreeK[F, ?]] = FreeKT.freeKTMonad[F, Id] // https://issues.scala-lang.org/browse/SI-10238
-
-  val prgMonad: Monad[Prg] = freeKMonad[Lang]
+  override val prgMonad: Monad[Prg] = implicitly
   implicit def varOrderK[K[_]]: HOrderK[VarK[K, ?]] = propMod.varOrderK
   implicit def varShowK[K[_]]: ShowK[VarK[K, ?]] = propMod.varShowK
   implicit def valOrderK[K[_]]: HOrderK[ValK[K, ?]] = propMod.valOrderK
@@ -108,12 +106,12 @@ private[proteinrefinery] class RefineryImpl[Var0[_[_], _], Val0[_[_], _], PropSt
       defMod.interpreter[K, S](deferLens[K].compose(lens))
   )
 
-  private val interpreterF = interpreter[Prg, State](Lens.lensId).freeInstance(_.run.toFree)
+  private val interpreterF = interpreter[Prg, State](Lens.lensId).freeInstance(_.unwrap)
 
   def emptyK[K[_]]: StateK[K] = propMod.emptyK[K] :*: relMod.emptyK[K] :*: trckMod.emptyK[K] :*: defMod.emptyK[K]
   def fetchK[K[_], D](ref: ValK[K, D], s: StateK[K]): Option[D] = propMod.fetchK(ref, s._1)
   def fetchK[K[_], D](ref: VarK[K, D], s: StateK[K]):        D  = propMod.fetchK(ref, s._1)
-  def interpret[A](prg: Prg[A], s: State): (State, A) = interpreterF(prg.run.toFree)(s)
+  def interpret[A](prg: Prg[A], s: State): (State, A) = interpreterF(prg.unwrap)(s)
 
   val lib: Lib[Prg, Var, Val] =
   // all of the arguments are implicit, but scalac...
