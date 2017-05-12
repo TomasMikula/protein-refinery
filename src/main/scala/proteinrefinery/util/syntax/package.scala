@@ -33,7 +33,7 @@ package object syntax {
   implicit class MapOps[K, V](self: Map[K, V]) {
     def pairWith[W](that: Map[K, W])(v0: V, w0: W): Map[K, (V, W)] = {
       val keys = self.keySet union that.keySet
-      var builder = Map.newBuilder[K, (V, W)]
+      val builder = Map.newBuilder[K, (V, W)]
       keys.foreach(a => {
         val b = self.get(a).getOrElse(v0)
         val c = that.get(a).getOrElse(w0)
@@ -44,7 +44,7 @@ package object syntax {
 
     def pairWithOpt[W](that: Map[K, W]): Map[K, V \&/ W] = {
       val keys = self.keySet union that.keySet
-      var builder = Map.newBuilder[K, V \&/ W]
+      val builder = Map.newBuilder[K, V \&/ W]
       keys.foreach(a => builder += ((a, (self.get(a), that.get(a)) match {
         case (Some(v), Some(w)) => \&/.Both(v, w)
         case (Some(v), None) => \&/.This(v)

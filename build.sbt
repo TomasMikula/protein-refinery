@@ -2,7 +2,7 @@ name := "protein-refinery"
 
 version := "0.2-SNAPSHOT"
 
-scalaVersion := "2.12.1"
+scalaVersion := "2.12.2"
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 
@@ -33,7 +33,7 @@ scalacOptions in (Test, console) := commonScalacOptions
 libraryDependencies ++= Seq(
   "com.github.tomasmikula" %% "nutcracker" % "0.2-SNAPSHOT",
   "org.typelevel" %% "algebra" % "0.6.0",
-  "org.scalaz" %% "scalaz-core" % "7.3.0-M11",
+  "org.scalaz" %% "scalaz-core" % "7.3.0-M12",
   "org.scalacheck" %% "scalacheck" % "1.13.4",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 )

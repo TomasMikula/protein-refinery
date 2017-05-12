@@ -53,15 +53,6 @@ trait Syntax[Ref[_]] {
   implicit def symbolToSite(sym: Symbol): SiteLabel = SiteLabel(sym.name)
 
   implicit def stringToState(s: String): SiteState = SiteState(s)
-
-
-  // examples
-  private def examples(implicit ev: EqualK[Ref]) = {
-    'A@@'x binds 'B@@'y
-    'A('x~"p")
-    'A('x~"p")@@'z
-    'A('x~"p")@@'z binds 'B('y~"u")@@'w
-  }
 }
 
 object Syntax {

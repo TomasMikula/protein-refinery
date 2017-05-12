@@ -1,8 +1,7 @@
 package proteinrefinery
 
-import scala.language.higherKinds
 import nutcracker.util.{DeepEqual, HEqualK}
-import org.scalactic.{Prettifier, source}
+import org.scalactic.source
 import org.scalatest.exceptions.{StackDepthException, TestFailedException}
 import org.scalatest.{Assertion, FunSuite, Succeeded}
 
@@ -11,7 +10,7 @@ import scalaz.Id._
 
 class TestSuite extends FunSuite {
 
-  def assertEqual[A](expected: A)(actual: A)(implicit ev: Equal[A], prettifier: Prettifier, pos: source.Position): Assertion = {
+  def assertEqual[A](expected: A)(actual: A)(implicit ev: Equal[A], pos: source.Position): Assertion = {
     if (!ev.equal(actual, expected)) {
       val s = s"Expected: $expected, but got $actual"
       throw new TestFailedException((_: StackDepthException) => Some(s), None, pos)
@@ -24,7 +23,6 @@ class TestSuite extends FunSuite {
     eq2: HEqualK[Ptr2],
     deref1: Ptr1 ~> Id,
     deref2: Ptr2 ~> Id,
-    prettifier: Prettifier,
     pos: source.Position
   ): Assertion = {
     if (!ev.deepEqual(expected, actual)(deref1, deref2)) {
@@ -39,7 +37,6 @@ class TestSuite extends FunSuite {
     eq2: HEqualK[Ptr2],
     deref1: Ptr1 ~> Id,
     deref2: Ptr2 ~> Id,
-    prettifier: Prettifier,
     pos: source.Position
   ): Assertion = {
     if (!ev.lift.deepEqual(expected, actual)(deref1, deref2)) {
