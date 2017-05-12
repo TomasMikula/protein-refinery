@@ -1,9 +1,10 @@
 package proteinrefinery.util
 
-import nutcracker.util.{FreeK, HHKMap, Inject, Lst, Step, WriterState}
+import nutcracker.util.{FreeK, HHKMap, Inject, Lst, MonadTellState, StateInterpreter, StratifiedMonoidAggregator}
+import nutcracker.util.ops._
 import proteinrefinery.util.TrackLang._
 import proteinrefinery.util.Tracker._
-import scalaz.Lens
+import scalaz.{Bind, Lens}
 import scalaz.std.list._
 import scalaz.syntax.traverse._
 
@@ -23,15 +24,14 @@ private[util] class TrackingModuleImpl[Ref[_[_], _], Val[_[_], _]] extends Persi
       def handle[D[_[_]]](t: DomType[D])(f: (Ref1[D[Ref1]]) => FreeK[F, Unit]): FreeK[F, Unit] = handleF[Ref1, F, D](t)(f)
     }
 
-  def interpreter[K[_], S](implicit lens: Lens[S, StateK[K]]): Step[K, Lang[K, ?], S] = new Step[K, Lang[K, ?], S] {
-    def apply[A](t: TrackLang[Ref[K, ?], K, A]): WriterState[Lst[K[Unit]], S, A] =
-      go[Ref[K, ?], A](t).zoomOut
-
-    // https://github.com/scala/bug/issues/10292
-    private def go[Var0[_], A](t: TrackLang[Var0, K, A]): WriterState[Lst[K[Unit]], Tracker[Var0, K], A] =
-      WriterState(tracker => t match {
-        case i @ Track(t, ref) => tracker.track[i.Tracked](t, ref) match { case (tr, ks) => (ks, tr, ()) }
-        case i @ Handle(t, f) => tracker.handle[i.Tracked](t)(f) match { case (tr, ks) => (ks, tr, ()) }
+  def interpreter[K[_], S](implicit lens: Lens[S, StateK[K]]): StateInterpreter[K, Lang[K, ?], S] = new StateInterpreter[K, Lang[K, ?], S] {
+    def apply[M[_], W, A](t: TrackLang[Ref[K, ?], K, A])(implicit M: MonadTellState[M, W, S], W: StratifiedMonoidAggregator[W, Lst[K[Unit]]], inj: Inject[TrackLang[Ref[K, ?], K, ?], K], K: Bind[K]): M[A] =
+      M.writerState(s => {
+        val tracker = lens.get(s)
+        t.fold(
+          caseTrack = i => tracker.track[i.Tracked](i.t, i.ref) match { case (tr, ks) => (ks at 0, s set tr, t.witness(())) },
+          caseHandle = i => tracker.handle[i.Tracked](i.t)(i.f) match { case (tr, ks) => (ks at 0, s set tr, t.witness(())) }
+        )
       })
   }
 }

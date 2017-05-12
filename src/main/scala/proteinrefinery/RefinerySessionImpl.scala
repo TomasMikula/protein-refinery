@@ -15,24 +15,28 @@ class RefinerySessionImpl[State1[_[_]], State2[_[_]], Ref0[_[_], _], Val0[_[_], 
   type Lang[K[_], A] = (refinery.Lang :++: goalModule.Lang)#Out1[K, A]
   type StateK[K[_]]  = (State1        :**:          State2)#Out[K]
 
+  override def readOnlyK[K[_], A](ref: VarK[K, A]): ValK[K, A] = refinery.readOnlyK(ref)
   override val prgMonad: Monad[Prg] = implicitly
   implicit def varOrderK[K[_]]: HOrderK[VarK[K, ?]] = refinery.varOrderK
   implicit def varShowK[K[_]]: ShowK[VarK[K, ?]] = refinery.varShowK
+  implicit def valOrderK[K[_]]: HOrderK[ValK[K, ?]] = refinery.valOrderK
+  implicit def valShowK[K[_]]: ShowK[ValK[K, ?]] = refinery.valShowK
 
   protected implicit val goalKeepingApi: GoalKeeping[Prg, Var] = goalModule.freeGoalKeeping
 
-  val interpreter: StateInterpreter[Prg, Lang[Prg, ?], State] = refinery.interpreter[Prg, State] :+: goalModule.interpreter[Prg, State]
-  private val prgInterpreter = interpreter.freeInstance(_.unwrap)
+  override val stepInterpreter: StateInterpreter[Prg, Lang[Prg, ?], State] = refinery.interpreter[Prg, State] :+: goalModule.interpreter[Prg, State]
 
-  protected var state: StateK[Prg] = empty[Prg]
+  protected var state: StateK[Prg] = emptyK[Prg]
 
-  def empty[K[_]]: StateK[K] = refinery.emptyK[K] :*: goalModule.emptyK[K]
+  def emptyK[K[_]]: StateK[K] = refinery.emptyK[K] :*: goalModule.emptyK[K]
+  def fetchK[K[_], A](ref: ValK[K, A], s: StateK[K]): Option[A] = refinery.fetchK(ref, s._1)
+  def fetchK[K[_], A](ref: VarK[K, A], s: StateK[K]): A = refinery.fetchK(ref, s._1)
 
   def fetch[A](ref: Var[A]): A =
     refinery.fetchK(ref, state._1)
 
   def interpret[A](prg: Prg[A]): A = {
-    val (s, a) = prgInterpreter(prg.unwrap).run(state)
+    val (s, a) = interpret(prg, state)
     state = s
     a
   }

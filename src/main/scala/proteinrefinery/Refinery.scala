@@ -76,7 +76,7 @@ private[proteinrefinery] class RefineryImpl[Var0[_[_], _], Val0[_[_], _], PropSt
   implicit def valOrderK[K[_]]: HOrderK[ValK[K, ?]] = propMod.valOrderK
   implicit def valShowK[K[_]]: ShowK[ValK[K, ?]] = propMod.valShowK
 
-  override def readOnly[A](ref: Var[A]): Val[A] = propagationApi.readOnly(ref)
+  override def readOnlyK[K[_], A](ref: VarK[K, A]): ValK[K, A] = propMod.readOnlyK(ref)
 
   implicit def freePropagation[F[_[_], _]](implicit i: Inj[F]): Propagation[FreeK[F, ?], VarK[FreeK[F, ?], ?], ValK[FreeK[F, ?], ?]] =
     propMod.freePropagation[F](i.compose[propMod.Lang[FreeK[F, ?], ?]])
@@ -99,19 +99,18 @@ private[proteinrefinery] class RefineryImpl[Var0[_[_], _], Val0[_[_], _], PropSt
   private def trackLens[K[_]]: Lens[StateK[K], TrackState[K]] = Lens(s => Store(t => s._1 :*: s._2._1 :*: t :*: s._2._2._2, s._2._2._1))
   private def deferLens[K[_]]: Lens[StateK[K], DeferState[K]] = Lens(s => Store(t => s._1 :*: s._2._1 :*: s._2._2._1 :*: t, s._2._2._2))
 
+  override val stepInterpreter: StateInterpreter[Prg, Lang[Prg, ?], State] = interpreter[Prg, State](Lens.lensId[State])
+
   def interpreter[K[_], S](implicit lens: Lens[S, StateK[K]]): StateInterpreter[K, Lang[K, ?], S] = (
-    propMod.interpreter[K, S](propLens[K].compose(lens)) :+:
+    propMod.stepInterpreterK[K, S](propLens[K].compose(lens)) :+:
       relMod.interpreter[K, S](relLens[K].compose(lens)) :+:
       trckMod.interpreter[K, S](trackLens[K].compose(lens)) :+:
       defMod.interpreter[K, S](deferLens[K].compose(lens))
   )
 
-  private val interpreterF = interpreter[Prg, State](Lens.lensId).freeInstance(_.unwrap)
-
   def emptyK[K[_]]: StateK[K] = propMod.emptyK[K] :*: relMod.emptyK[K] :*: trckMod.emptyK[K] :*: defMod.emptyK[K]
   def fetchK[K[_], D](ref: ValK[K, D], s: StateK[K]): Option[D] = propMod.fetchK(ref, s._1)
   def fetchK[K[_], D](ref: VarK[K, D], s: StateK[K]):        D  = propMod.fetchK(ref, s._1)
-  def interpret[A](prg: Prg[A], s: State): (State, A) = interpreterF(prg.unwrap)(s)
 
   val lib: Lib[Prg, Var, Val] =
   // all of the arguments are implicit, but scalac...

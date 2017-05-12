@@ -1,31 +1,14 @@
 package proteinrefinery
 
+import nutcracker.toolkit.{FreeRefToolkit}
 import nutcracker.util.typealigned.APair
-import nutcracker.util.{DeepShow, FreeK, HOrderK, ShowK}
+import nutcracker.util.{DeepShow}
 import proteinrefinery.lib.Rule
 import scalaz.Id.Id
-import scalaz.{Monad, ~>}
+import scalaz.~>
 import scalaz.syntax.monad._
 
-trait RefinerySession {
-  type VarK[_[_], _]
-  type ValK[_[_], _]
-  type Lang[_[_], _]
-  type StateK[_[_]]
-
-  type Prg[A] = FreeK[Lang, A]
-
-  type Var[A] = VarK[Prg, A]
-  type Val[A] = ValK[Prg, A]
-  type State = StateK[Prg]
-
-  implicit val prgMonad: Monad[Prg]
-
-  def varOrderK[K[_]]: HOrderK[VarK[K, ?]]
-  def varShowK[K[_]]: ShowK[VarK[K, ?]]
-
-  implicit val varOrder: HOrderK[Var] = varOrderK
-  implicit val varShow: ShowK[Var] = varShowK
+trait RefinerySession extends FreeRefToolkit {
 
   protected implicit val goalKeepingApi: GoalKeeping[Prg, Var]
 

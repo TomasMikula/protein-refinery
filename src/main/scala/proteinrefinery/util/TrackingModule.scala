@@ -1,12 +1,12 @@
 package proteinrefinery.util
 
-import nutcracker.util.{FreeK, Inject, Step}
+import nutcracker.util.{FreeK, Inject, StateInterpreter}
 import nutcracker.toolkit.{ListModule, Module, PersistentStateModule, StashModule}
 import scalaz.Lens
 
 trait TrackingModule[Ref[_[_], _], Val[_[_], _]] extends Module {
   def freeTracking[F[_[_], _]](implicit i: Inject[Lang[FreeK[F, ?], ?], F[FreeK[F, ?], ?]]): Tracking[FreeK[F, ?], Ref[FreeK[F, ?], ?], Val[FreeK[F, ?], ?]]
-  def interpreter[K[_], S](implicit lens: Lens[S, StateK[K]]): Step[K, Lang[K, ?], S]
+  def interpreter[K[_], S](implicit lens: Lens[S, StateK[K]]): StateInterpreter[K, Lang[K, ?], S]
 }
 
 object TrackingModule {
@@ -31,6 +31,6 @@ extends ListModule[Lang0, State0](base) with StashTrackingModule[Ref, Val] {
   def freeTracking[F[_[_], _]](implicit i: Inject[Lang[FreeK[F, ?], ?], F[FreeK[F, ?], ?]]): Tracking[FreeK[F, ?], Ref[FreeK[F, ?], ?], Val[FreeK[F, ?], ?]] =
     base.freeTracking[F]
 
-  override def interpreter[K[_], S](implicit lens: Lens[S, StateK[K]]): Step[K, Lang[K, ?], S] =
+  override def interpreter[K[_], S](implicit lens: Lens[S, StateK[K]]): StateInterpreter[K, Lang[K, ?], S] =
     base.interpreter[K, S](Lens.nelHeadLens[State0[K]].compose(lens))
 }
