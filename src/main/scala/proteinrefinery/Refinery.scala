@@ -1,7 +1,6 @@
 package proteinrefinery
 
-import nutcracker.{Defer, Propagation}
-import nutcracker.rel.Relations
+import nutcracker.{Defer, Propagation, Relations}
 import nutcracker.toolkit.{DeferModule, FreeRefToolkit, PropagationModule, RelModule}
 import nutcracker.util.{FreeK, HOrderK, Inject, KPair, ShowK, StateInterpreter}
 import nutcracker.util.CoproductK.{:++:, :+:}
@@ -67,7 +66,7 @@ private[proteinrefinery] class RefineryImpl[Var0[_[_], _], Val0[_[_], _], PropSt
 ) extends Refinery {
   type VarK[K[_], A] = Var0[K, A]
   type ValK[K[_], A] = Val0[K, A]
-  type Lang[K[_], A] = (propMod.Lang :+: relMod.Lang :+: trckMod.Lang :++: defMod.Lang)#Out1[K, A]
+  type Lang[K[_], A] = (propMod.Lang :+: relMod.Lang :+: trckMod.Lang :++: defMod.Lang)#Out[K, A]
   type StateK[K[_]]  = (PropState    :*: RelState    :*: TrackState   :**: DeferState )#Out[K]
 
   override val prgMonad: Monad[Prg] = implicitly

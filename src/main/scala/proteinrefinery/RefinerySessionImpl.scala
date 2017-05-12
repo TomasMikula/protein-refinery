@@ -12,7 +12,7 @@ class RefinerySessionImpl[State1[_[_]], State2[_[_]], Ref0[_[_], _], Val0[_[_], 
 
   type VarK[K[_], A] = Ref0[K, A]
   type ValK[K[_], A] = Val0[K, A]
-  type Lang[K[_], A] = (refinery.Lang :++: goalModule.Lang)#Out1[K, A]
+  type Lang[K[_], A] = (refinery.Lang :++: goalModule.Lang)#Out[K, A]
   type StateK[K[_]]  = (State1        :**:          State2)#Out[K]
 
   override def readOnlyK[K[_], A](ref: VarK[K, A]): ValK[K, A] = refinery.readOnlyK(ref)
