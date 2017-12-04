@@ -2,12 +2,12 @@ name := "protein-refinery"
 
 version := "0.2-SNAPSHOT"
 
-scalaVersion := "2.12.3"
+scalaVersion := "2.12.4"
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 
 autoCompilerPlugins := true
-addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.4" cross CrossVersion.binary)
+addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.5" cross CrossVersion.binary)
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
 scalastyleFailOnError := true
@@ -33,9 +33,9 @@ scalacOptions in (Test, console) := commonScalacOptions
 libraryDependencies ++= Seq(
   "com.github.tomasmikula" %% "nutcracker" % "0.2-SNAPSHOT",
   "org.typelevel" %% "algebra" % "0.6.0",
-  "org.scalaz" %% "scalaz-core" % "7.3.0-M16",
+  "org.scalaz" %% "scalaz-core" % "7.3.0-M18",
   "org.scalacheck" %% "scalacheck" % "1.13.4",
-  "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+  "org.scalatest" %% "scalatest" % "3.0.4" % "test"
 )
 
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oF") // show full stack traces

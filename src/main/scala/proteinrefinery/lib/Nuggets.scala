@@ -41,7 +41,7 @@ trait Nuggets[M[_], Ref[_], Val[_]] {
     rules: List[Rule[Ref]] = Nil,
     phosphoSites: List[PhosphoTriple[Ref]] = Nil
   ): M[Unit] = {
-    import scalaz.syntax.traverse._
+    import scalaz.syntax.foldable0._
     val a = rules.traverse_(addRule(_) map (_ => ()))
     val b = phosphoSites.traverse_(addPhosphoTarget(_) map (_ => ()))
     M.apply2(a, b)((_, _) => ())

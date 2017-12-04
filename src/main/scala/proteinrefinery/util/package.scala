@@ -4,7 +4,8 @@ import scala.collection.mutable
 import scala.language.higherKinds
 import scalaz.{Applicative, BindRec, \/}
 import scalaz.std.list._
-import scalaz.syntax.traverse._
+import scalaz.syntax.functor._
+import scalaz.syntax.traverse0._
 
 package object util {
 
